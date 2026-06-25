@@ -1,0 +1,3 @@
+-- Seed-Daten für lokale Entwicklung.
+-- Wird bei `supabase db reset` nach den Migrationen ausgeführt.
+-- Erst befüllen wenn das Datenbankschema stabil ist.

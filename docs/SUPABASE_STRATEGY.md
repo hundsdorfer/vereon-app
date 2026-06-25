@@ -420,15 +420,39 @@ Der Service-Role-Key umgeht RLS vollständig. Er gehört **ausschließlich** in:
 - Keys ausschließlich in Vercel Environment Variables (nicht in `.env.production`)
 - Separate Migrations-History — Prod wird nie manuell geändert
 
-### Option: Lokale Supabase-Instanz (empfohlen für Entwicklung)
+### Lokale Supabase-Instanz (aktive Entwicklungsstrategie)
 
-```bash
-npx supabase init
-npx supabase start
+Vorteile: Offline-fähig, Migrations lokal testbar, keine Dev-Daten in der Cloud.
+
+**Status:** `supabase init` abgeschlossen. `supabase start` steht noch aus.
+
+```
+supabase/
+  config.toml   ← Hauptkonfiguration (project_id = "vereon-app")
+  .gitignore    ← Schützt .branches, .temp, .env.local
+  seed.sql      ← Seed-Daten (vorerst leer)
+  migrations/   ← Wird beim ersten Migration-File angelegt
 ```
 
-Vorteile: Offline-fähig, Migrations testbar, keine Dev-Daten in Cloud.
-Entscheidung: Wird zu Beginn mit lokaler Instanz entwickelt.
+**Lokale Ports nach `supabase start`:**
+
+| Dienst | Port | URL |
+|---|---|---|
+| API (PostgREST) | 54321 | `http://127.0.0.1:54321` |
+| Postgres DB | 54322 | `postgresql://postgres:postgres@127.0.0.1:54322/postgres` |
+| Studio | 54323 | `http://127.0.0.1:54323` |
+| E-Mail-Testing (Inbucket) | 54324 | `http://127.0.0.1:54324` |
+
+**`supabase start` starten:**
+```bash
+npx supabase start
+```
+Gibt nach dem Start URL + anon key + service_role key aus. Nur `NEXT_PUBLIC_SUPABASE_URL` und `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local` eintragen — service_role key **nicht**.
+
+**Sicherheitshinweis `config.toml`:**
+- `auto_expose_new_tables` ist auskommentiert — neue Tabellen werden **nicht** automatisch per API exponiert. Kein Handlungsbedarf. Entspricht unserer Deny-by-default-Strategie.
+- `minimum_password_length = 8` (angehoben von 6)
+- `enable_confirmations = false` — nur für lokale Dev. In Produktion muss das auf `true`.
 
 ---
 

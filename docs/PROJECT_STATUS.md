@@ -89,10 +89,15 @@ Nach der initialen Erstellung der Architekturdokumente wurde eine kritische Prü
 - [x] `src/proxy.ts` — Minimaler Proxy (Session-Refresh, Next.js 16 Konvention)
 - [x] Lint und Build fehlerfrei
 
+### Lokale Supabase-Instanz
+- [x] `supabase init` — `supabase/config.toml` + `supabase/.gitignore` erstellt
+- [x] `supabase/seed.sql` — leere Datei erstellt (verhindert Fehler bei `db reset`)
+- [x] `config.toml` — `minimum_password_length` auf 8 angehoben
+- [ ] `supabase start` — noch nicht gestartet (benötigt Docker Desktop, nach Bestätigung)
+- [ ] `.env.local` mit lokalen Keys befüllt (nach `supabase start`)
+
 ### Noch nicht vorhanden
 - [ ] Supabase-Projekt (Cloud) angelegt
-- [ ] Lokale Supabase-Instanz (Docker) eingerichtet (`npx supabase init && npx supabase start`)
-- [ ] `.env.local` mit Supabase-Keys befüllt
 - [ ] Datenbankschema / Migrationen
 - [ ] Auth-Flow
 - [ ] Irgendein Feature
@@ -104,10 +109,10 @@ Nach der initialen Erstellung der Architekturdokumente wurde eine kritische Prü
 ### ~~Schritt 1 — Supabase Packages + Clients~~ ✓ abgeschlossen
 Alle Packages installiert, alle vier Clients implementiert, `src/proxy.ts` erstellt.
 
-### Schritt 2 — Lokale Supabase-Instanz einrichten
-- `npx supabase init` im Projekt
-- `npx supabase start` — benötigt Docker Desktop
-- `.env.local` mit lokalen Keys befüllen (URL + anon key aus der CLI-Ausgabe)
+### Schritt 2 — Lokale Supabase-Instanz starten
+- ~~`npx supabase init`~~ ✓ abgeschlossen
+- `npx supabase start` — benötigt Docker Desktop (startet Postgres, Auth, Studio lokal)
+- `.env.local` mit lokalen Keys befüllen (URL + anon key aus der CLI-Ausgabe von `supabase start`)
 
 ### Schritt 3 — Datenbankschema migrieren
 - Migrationsdateien in `supabase/migrations/` anlegen
