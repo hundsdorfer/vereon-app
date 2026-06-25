@@ -78,11 +78,21 @@ Nach der initialen Erstellung der Architekturdokumente wurde eine kritische Prü
 - [x] `docs/SECURITY.md` — 7 Sicherheitsrisiken mit Maßnahmen
 - [x] `docs/MOBILE_APP_STRATEGY.md` — PWA + Capacitor-Plan
 
+### Supabase-Technische Basis
+- [x] `@supabase/supabase-js`, `@supabase/ssr`, `server-only` installiert
+- [x] `supabase` CLI als devDependency installiert (`npx supabase ...`)
+- [x] `.env.example` erstellt (committierbar, ohne echte Keys)
+- [x] `src/lib/supabase/client.ts` — Browser-Client für Client Components
+- [x] `src/lib/supabase/server.ts` — Server-Client für Server Components + Server Actions
+- [x] `src/lib/supabase/route-handler.ts` — Client für Route Handlers
+- [x] `src/lib/supabase/middleware.ts` — `updateSession`-Helper für Proxy
+- [x] `src/proxy.ts` — Minimaler Proxy (Session-Refresh, Next.js 16 Konvention)
+- [x] Lint und Build fehlerfrei
+
 ### Noch nicht vorhanden
 - [ ] Supabase-Projekt (Cloud) angelegt
-- [ ] Lokale Supabase-Instanz (Docker) eingerichtet
-- [ ] `.env.local` mit Supabase-Keys
-- [ ] Supabase Packages installiert
+- [ ] Lokale Supabase-Instanz (Docker) eingerichtet (`npx supabase init && npx supabase start`)
+- [ ] `.env.local` mit Supabase-Keys befüllt
 - [ ] Datenbankschema / Migrationen
 - [ ] Auth-Flow
 - [ ] Irgendein Feature
@@ -91,18 +101,13 @@ Nach der initialen Erstellung der Architekturdokumente wurde eine kritische Prü
 
 ## Nächste Schritte (in dieser Reihenfolge)
 
-### Schritt 1 — Lokale Supabase-Instanz einrichten
-- Supabase CLI installieren
-- `npx supabase init` im Projekt
-- `npx supabase start` — lokale Postgres + Auth Instanz
-- `.env.local` mit lokalen Keys befüllen
-- Supabase Packages installieren: `@supabase/supabase-js`, `@supabase/ssr`
+### ~~Schritt 1 — Supabase Packages + Clients~~ ✓ abgeschlossen
+Alle Packages installiert, alle vier Clients implementiert, `src/proxy.ts` erstellt.
 
-### Schritt 2 — Vier Supabase-Clients implementieren
-- `src/lib/supabase/server.ts`
-- `src/lib/supabase/route-handler.ts`
-- `src/lib/supabase/client.ts`
-- `src/lib/supabase/middleware.ts`
+### Schritt 2 — Lokale Supabase-Instanz einrichten
+- `npx supabase init` im Projekt
+- `npx supabase start` — benötigt Docker Desktop
+- `.env.local` mit lokalen Keys befüllen (URL + anon key aus der CLI-Ausgabe)
 
 ### Schritt 3 — Datenbankschema migrieren
 - Migrationsdateien in `supabase/migrations/` anlegen
@@ -113,7 +118,7 @@ Nach der initialen Erstellung der Architekturdokumente wurde eine kritische Prü
 - Lokal testen
 
 ### Schritt 4 — Auth-Flow (MVP 0)
-- `middleware.ts` im Root
+- `src/proxy.ts` um vollständigen Route-Schutz erweitern (Public Routes, Redirects)
 - `/login`, `/register`, `/auth/callback` Seiten und Server Actions
 - Passwort-Reset-Flow
 - Profil-Trigger testen

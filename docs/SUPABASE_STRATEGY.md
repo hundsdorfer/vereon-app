@@ -1,6 +1,6 @@
 # Supabase Strategie — Vereon
 
-**Stand:** 2026-06-25 (überarbeitet: Route-Handler-Client getrennt, Middleware weniger aggressiv)
+**Stand:** 2026-06-25 (überarbeitet: Route-Handler-Client getrennt, Middleware weniger aggressiv; Packages + Clients implementiert)
 
 ---
 
@@ -19,8 +19,11 @@ Supabase wird **nicht als abstrahiertes ORM** genutzt — wir arbeiten direkt mi
 ## Packages
 
 ```bash
-npm install @supabase/supabase-js @supabase/ssr
+npm install @supabase/supabase-js @supabase/ssr server-only
+npm install supabase --save-dev   # Supabase CLI
 ```
+
+**Status: installiert** (`package.json` enthält alle vier Packages.)
 
 **Kein NextAuth. Kein Prisma.**
 
@@ -35,8 +38,15 @@ src/lib/supabase/
   server.ts          → Server Components, Server Actions
   route-handler.ts   → Route Handlers (API-Endpunkte unter app/api/)
   client.ts          → Client Components ('use client')
-  middleware.ts      → middleware.ts im Root (Cookies lesen + schreiben)
+  middleware.ts      → proxy.ts im Root (Cookies lesen + schreiben)
 ```
+
+**Status: implementiert** (alle vier Dateien existieren in `src/lib/supabase/`)
+
+> **Next.js 16:** Die Konvention `middleware.ts` wurde zu `proxy.ts` umbenannt.
+> Die Hilfsdatei `src/lib/supabase/middleware.ts` ist eine normale Library-Datei und behält ihren Namen.
+> Der Root-Einstiegspunkt heißt `src/proxy.ts` mit `export function proxy(...)`.
+
 
 ---
 
@@ -93,7 +103,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 
 export function createClient(request: NextRequest) {
-  let response = NextResponse.next({ request })
+  const response = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -196,20 +206,23 @@ export async function updateSession(request: NextRequest) {
 
 ---
 
-## Middleware — Route-Schutz
+## Proxy — Route-Schutz
 
-Die Middleware unterscheidet drei Kategorien von Routen:
+> **Next.js 16:** Der Root-Einstiegspunkt heißt `src/proxy.ts` (früher `middleware.ts`). Die exportierte Funktion heißt `proxy` statt `middleware`.
+
+**Status: minimale Version implementiert** (`src/proxy.ts` — nur Session-Refresh, noch keine Redirects.)
+
+Die vollständige Version (mit Route-Schutz) wird in Schritt 4 (Auth-Flow) ausgebaut:
 
 ```ts
-// middleware.ts (Root)
-import { NextRequest } from 'next/server'
+// src/proxy.ts (vollständige Version — Schritt 4)
+import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-// Routen, die ohne Auth zugänglich sind
 const PUBLIC_ROUTES = ['/', '/login', '/register', '/auth/callback']
 const PUBLIC_PREFIXES = ['/invite/', '/about', '/impressum', '/datenschutz']
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { supabaseResponse, user } = await updateSession(request)
   const pathname = request.nextUrl.pathname
 
@@ -217,7 +230,6 @@ export async function middleware(request: NextRequest) {
     PUBLIC_ROUTES.includes(pathname) ||
     PUBLIC_PREFIXES.some(prefix => pathname.startsWith(prefix))
 
-  // Unauthentifiziert → nur Public Routes erlaubt
   if (!user && !isPublicRoute) {
     const loginUrl = request.nextUrl.clone()
     loginUrl.pathname = '/login'
@@ -225,7 +237,6 @@ export async function middleware(request: NextRequest) {
     return Response.redirect(loginUrl)
   }
 
-  // Eingeloggt auf Login/Register → ins Dashboard
   if (user && (pathname === '/login' || pathname === '/register')) {
     const dashboardUrl = request.nextUrl.clone()
     dashboardUrl.pathname = '/dashboard'
@@ -237,13 +248,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Alle Routen außer:
-     * - _next/static (statische Dateien)
-     * - _next/image (Bildoptimierung)
-     * - favicon.ico
-     * - Öffentliche statische Dateien (SVG, PNG, etc.)
-     */
     '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
