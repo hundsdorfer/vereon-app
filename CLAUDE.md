@@ -2,56 +2,50 @@
 
 # Vereon — Projektregeln für Claude
 
-## Was ist Vereon?
-SaaS-Plattform für Fußball-Vereinsmanagement. Multi-Tenant: mehrere Vereine, mehrere Teams, mehrere Rollen pro User.
+## Pflichtlektüre zu Sessionbeginn
 
-## Tech Stack
-- **Framework:** Next.js 16 (App Router) — Breaking Changes beachten, docs in `node_modules/next/dist/docs/` lesen
-- **Sprache:** TypeScript (strict)
-- **Styling:** Tailwind CSS v4 — kein `tailwind.config.js`, Konfiguration in CSS via `@theme`
-- **Auth & DB:** Supabase (`@supabase/supabase-js`, `@supabase/ssr`)
-- **Kein** NextAuth, kein Prisma, kein separates ORM
+1. `docs/PROJECT_BRIEF.md` — Kompaktzusammenfassung: Architektur, MVP, Rollen, Verbote
+2. `docs/CURRENT_TASK.md` — Aktueller Arbeitsstand und nächste Schritte (falls vorhanden)
 
-## Projektstruktur
-```
-src/
-  app/           → Next.js App Router (Routing)
-  components/    → Wiederverwendbare UI-Komponenten
-  components/ui/ → Primitive (Button, Input, Card…)
-  features/      → Feature-Module (teams, players, matches…)
-  hooks/         → Custom React Hooks
-  lib/           → Utilities, Server-Logik
-  lib/supabase/  → Supabase-Clients (server/client/middleware)
-  styles/        → Zusätzliche globale Styles
-  types/         → Globale TypeScript-Typen
-docs/            → Projektdokumentation
-```
+Bei Datenbankaufgaben zusätzlich: `docs/DATABASE_MODEL.md`, `docs/SECURITY.md`
+Bei Rollenaufgaben zusätzlich: `docs/ROLES_AND_PERMISSIONS.md`
+Bei Supabase-Aufgaben zusätzlich: `docs/SUPABASE_STRATEGY.md`
+Bei MVP/Feature-Planung zusätzlich: `docs/MVP_SCOPE.md`
 
-## TypeScript-Alias
-`@/*` zeigt auf `./src/*`. Beispiel: `import { cn } from '@/lib/utils'`
+---
 
-## Architekturregel: Auth & Sicherheit
-- Auth **immer serverseitig prüfen** — nie nur im Client
-- **Row Level Security (RLS)** in Supabase ist Pflicht für alle Tabellen
-- Supabase-Server-Client (`@supabase/ssr`) für Server Components, Route Handlers und Middleware
-- Supabase-Browser-Client nur für clientseitige Reads ohne sensitive Daten
-- Rollen und Rechte über eigene DB-Tabellen (`roles`, `memberships`) — nicht nur über Supabase-Metadaten
-- `middleware.ts` schützt alle geschützten Routen
+## Tech Stack (Kurzversion)
 
-## Architekturregel: Routing
-- Route Groups: `(auth)` für Login/Register, `(dashboard)` für die gesicherte App
-- `params` in Next.js 16 ist ein **Promise** — immer awaiten: `const { id } = await params`
+- Next.js 16 App Router — Breaking Changes beachten, `node_modules/next/dist/docs/` lesen
+- TypeScript strict, Tailwind CSS v4 (kein `tailwind.config.js`, Konfiguration via `@theme`)
+- Supabase (`@supabase/supabase-js`, `@supabase/ssr`) — kein NextAuth, kein Prisma
+- `src/proxy.ts` statt `middleware.ts` (Next.js 16), `params` immer awaiten
+- `@/*` → `./src/*`
 
-## Architekturregel: Server vs. Client Components
-- Standard: Server Component (kein `'use client'`)
-- `'use client'` nur für: State, Event Handler, Browser APIs, Custom Hooks
-- Datenbankzugriffe und API-Keys **niemals** in Client Components
+---
 
-## Stil
-- Keine unnötigen Kommentare
-- Keine Docstrings, keine Zusammenfassungen am Ende
-- Kein Boilerplate, keine Features die nicht gefragt sind
-- Deutsch ist die Arbeitssprache für Dokumentation und Kommentare
+## Arbeitsregeln
+
+- **Kein großer Schritt ohne Plan** — erst Dateiliste + Vorhaben nennen, dann auf Bestätigung warten
+- **Immer auflisten** welche Dateien geändert werden, bevor geändert wird
+- Antworten kurz halten — keine Wiederholungen aus Docs, keine Zusammenfassungen am Ende
+- Standard: Server Component. `'use client'` nur für State, Event Handler, Browser APIs
+- Deutsch für Dokumentation und Kommentare; keine unnötigen Kommentare im Code
+
+---
+
+## Hard Constraints
+
+- **Keine Remote-Datenbank** anfassen (kein `db push`, kein direkter Zugriff)
+- **Kein `db reset`** ohne ausdrückliche Bestätigung in dieser Session
+- **Migration nie befüllen** ohne ausdrückliche Bestätigung in dieser Session
+- **Keine Secrets anzeigen** — kein `.env.local`, kein Service Role Key
+- **`SUPABASE_SERVICE_ROLE_KEY` nie committen** — er umgeht RLS vollständig
+- **Kein Anwendungscode ändern** ohne vorherige Bestätigung
+- **Keine Packages installieren** ohne Bestätigung
+
+---
 
 ## Dokumentation
-Alle Architektur- und Produktentscheidungen landen in `docs/`. Vor größeren Änderungen die relevanten Docs lesen.
+
+Alle Architektur- und Produktentscheidungen landen in `docs/`. Vollständige Docs-Liste in `docs/PROJECT_BRIEF.md`.
