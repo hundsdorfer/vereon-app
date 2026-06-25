@@ -186,6 +186,125 @@ export type Database = {
         }
         Relationships: []
       }
+      player_guardians: {
+        Row: {
+          created_at: string
+          guardian_user_id: string
+          id: string
+          player_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          guardian_user_id: string
+          id?: string
+          player_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          guardian_user_id?: string
+          id?: string
+          player_id?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_guardians_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_team_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          joined_at: string
+          left_at: string | null
+          player_id: string
+          status: string
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          player_id: string
+          status?: string
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          player_id?: string
+          status?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_team_assignments_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_team_assignments_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          birth_year: number | null
+          created_at: string
+          created_by: string | null
+          first_name: string
+          id: string
+          is_active: boolean
+          jersey_nr: number | null
+          last_name: string
+          position: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          birth_year?: number | null
+          created_at?: string
+          created_by?: string | null
+          first_name: string
+          id?: string
+          is_active?: boolean
+          jersey_nr?: number | null
+          last_name: string
+          position?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          birth_year?: number | null
+          created_at?: string
+          created_by?: string | null
+          first_name?: string
+          id?: string
+          is_active?: boolean
+          jersey_nr?: number | null
+          last_name?: string
+          position?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -310,6 +429,108 @@ export type Database = {
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_invitation_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          max_uses: number
+          revoked_at: string | null
+          team_id: string
+          token_hash: string
+          use_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          max_uses?: number
+          revoked_at?: string | null
+          team_id: string
+          token_hash: string
+          use_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          max_uses?: number
+          revoked_at?: string | null
+          team_id?: string
+          token_hash?: string
+          use_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invitation_links_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_join_requests: {
+        Row: {
+          created_at: string
+          guardian_user_id: string
+          id: string
+          invitation_link_id: string | null
+          player_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          team_id: string
+        }
+        Insert: {
+          created_at?: string
+          guardian_user_id: string
+          id?: string
+          invitation_link_id?: string | null
+          player_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          team_id: string
+        }
+        Update: {
+          created_at?: string
+          guardian_user_id?: string
+          id?: string
+          invitation_link_id?: string | null
+          player_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_join_requests_invitation_link_id_fkey"
+            columns: ["invitation_link_id"]
+            isOneToOne: false
+            referencedRelation: "team_invitation_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_join_requests_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_join_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -456,6 +677,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_join_request: { Args: { p_request_id: string }; Returns: string }
+      cleanup_expired_join_requests: { Args: never; Returns: number }
       create_club: {
         Args: { p_name: string; p_season_name?: string; p_slug: string }
         Returns: string
@@ -469,6 +692,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_invitation_link: {
+        Args: {
+          p_expires_in_days?: number
+          p_max_uses?: number
+          p_team_id: string
+        }
+        Returns: string
+      }
+      get_invitation_link_info: { Args: { p_token: string }; Returns: Json }
       has_club_role: {
         Args: { p_club_id: string; p_role_key: string }
         Returns: boolean
@@ -478,8 +710,43 @@ export type Database = {
         Returns: boolean
       }
       is_club_member: { Args: { p_club_id: string }; Returns: boolean }
+      is_guardian_of: { Args: { p_player_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       is_team_member: { Args: { p_team_id: string }; Returns: boolean }
+      reject_join_request: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
+      revoke_invitation_link: {
+        Args: { p_link_id: string }
+        Returns: undefined
+      }
+      submit_join_request: {
+        Args: {
+          p_birth_year?: number
+          p_first_name: string
+          p_jersey_nr?: number
+          p_last_name: string
+          p_position?: string
+          p_token: string
+        }
+        Returns: string
+      }
+      update_player_basic_info: {
+        Args: {
+          p_birth_year?: number
+          p_first_name: string
+          p_jersey_nr?: number
+          p_last_name: string
+          p_player_id: string
+          p_position?: string
+        }
+        Returns: undefined
+      }
+      withdraw_join_request: {
+        Args: { p_request_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
