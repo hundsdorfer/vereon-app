@@ -12,13 +12,56 @@ Die aktuelle Codebasis (`vereon-app`) ist bewusst leer gehalten: technisch saube
 
 ---
 
+## Architektur-Korrekturschleife (abgeschlossen)
+
+Nach der initialen Erstellung der Architekturdokumente wurde eine kritische Prüfung durchgeführt. Folgende Korrekturen wurden in einer zweiten Überarbeitungsrunde umgesetzt, **bevor** mit der Supabase-Integration begonnen wird:
+
+### Datenmodell-Korrekturen
+- `UNIQUE(club_id, user_id)` auf `club_memberships` bleibt — aber Rollen werden in `club_member_roles` ausgelagert (separate Tabelle, beliebig viele Rollen pro Mitglied)
+- Neue Tabelle `club_member_roles`: n Vereinsrollen pro Mitglied
+- Neue Tabelle `team_member_roles`: n Teamrollen pro Teammitglied
+- `player_guardians` ersetzt und erweitert bisherige Guardian-Struktur: Rechte aus Spieler-Guardian-Beziehung, nicht aus Team-Mitgliedschaft
+- `invitations` um `player_id`, `invitation_type`, `target_scope`, `used_at`, `revoked_at`, Sicherheitsanforderungen für Tokens erweitert
+- `event_attendance` hängt primär an `player_id` (nicht `user_id`) — Spieler ohne Account werden unterstützt
+- Neue Tabelle `player_team_assignments`: Kader unabhängig von Auth-Accounts
+- Neue Tabelle `seasons`: Saisonzugehörigkeit für Teams, Events, Kader
+- `player_transfers` als Phase-2-Tabelle dokumentiert
+- Vollständige Index-Strategie ergänzt (RLS-kritische Indexes)
+- `events.club_id` Integrität via Trigger statt unsicherem CHECK-Constraint
+- `create_club()`-Funktion (SECURITY DEFINER) als einziger Weg zum ersten club_admin
+
+### Rollenmodell-Korrekturen
+- Mehrfachrollen explizit unterstützt — reale Amateurfußball-Struktur berücksichtigt
+- 19 Rollen definiert (System, Verein, Team), davon 5 MVP-relevant
+- Klare Trennung: MVP-Rollen vs. architektonisch vorgesehene Rollen vs. Overengineering
+- Department-Scopes für Phase 2 vorgeplant (Jugend, Frauen, Herren, Finanzen etc.)
+- Guardian-Rechte-Modell korrekt: über `player_guardians`, nicht `team_member_roles`
+
+### Supabase-Strategie-Korrekturen
+- Vier statt drei Supabase-Clients: `server.ts`, `route-handler.ts`, `client.ts`, `middleware.ts`
+- Route-Handler-Client separat mit vollem Cookie-Schreib-Zugriff
+- Middleware weniger aggressiv: öffentliche Routen (`/`, `/invite/*`, `/about`) werden nicht blockiert
+- `?redirect=`-Parameter für Post-Login-Navigation
+- SECURITY DEFINER Funktionen mit `SET search_path = ''` — Schema-Injection verhindert
+
+### Security-Korrekturen
+- Falscher Tabellenname `team_members` → `team_memberships` korrigiert
+- 7 konkrete Sicherheitsrisiken mit Maßnahmen dokumentiert
+- Privilege-Escalation-Szenarien explizit adressiert
+
+### MVP-Neuaufteilung
+- MVP 0: Auth + Verein + Team + Trainer + Kalender + RSVP
+- MVP 1: Spieler + Guardian + Anwesenheit + Mein Team + Spielbericht
+- Klare Akzeptanzkriterien für beide Stufen
+
+---
+
 ## Aktueller Zustand
 
 ### Technische Basis
 - [x] Next.js 16 (App Router) mit TypeScript, Tailwind CSS v4, ESLint 9
 - [x] `src/`-Ordnerstruktur eingerichtet
 - [x] TypeScript-Alias `@/*` → `./src/*` konfiguriert
-- [x] Projektordner: `components`, `features`, `hooks`, `lib`, `lib/supabase`, `styles`, `types`
 - [x] Build und Lint funktionieren fehlerfrei
 - [x] GitHub Repository vorhanden
 - [x] Vercel Deployment vorbereitet
@@ -27,16 +70,17 @@ Die aktuelle Codebasis (`vereon-app`) ist bewusst leer gehalten: technisch saube
 - [x] `CLAUDE.md` — Projektregeln für Claude
 - [x] `docs/PRODUCT_VISION.md` — Produktvision und Zielgruppe
 - [x] `docs/ROADMAP.md` — Phasenplanung
-- [x] `docs/MVP_SCOPE.md` — MVP-Abgrenzung und Akzeptanzkriterien
-- [x] `docs/DATABASE_MODEL.md` — Vollständiges Datenmodell (15 Tabellen)
-- [x] `docs/ROLES_AND_PERMISSIONS.md` — 10 Rollen, Berechtigungsmatrix
-- [x] `docs/SUPABASE_STRATEGY.md` — Client-Strategie, Auth-Flow, RLS, Env-Variablen
+- [x] `docs/MVP_SCOPE.md` — MVP 0/1 Aufteilung, Akzeptanzkriterien
+- [x] `docs/DATABASE_MODEL.md` — Vollständiges Datenmodell (20 Tabellen, Indexes, Trigger)
+- [x] `docs/ROLES_AND_PERMISSIONS.md` — 19 Rollen, Mehrfachrollen, Berechtigungsmatrix
+- [x] `docs/SUPABASE_STRATEGY.md` — 4 Clients, Route Handler, Middleware, Auth-Flow
 - [x] `docs/TECH_STACK.md` — Tech-Entscheidungen
-- [x] `docs/SECURITY.md` — Sicherheitsarchitektur
+- [x] `docs/SECURITY.md` — 7 Sicherheitsrisiken mit Maßnahmen
 - [x] `docs/MOBILE_APP_STRATEGY.md` — PWA + Capacitor-Plan
 
 ### Noch nicht vorhanden
 - [ ] Supabase-Projekt (Cloud) angelegt
+- [ ] Lokale Supabase-Instanz (Docker) eingerichtet
 - [ ] `.env.local` mit Supabase-Keys
 - [ ] Supabase Packages installiert
 - [ ] Datenbankschema / Migrationen
@@ -47,30 +91,40 @@ Die aktuelle Codebasis (`vereon-app`) ist bewusst leer gehalten: technisch saube
 
 ## Nächste Schritte (in dieser Reihenfolge)
 
-### Schritt 1 — Supabase einrichten
-- Supabase Cloud-Projekt anlegen (Vereon Dev)
-- `.env.local` mit URL + Anon Key anlegen
-- Packages installieren: `@supabase/supabase-js`, `@supabase/ssr`
-- Drei Supabase-Clients implementieren: `src/lib/supabase/server.ts`, `client.ts`, `middleware.ts`
+### Schritt 1 — Lokale Supabase-Instanz einrichten
+- Supabase CLI installieren
+- `npx supabase init` im Projekt
+- `npx supabase start` — lokale Postgres + Auth Instanz
+- `.env.local` mit lokalen Keys befüllen
+- Supabase Packages installieren: `@supabase/supabase-js`, `@supabase/ssr`
 
-### Schritt 2 — Datenbankschema
-- Migrations-Ordner anlegen (Supabase CLI oder direkt im Dashboard)
-- Tabellen erstellen (Reihenfolge laut `DATABASE_MODEL.md`)
-- RLS auf allen Tabellen aktivieren
-- Seed-Daten für `roles` und `permissions`
-- Trigger für automatisches `profiles`-Anlegen bei Registrierung
+### Schritt 2 — Vier Supabase-Clients implementieren
+- `src/lib/supabase/server.ts`
+- `src/lib/supabase/route-handler.ts`
+- `src/lib/supabase/client.ts`
+- `src/lib/supabase/middleware.ts`
 
-### Schritt 3 — Auth-Flow
-- `middleware.ts` im Root (Route-Schutz)
-- `/login` Seite und Server Action
-- `/register` Seite und Server Action
+### Schritt 3 — Datenbankschema migrieren
+- Migrationsdateien in `supabase/migrations/` anlegen
+- Reihenfolge: `roles` → `clubs` → `seasons` → `profiles` (+ Trigger) → Mitgliedschaften → Teams → Spieler → Guardian → Events (+ Trigger) → Attendance (+ Trigger) → Matches → Reports → Audit
+- RLS aktivieren, Hilfsfunktionen anlegen, Policies schreiben
+- Alle Indexes anlegen
+- `create_club()`-Funktion anlegen
+- Lokal testen
+
+### Schritt 4 — Auth-Flow (MVP 0)
+- `middleware.ts` im Root
+- `/login`, `/register`, `/auth/callback` Seiten und Server Actions
 - Passwort-Reset-Flow
-- `/invite/[token]` — Einladungslink annehmen
+- Profil-Trigger testen
 
-### Schritt 4 — Erstes Feature: Verein anlegen
+### Schritt 5 — Erste Features (MVP 0)
 - Dashboard-Shell (Layout mit Sidebar/Header)
-- `/clubs/new` — Verein anlegen
-- Automatische `club_admin`-Mitgliedschaft
+- `/clubs/new` — Verein anlegen via `create_club()`
+- `/clubs/[clubId]/teams/new` — Team anlegen
+- Einladungsflow für `head_coach`
+- Kalender: Termine erstellen und anzeigen
+- RSVP: Zu-/Absage setzen
 
 ---
 
@@ -80,18 +134,23 @@ Die aktuelle Codebasis (`vereon-app`) ist bewusst leer gehalten: technisch saube
 |---|---|
 | Supabase statt NextAuth + Prisma | Weniger Schichten, RLS als echte Sicherheitsebene |
 | Multi-Tenant von Anfang an | Nachträglich fast unmöglich einzubauen |
-| `src/`-Ordnerstruktur | Langfristige Skalierbarkeit |
-| Kein Realtime im MVP | Komplexität reduzieren, später nachrüsten |
+| Mehrfachrollen via separate Tabellen | Amateurfußball-Realität: Obmann = Trainer, etc. |
+| Guardian-Rechte über player_guardians | Teamwechsel des Kindes bricht nicht die Elternrechte |
+| event_attendance via player_id | Spieler ohne Account erscheinen in Anwesenheitslisten |
+| `create_club()` SECURITY DEFINER | Privilege Escalation beim ersten club_admin verhindert |
+| Vier Supabase-Clients | Jeder Kontext (Server/Route Handler/Client/Middleware) braucht eigenen Cookie-Zugriff |
+| MVP 0 vor MVP 1 | Jede Stufe ist vollständig deploybar |
+| Lokale Supabase-Instanz | Offline-fähig, Migrations sicher testbar |
 | Capacitor statt React Native | Code-Sharing mit Web, eine Codebasis |
 
 ---
 
 ## Bekannte offene Fragen
 
-| Frage | Priorität |
-|---|---|
-| Lokale Supabase-Instanz (Docker) oder nur Cloud? | Mittel |
-| Supabase Realtime vs. Polling für Zu-/Absagen? | Phase 2 |
-| Zod für Formularvalidierung von Anfang an? | Klären bei Schritt 3 |
-| Notifications-Tabelle oder nur Supabase Realtime? | Phase 2 |
-| Seasons als eigene Tabelle? | Klären bei Schritt 2 |
+| Frage | Priorität | Klären wann |
+|---|---|---|
+| `notifications`-Tabelle oder nur Supabase Realtime? | Mittel | Phase 2 |
+| pg_cron für Invitation-Cleanup? | Mittel | Vor Launch |
+| Departments als eigene Tabelle? | Niedrig | Phase 2 |
+| Finanzmodul in gleichem Schema? | Niedrig | Phase 3 |
+| Column-Level Security für `tactics_notes`? | Mittel | MVP 1 |
