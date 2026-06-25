@@ -93,8 +93,8 @@ Nach der initialen Erstellung der Architekturdokumente wurde eine kritische Prü
 - [x] `supabase init` — `supabase/config.toml` + `supabase/.gitignore` erstellt
 - [x] `supabase/seed.sql` — leere Datei erstellt (verhindert Fehler bei `db reset`)
 - [x] `config.toml` — `minimum_password_length` auf 8 angehoben
-- [ ] `supabase start` — noch nicht gestartet (benötigt Docker Desktop, nach Bestätigung)
-- [ ] `.env.local` mit lokalen Keys befüllt (nach `supabase start`)
+- [x] `supabase start` — läuft (Docker Desktop, lokale Instanz aktiv)
+- [x] `.env.local` mit lokalen Keys befüllt (URL + anon key der lokalen Instanz)
 
 ### Noch nicht vorhanden
 - [ ] Supabase-Projekt (Cloud) angelegt

@@ -424,7 +424,7 @@ Der Service-Role-Key umgeht RLS vollständig. Er gehört **ausschließlich** in:
 
 Vorteile: Offline-fähig, Migrations lokal testbar, keine Dev-Daten in der Cloud.
 
-**Status:** `supabase init` abgeschlossen. `supabase start` steht noch aus.
+**Status:** `supabase init` abgeschlossen. `supabase start` läuft — lokale Instanz aktiv, `.env.local` befüllt.
 
 ```
 supabase/
