@@ -1,0 +1,1 @@
+select public.create_independent_team('U10 Testteam');
