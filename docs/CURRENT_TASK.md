@@ -1,41 +1,75 @@
-# CURRENT_TASK.md – Aktueller Arbeitsstand
+# Current Task — Vereon
 
-## Aktuelle Phase
+## Aktueller Stand
 
-Vereon befindet sich in der Architektur- und Datenmodellierungsphase vor der ersten echten Datenbankmigration.
+Vereon hat die Datenbankfundament-Phase abgeschlossen.
 
-Die lokale Entwicklungsumgebung steht:
+Abgeschlossen:
 
-* Next.js 16 Projekt vorhanden
-* Supabase Client Foundation vorhanden
+* Next.js 16 Projekt steht
+* Supabase Client Foundation ist eingebaut
 * Docker Desktop läuft
 * Lokale Supabase-Instanz läuft
 * `.env.local` ist lokal befüllt und wird nicht committed
-* Migration-Datei `20260625190923_init_mvp0_core.sql` existiert, ist aber leer
+* Migration 001 `20260625190923_init_mvp0_core.sql` ist befüllt
+* `npx supabase db reset` wurde lokal erfolgreich ausgeführt
+* TypeScript-Datenbanktypen wurden generiert
+* Lint und Build waren erfolgreich
+* `create_independent_team()` wurde lokal mit Auth-User getestet
+* `create_club()` wurde lokal mit Auth-User getestet
+* Migration 001 gilt als lokal verifiziert
 
 ## Aktuelle Hauptaufgabe
 
-Migration 001 final vorbereiten, aber noch nicht blind ausführen.
+Migration 002 planen: MVP 0A Self-Service Team Flow.
 
-Vor dem Befüllen der Migration müssen die letzten Produktentscheidungen vollständig berücksichtigt sein:
+Ziel von Migration 002 ist der erste echte Nutzungsflow für eigenständige Teams:
 
-* Vereon startet nicht nur vereinszentriert, sondern auch teamzentriert.
-* Trainer können eigenständige Teams ohne offiziellen Verein erstellen.
-* Teams können später einem geprüften Verein zugeordnet werden.
-* Vereine brauchen einen Verifikationsstatus.
-* `team_owner` ist getrennt von `head_coach`.
-* Eltern/Kinder nutzen bevorzugt Self-Service über Einladungslink und Beitrittsanfrage.
-* Kinder werden nicht automatisch Teammitglieder.
-* Mehrfachrollen und Mehrfachteamzugehörigkeiten sind Pflicht.
-* DSGVO/Datenschutz ist Kernanforderung.
-* Monetarisierung wird dokumentiert, aber nicht in MVP 0 gebaut.
+Trainer erstellt Team
+→ Trainer erzeugt Einladungslink
+→ Eltern registrieren sich
+→ Eltern legen Kind an
+→ Beitrittsanfrage entsteht
+→ Trainer nimmt Kind an oder lehnt ab
+
+## Scope-Fragen für Migration 002
+
+Vor dem SQL-Schreiben klären:
+
+* `players`: wahrscheinlich ja, minimal nötig für Kinderprofile
+* `team_invitation_links`: ja, Kernfeature MVP 0A
+* `team_join_requests`: ja, Kernfeature MVP 0A
+* `player_guardians`: kritisch prüfen, eventuell direkt nötig
+* `player_team_assignments`: kritisch prüfen, eventuell direkt nötig
+* `events`: eher spätere eigene Migration
+* `event_attendance`: erst nach stabilem `player_id`-Modell
+* 90-Tage-Löschlogik für abgelehnte/abgelaufene Anfragen: dokumentieren, technische Umsetzung prüfen
+
+## Voraussichtlicher Inhalt Migration 002
+
+Wahrscheinlich enthalten:
+
+* `players`
+* `team_invitation_links`
+* `team_join_requests`
+* RLS-Policies für neue Tabellen
+* Indexes für Token-Lookups und Status-Queries
+* DSGVO-Regeln für Join Requests
+
+Noch offen:
+
+* `player_guardians`
+* `player_team_assignments`
+* `events`
+* `event_attendance`
 
 ## Erlaubt
 
-* Dokumentation aktualisieren
-* Migrationsplan erstellen
+* Dokumentation prüfen
+* Migration 001 lesen
+* Migrationsplan 002 erstellen
 * bestehende Architektur kritisch prüfen
-* kleine, gezielte Änderungen an Dokumenten
+* lokale Supabase-Struktur analysieren
 * Lint und Build ausführen
 
 ## Verboten
@@ -46,75 +80,43 @@ Vor dem Befüllen der Migration müssen die letzten Produktentscheidungen vollst
 * Kein Remote-Linking
 * Keine Remote-Datenbank verändern
 * Keine Secrets anzeigen
-* `.env.local` nicht ausgeben
+* `.env.local` nicht anzeigen
 * Keine Anwendungscode-Features bauen
 * Kein Login-UI bauen
 * Keine Designänderungen
-* Keine Packages installieren, außer ausdrücklich beauftragt
-
-## Nächster geplanter Schritt
-
-1. Dokumentation für unabhängige Teams, Self-Service-Onboarding, DSGVO und Monetarisierung finalisieren.
-2. Danach finalen Plan für Migration 001 erstellen.
-3. Erst nach Freigabe Migration 001 befüllen.
-4. Danach lokale Migration testen.
-5. Danach TypeScript-Datenbanktypen generieren.
+* Keine Packages installieren
 
 ## Relevante Dokumente
 
-Claude Code soll bei Aufgaben zuerst diese Dateien lesen:
+Claude Code soll zuerst lesen:
 
 * `CLAUDE.md`
 * `docs/PROJECT_BRIEF.md`
 * `docs/CURRENT_TASK.md`
 
-Je nach Aufgabe zusätzlich:
+Für Migration 002 zusätzlich:
 
 * `docs/DATABASE_MODEL.md`
 * `docs/ROLES_AND_PERMISSIONS.md`
 * `docs/MVP_SCOPE.md`
 * `docs/SECURITY.md`
-* `docs/SUPABASE_STRATEGY.md`
 * `docs/DSGVO_PRIVACY_MODEL.md`
-* `docs/MONETIZATION_STRATEGY.md`
 * `docs/USER_FLOWS.md`
 
-## Ziel der nächsten Migration
+## Migrationsübersicht
 
-Migration 001 soll nur den stabilen MVP-0-Core enthalten.
+| Migration               | Inhalt                                                   | Status                              |
+| ----------------------- | -------------------------------------------------------- | ----------------------------------- |
+| `001_init_mvp0_core`    | Kern-Tabellen, Rollen, RLS, Funktionen                   | Abgeschlossen und lokal verifiziert |
+| `002_mvp0a_team_flows`  | Self-Service Team Flow                                   | Als nächstes planen                 |
+| `003_mvp0b_club_flows`  | Vereinsflows, Vereins-Einladungen                        | Offen                               |
+| `004_mvp1_players_full` | vollständiges Spieler-/Elternmodell, Events, Anwesenheit | Offen                               |
+| `005_mvp2_affiliation`  | Team-Zuordnung zu verifiziertem Verein                   | Offen                               |
 
-Voraussichtlich enthalten:
+## Nächster Schritt
 
-* Rollen
-* Berechtigungen
-* Profile
-* Clubs mit Verifikationsstatus
-* Seasons
-* Club-Mitgliedschaften
-* Club-Rollen
-* Teams mit optionalem `club_id`
-* Team-Mitgliedschaften
-* Team-Rollen
-* `team_owner`
-* `create_club()`
-* wahrscheinlich `create_independent_team()`
-* RLS-Grundfunktionen
-* erste RLS-Policies
-* Indexes
-* Seed-Rollen
+Finalen Plan für Migration 002 erstellen.
 
-Noch nicht enthalten oder kritisch zu entscheiden:
-
-* `team_invitation_links`
-* `team_join_requests`
-* `players`
-* `player_guardians`
-* `player_team_assignments`
-* `events`
-* `event_attendance`
-* `matches`
-* `match_reports`
-* `billing`
-* `official_club_registry`
-* `team_affiliation_requests`
-* `player_transfer_requests`
+Noch kein SQL schreiben.
+Noch keine Migration befüllen.
+Erst Scope klären.
