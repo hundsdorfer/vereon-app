@@ -1,26 +1,139 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  Theme system: controlled exclusively via data-theme attribute on <html>.
+  - data-theme="light"  → :root / [data-theme="light"] tokens apply
+  - data-theme="dark"   → [data-theme="dark"] tokens apply
+  - NO @media (prefers-color-scheme) rules anywhere in this file.
+  - prefers-color-scheme is used ONLY in the inline JS in layout.tsx,
+    and ONLY as the initial fallback when localStorage is empty.
+  - Once a manual choice is stored in localStorage, prefers-color-scheme
+    never overrides it.
+*/
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ======================================================
+   Design Tokens — Light Theme
+   ====================================================== */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Workspace */
+  --background:           #f4f6f8;
+  --foreground:           #0f172a;
+  --surface:              #ffffff;
+  --surface-muted:        #f1f5f9;
+  --border:               #e2e8f0;
+  --muted:                #cbd5e1;
+  --muted-foreground:     #64748b;
+
+  /* Brand — Green accent, sports-first */
+  --primary:              #16a34a;
+  --primary-foreground:   #ffffff;
+
+  /* Status */
+  --success:              #15803d;
+  --warning:              #b45309;
+  --danger:               #b91c1c;
+
+  /* Status subtle backgrounds — for badges, banners */
+  --success-subtle:       rgba(21, 128, 61, 0.10);
+  --warning-subtle:       rgba(180, 83, 9, 0.10);
+  --danger-subtle:        rgba(185, 28, 28, 0.10);
+
+  /* Navigation sidebar — intentionally always dark */
+  --nav-bg:               #111827;
+  --nav-fg:               #f9fafb;
+  --nav-muted:            #9ca3af;
+  --nav-border:           #1f2937;
+  --nav-active-fg:        #4ade80;
+  --nav-item-hover:       rgba(255, 255, 255, 0.06);
+  --nav-item-active:      rgba(74, 222, 128, 0.12);
 }
 
+/* ======================================================
+   Design Tokens — Dark Theme
+   ====================================================== */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background:           #0d1117;
+  --foreground:           #e2e8f0;
+  --surface:              #161b27;
+  --surface-muted:        #1e2433;
+  --border:               #2d3652;
+  --muted:                #334155;
+  --muted-foreground:     #8892a4;
+
+  --primary:              #4ade80;
+  --primary-foreground:   #052e16;
+
+  --success:              #22c55e;
+  --warning:              #f59e0b;
+  --danger:               #ef4444;
+
+  --success-subtle:       rgba(34, 197, 94, 0.12);
+  --warning-subtle:       rgba(245, 158, 11, 0.12);
+  --danger-subtle:        rgba(239, 68, 68, 0.12);
+
+  /* Sidebar slightly deeper in dark mode */
+  --nav-bg:               #0a0f1a;
+  --nav-fg:               #e2e8f0;
+  --nav-muted:            #64748b;
+  --nav-border:           #111827;
+  --nav-active-fg:        #4ade80;
+  --nav-item-hover:       rgba(255, 255, 255, 0.05);
+  --nav-item-active:      rgba(74, 222, 128, 0.10);
+}
+
+/* ======================================================
+   Tailwind v4 Theme Bridge
+   Maps CSS variables to Tailwind utility classes:
+   --color-surface → bg-surface, text-surface, border-surface
+   ====================================================== */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-surface:              var(--surface);
+  --color-surface-muted:        var(--surface-muted);
+  --color-border:               var(--border);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-success:              var(--success);
+  --color-warning:              var(--warning);
+  --color-danger:               var(--danger);
+  --color-success-subtle:       var(--success-subtle);
+  --color-warning-subtle:       var(--warning-subtle);
+  --color-danger-subtle:        var(--danger-subtle);
+  --color-nav-bg:               var(--nav-bg);
+  --color-nav-fg:               var(--nav-fg);
+  --color-nav-muted:            var(--nav-muted);
+  --color-nav-border:           var(--nav-border);
+  --color-nav-active-fg:        var(--nav-active-fg);
+  --color-nav-item-hover:       var(--nav-item-hover);
+  --color-nav-item-active:      var(--nav-item-active);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ======================================================
+   Base Styles
+   ====================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  border-color: var(--border);
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
