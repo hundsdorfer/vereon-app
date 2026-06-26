@@ -2,121 +2,100 @@
 
 ## Aktueller Stand
 
-Vereon hat die Datenbankfundament-Phase abgeschlossen.
-
 Abgeschlossen:
 
 * Next.js 16 Projekt steht
 * Supabase Client Foundation ist eingebaut
-* Docker Desktop läuft
-* Lokale Supabase-Instanz läuft
+* Docker Desktop läuft, lokale Supabase-Instanz läuft
 * `.env.local` ist lokal befüllt und wird nicht committed
-* Migration 001 `20260625190923_init_mvp0_core.sql` ist befüllt
-* `npx supabase db reset` wurde lokal erfolgreich ausgeführt
+* Migration 001 `init_mvp0_core` ist abgeschlossen und lokal verifiziert
+* Migration 002 `mvp0a_team_flows` ist abgeschlossen und lokal verifiziert
+* Auth/RPC-Testflow Migration 002 funktioniert:
+  Trainer erstellt Team → erstellt Einladungslink → Elternteil erstellt Kind + Join Request → Trainer approved → Player/Guardian/Assignment entstehen korrekt
 * TypeScript-Datenbanktypen wurden generiert
 * Lint und Build waren erfolgreich
-* `create_independent_team()` wurde lokal mit Auth-User getestet
-* `create_club()` wurde lokal mit Auth-User getestet
-* Migration 001 gilt als lokal verifiziert
+* Phase A UI-Fundament ist abgeschlossen:
+  * responsive AppShell mit Mobile Topbar und Bottom Navigation
+  * Light/Dark Theme über `data-theme`-Attribut
+  * localStorage-Key `vereon-theme`
+  * ThemeToggle funktioniert auf PC und echtem Smartphone
+  * Bottom Navigation, Safe Area und Touch Targets korrekt
+  * `allowedDevOrigins` in `next.config.ts` gesetzt — Handy-Hydration lokal funktioniert
+  * temporäre Debug-Seiten und Diagnoseanzeigen entfernt
+  * UI-Basiskomponenten (Button, Input, Label, Card, Badge, EmptyState, FormError, PageHeader)
 
 ## Aktuelle Hauptaufgabe
 
-Migration 002 planen: MVP 0A Self-Service Team Flow.
+Phase B.1 umsetzen: Routing- und Auth-Grundstruktur.
 
-Ziel von Migration 002 ist der erste echte Nutzungsflow für eigenständige Teams:
+Ziel: Die App soll lokal im Browser testbar Login/Register, geschützte App-Routen und Redirects unterstützen.
 
-Trainer erstellt Team
-→ Trainer erzeugt Einladungslink
-→ Eltern registrieren sich
-→ Eltern legen Kind an
-→ Beitrittsanfrage entsteht
-→ Trainer nimmt Kind an oder lehnt ab
+## Scope Phase B.1
 
-## Scope-Fragen für Migration 002
+Zu bauen:
 
-Vor dem SQL-Schreiben klären:
+* Route-Gruppen `(auth)` und `(app)`
+* Login-Seite mit `LoginForm`
+* Register-Seite mit `RegisterForm`
+* Auth-Layout (kein AppShell)
+* App-Layout mit AppShell
+* `/dashboard` Platzhalter
+* `/auth/callback/route.ts`
+* `src/actions/auth.ts`
+* Root `/` Redirect: eingeloggt → `/dashboard`, nicht eingeloggt → `/login`
+* Phase-A-Preview von `/` nach `/dev/ui-preview` verschieben
+* `proxy.ts` Route-Schutz:
+  * geschützt: `/dashboard`, `/teams`
+  * öffentlich: `/login`, `/register`, `/auth/callback`, `/join/*`, `/dev/ui-preview`
 
-* `players`: wahrscheinlich ja, minimal nötig für Kinderprofile
-* `team_invitation_links`: ja, Kernfeature MVP 0A
-* `team_join_requests`: ja, Kernfeature MVP 0A
-* `player_guardians`: kritisch prüfen, eventuell direkt nötig
-* `player_team_assignments`: kritisch prüfen, eventuell direkt nötig
-* `events`: eher spätere eigene Migration
-* `event_attendance`: erst nach stabilem `player_id`-Modell
-* 90-Tage-Löschlogik für abgelehnte/abgelaufene Anfragen: dokumentieren, technische Umsetzung prüfen
+Noch nicht bauen:
 
-## Voraussichtlicher Inhalt Migration 002
-
-Wahrscheinlich enthalten:
-
-* `players`
-* `team_invitation_links`
-* `team_join_requests`
-* RLS-Policies für neue Tabellen
-* Indexes für Token-Lookups und Status-Queries
-* DSGVO-Regeln für Join Requests
-
-Noch offen:
-
-* `player_guardians`
-* `player_team_assignments`
-* `events`
-* `event_attendance`
+* Kein Team-erstellen-Flow in der UI
+* Kein `create_independent_team()` in der UI
+* Kein Einladungslink-Flow
+* Kein Join Request Flow
+* Kein echtes Team-Dashboard
+* Keine neue Migration
 
 ## Erlaubt
 
-* Dokumentation prüfen
-* Migration 001 lesen
-* Migrationsplan 002 erstellen
-* bestehende Architektur kritisch prüfen
-* lokale Supabase-Struktur analysieren
+* Dokumentation lesen
+* Phase B.1 planen
+* Phase B.1 App-Dateien umsetzen
 * Lint und Build ausführen
 
 ## Verboten
 
-* Keine SQL-Migration befüllen ohne ausdrückliche Freigabe
-* Kein `npx supabase db reset` ohne ausdrückliche Freigabe
+* Keine Migration ändern
+* Kein `npx supabase db reset`
 * Kein `npx supabase db push`
-* Kein Remote-Linking
-* Keine Remote-Datenbank verändern
+* Keine Remote-Datenbank
 * Keine Secrets anzeigen
 * `.env.local` nicht anzeigen
-* Keine Anwendungscode-Features bauen
-* Kein Login-UI bauen
-* Keine Designänderungen
 * Keine Packages installieren
+* Keine Design-Neuerfindung
+* Phase-A-Design, Dark Mode und Mobile nicht beschädigen
 
 ## Relevante Dokumente
-
-Claude Code soll zuerst lesen:
 
 * `CLAUDE.md`
 * `docs/PROJECT_BRIEF.md`
 * `docs/CURRENT_TASK.md`
-
-Für Migration 002 zusätzlich:
-
-* `docs/DATABASE_MODEL.md`
-* `docs/ROLES_AND_PERMISSIONS.md`
-* `docs/MVP_SCOPE.md`
+* `docs/SUPABASE_STRATEGY.md`
 * `docs/SECURITY.md`
-* `docs/DSGVO_PRIVACY_MODEL.md`
 * `docs/USER_FLOWS.md`
+* `docs/DATABASE_MODEL.md`
 
 ## Migrationsübersicht
 
 | Migration               | Inhalt                                                   | Status                              |
 | ----------------------- | -------------------------------------------------------- | ----------------------------------- |
 | `001_init_mvp0_core`    | Kern-Tabellen, Rollen, RLS, Funktionen                   | Abgeschlossen und lokal verifiziert |
-| `002_mvp0a_team_flows`  | Self-Service Team Flow                                   | Als nächstes planen                 |
+| `002_mvp0a_team_flows`  | Self-Service Team Flow                                   | Abgeschlossen und lokal verifiziert |
 | `003_mvp0b_club_flows`  | Vereinsflows, Vereins-Einladungen                        | Offen                               |
 | `004_mvp1_players_full` | vollständiges Spieler-/Elternmodell, Events, Anwesenheit | Offen                               |
 | `005_mvp2_affiliation`  | Team-Zuordnung zu verifiziertem Verein                   | Offen                               |
 
 ## Nächster Schritt
 
-Finalen Plan für Migration 002 erstellen.
-
-Noch kein SQL schreiben.
-Noch keine Migration befüllen.
-Erst Scope klären.
+Phase B.1 Routing- und Auth-Grundstruktur umsetzen.
