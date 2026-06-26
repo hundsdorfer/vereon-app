@@ -4,73 +4,47 @@
 
 Abgeschlossen:
 
-* Next.js 16 Projekt steht
-* Supabase Client Foundation ist eingebaut
-* Docker Desktop läuft, lokale Supabase-Instanz läuft
-* `.env.local` ist lokal befüllt und wird nicht committed
-* Migration 001 `init_mvp0_core` ist abgeschlossen und lokal verifiziert
-* Migration 002 `mvp0a_team_flows` ist abgeschlossen und lokal verifiziert
-* Auth/RPC-Testflow Migration 002 funktioniert:
-  Trainer erstellt Team → erstellt Einladungslink → Elternteil erstellt Kind + Join Request → Trainer approved → Player/Guardian/Assignment entstehen korrekt
-* TypeScript-Datenbanktypen wurden generiert
-* Phase A UI-Fundament ist abgeschlossen und committed:
-  * responsive AppShell mit Mobile Topbar und Bottom Navigation
-  * Light/Dark Theme über `data-theme`-Attribut, localStorage-Key `vereon-theme`
-  * ThemeToggle funktioniert auf PC und echtem Smartphone
-  * Bottom Navigation, Safe Area und Touch Targets korrekt
-  * `allowedDevOrigins` in `next.config.ts` gesetzt — Handy-Hydration lokal funktioniert
-  * Debug-Reste entfernt
-  * UI-Basiskomponenten (Button, Input, Label, Card, Badge, EmptyState, FormError, PageHeader)
-* Phase B.1 Routing- und Auth-Grundstruktur ist abgeschlossen und committed:
-  * Route-Gruppen `(auth)` und `(app)`
-  * Login-Seite, Register-Seite, Auth-Layout (kein AppShell)
-  * App-Layout mit AppShell, `/dashboard` Platzhalter
-  * `/auth/callback/route.ts` — PKCE Code Exchange
-  * `src/actions/auth.ts` — signIn/signUp/signOut Server Actions
-  * LoginForm und RegisterForm als Client Components (`useActionState`)
-  * Root `/` Redirect: eingeloggt → `/dashboard`, nicht eingeloggt → `/login`
-  * Phase-A-Preview nach `/dev/ui-preview` verschoben
-  * `proxy.ts` Route-Schutz aktiv (Open-Redirect-Schutz eingebaut)
-  * Login/Register/Logout/Redirects lokal getestet
+* Migration 001 `init_mvp0_core` — lokal verifiziert
+* Migration 002 `mvp0a_team_flows` — lokal verifiziert
+* Phase A UI-Fundament — committed:
+  * responsive AppShell, Light/Dark Theme, Mobile, Safe Area, Touch Targets, allowedDevOrigins, UI-Basiskomponenten
+* Phase B.1 Routing/Auth — committed:
+  * Login/Register, Auth Actions, Auth Callback, Route-Gruppen, /dashboard Platzhalter, Root Redirect, proxy.ts Route-Schutz
+* Phase B.2 AppShell UX Cleanup — committed:
+  * User-E-Mail in AppShell, Logout auf Desktop + Mobile, aktive Navigation, /teams Platzhalterseite, kein toter Nav-Link
 
 ## Aktuelle Hauptaufgabe
 
-Phase B.2 umsetzen: Auth/AppShell UX Cleanup.
+Phase C planen und umsetzen: Team erstellen + eigene Teams anzeigen.
 
-Ziel: Die eingeloggte App-Grundstruktur soll sauber bedienbar sein, bevor Phase C echte Teamfunktionen baut.
+Ziel: Ein eingeloggter User soll über die Browser-App ein eigenständiges Team erstellen und seine eigenen Teams sehen können.
 
-## Scope Phase B.2
+## Scope Phase C
 
 Zu bauen:
 
-* User-E-Mail oder Accountbereich in AppShell anzeigen
-* Logout fest in AppShell integrieren (nicht nur als Button auf /dashboard)
-* Aktive Navigation markieren (aktuell aktiver Link hervorheben)
-* Keine AppShell-Hauptnavigation darf auf 404 führen
-* `/teams` als geschützte Platzhalterseite anlegen, falls nötig
-
-Zu prüfen / sicherstellen:
-
-* `/dev/ui-preview` öffentlich belassen, aber nicht in der Hauptnavigation sichtbar
-* Route-Schutz nochmals verifizieren:
-  * `/dashboard` geschützt ✓
-  * `/teams` geschützt
-  * `/login` und `/register` für eingeloggte User → `/dashboard` ✓
-  * `/join/*` bleibt öffentlich ✓
+* Team-Erstellungsformular (verwendet `create_independent_team()` RPC)
+* `/teams` von Platzhalter zu echter Teamübersicht erweitern
+* eigene Teams über bestehende Tabellen laden und anzeigen
+* nach Team-Erstellung zu `/teams` oder Teamseite redirecten
+* `/dashboard` mit sinnvollem Einstieg zu Teams erweitern
 
 Noch nicht bauen:
 
-* Kein Team-erstellen-Flow
-* Kein `create_independent_team()` in der UI
 * Kein Einladungslink-Flow
-* Kein Join Request Flow
-* Kein echtes Team-Dashboard
+* Kein `/join/[token]` Flow
+* Kein `submit_join_request()` in der UI
+* Kein `approve_join_request()` in der UI
 * Keine neue Migration
+* Keine Club-Flows
+* Keine Events/Anwesenheit
 
 ## Erlaubt
 
-* Phase B.2 planen
-* Phase B.2 App-Dateien umsetzen
+* Phase C planen und umsetzen
+* bestehende Supabase-Clients verwenden
+* RPC `create_independent_team()` verwenden
+* bestehende Tabellen lesen
 * Lint und Build ausführen
 
 ## Verboten
@@ -82,19 +56,14 @@ Noch nicht bauen:
 * Keine Secrets anzeigen
 * `.env.local` nicht anzeigen
 * Keine Packages installieren
-* Keine Design-Neuerfindung
 * Phase-A-Design, Dark Mode und Mobile nicht beschädigen
-* Keine Team-RPCs verwenden
+* Kein Einladungslink-/Join-Request-Scope
 
 ## Relevante Dokumente
 
-* `CLAUDE.md`
-* `docs/PROJECT_BRIEF.md`
-* `docs/CURRENT_TASK.md`
-* `docs/SUPABASE_STRATEGY.md`
-* `docs/SECURITY.md`
-* `docs/USER_FLOWS.md`
-* `docs/DATABASE_MODEL.md`
+* `CLAUDE.md`, `docs/PROJECT_BRIEF.md`, `docs/CURRENT_TASK.md`
+* `docs/SUPABASE_STRATEGY.md`, `docs/SECURITY.md`
+* `docs/USER_FLOWS.md`, `docs/DATABASE_MODEL.md`
 
 ## Migrationsübersicht
 
@@ -108,4 +77,4 @@ Noch nicht bauen:
 
 ## Nächster Schritt
 
-Phase B.2 Auth/AppShell UX Cleanup umsetzen.
+Phase C zuerst kurz planen, dann nach Bestätigung umsetzen.
