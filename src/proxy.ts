@@ -1,14 +1,17 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-// Public routes — accessible without authentication.
-// Protected route enforcement is added during the auth implementation step.
-//
-// Public:  '/', '/login', '/register', '/auth/callback', '/invite/*'
-// Static:  excluded via matcher below
+// Routen, die ohne Login zugänglich sind
+const PUBLIC_ROUTES = new Set(['/', '/login', '/register', '/auth/callback'])
+// Pfad-Präfixe, die ohne Login zugänglich sind
+const PUBLIC_PREFIXES = ['/join/', '/dev/']
+
+function isPublic(pathname: string): boolean {
+  if (PUBLIC_ROUTES.has(pathname)) return true
+  return PUBLIC_PREFIXES.some(p => pathname.startsWith(p))
+}
 
 export async function proxy(request: NextRequest) {
-  // Skip session refresh when Supabase is not yet configured (before .env.local is set up).
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -16,13 +19,30 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const { supabaseResponse } = await updateSession(request)
+  const { supabaseResponse, user } = await updateSession(request)
+  const pathname = request.nextUrl.pathname
+
+  // Nicht eingeloggt → geschützte Route → /login mit redirect-Param
+  if (!user && !isPublic(pathname)) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(url)
+  }
+
+  // Eingeloggt → Auth-Seiten → /dashboard
+  if (user && (pathname === '/login' || pathname === '/register')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    url.search = ''
+    return NextResponse.redirect(url)
+  }
+
   return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    // Match all routes except Next.js internals and static files.
     '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
