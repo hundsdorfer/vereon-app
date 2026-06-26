@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { signOutAction } from '@/actions/auth'
 import { PageHeader } from '@/components/ui/PageHeader'
-import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -12,17 +11,19 @@ export default async function DashboardPage() {
       <PageHeader
         title="Dashboard"
         subtitle={user?.email ?? ''}
-        action={
-          <form action={signOutAction}>
-            <Button type="submit" variant="secondary" size="sm">
-              Abmelden
-            </Button>
-          </form>
-        }
       />
-      <p className="text-sm text-muted-foreground">
-        Team-Features folgen in Phase B.2.
-      </p>
+
+      <div className="mt-6 rounded-lg border border-border bg-surface p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Meine Teams</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Eigenständige Teams erstellen und Spieler einladen — folgt in Phase C.
+            </p>
+          </div>
+          <Badge variant="outline" className="flex-shrink-0">Kommt als Nächstes</Badge>
+        </div>
+      </div>
     </div>
   )
 }
