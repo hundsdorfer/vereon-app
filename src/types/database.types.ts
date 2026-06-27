@@ -309,28 +309,46 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          date_of_birth: string | null
           email: string | null
+          first_name: string | null
           full_name: string | null
           id: string
+          last_name: string | null
+          onboarding_role: string | null
           phone: string | null
+          privacy_accepted_at: string | null
+          terms_accepted_at: string | null
           updated_at: string
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
           id: string
+          last_name?: string | null
+          onboarding_role?: string | null
           phone?: string | null
+          privacy_accepted_at?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
           id?: string
+          last_name?: string | null
+          onboarding_role?: string | null
           phone?: string | null
+          privacy_accepted_at?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string
         }
         Relationships: []
