@@ -1,7 +1,12 @@
-select r.key
-from public.club_memberships cm
-join public.club_member_roles cmr on cmr.club_membership_id = cm.id
-join public.roles r on r.id = cmr.role_id
-where cm.club_id = (
-  select id from public.clubs where slug = 'fc-testverein'
-);
+select
+  tm.id as membership_id,
+  tm.team_id,
+  t.name as team_name,
+  tm.user_id,
+  u.email,
+  tm.created_at
+from public.team_memberships tm
+join public.teams t on t.id = tm.team_id
+join auth.users u on u.id = tm.user_id
+order by tm.created_at desc
+limit 10;
