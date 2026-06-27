@@ -61,6 +61,7 @@ export default async function TeamDetailPage({
     .single()
 
   if (error || !team) {
+
     if (error && error.code !== 'PGRST116') {
       console.error('Team detail query error', {
         message: error.message,
@@ -71,6 +72,12 @@ export default async function TeamDetailPage({
     }
     notFound()
   }
+
+  const { count: pendingRequestCount } = await supabase
+    .from('team_join_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('team_id', teamId)
+    .eq('status', 'pending')
 
   const statusVariant = STATUS_VARIANT[team.status] ?? 'default'
   const statusLabel = STATUS_LABEL[team.status] ?? team.status
@@ -164,13 +171,31 @@ export default async function TeamDetailPage({
           <CardHeader>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">Beitrittsanfragen</h2>
-              <Badge variant="outline">Folgt später</Badge>
+              {pendingRequestCount !== null && pendingRequestCount > 0 && (
+                <Badge variant="warning">{pendingRequestCount} offen</Badge>
+              )}
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Hier kannst du Beitrittsanfragen von Eltern annehmen oder ablehnen.
-            </p>
+            {pendingRequestCount !== null && pendingRequestCount > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {pendingRequestCount === 1
+                  ? 'Eine Person möchte deinem Team beitreten.'
+                  : `${pendingRequestCount} Personen möchten deinem Team beitreten.`}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Noch keine offenen Anfragen.
+              </p>
+            )}
+            <div className="mt-4">
+              <Link
+                href={`/teams/${team.id}/requests`}
+                className="inline-flex items-center justify-center rounded-md bg-surface border border-border px-4 py-2 text-sm font-medium text-foreground transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
+              >
+                Anfragen ansehen
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>

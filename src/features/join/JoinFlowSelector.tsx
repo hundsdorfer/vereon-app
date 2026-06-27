@@ -1,20 +1,21 @@
 'use client'
 
 import { useState } from 'react'
-import { JoinSelfForm } from '@/features/join/JoinSelfForm'
+import { JoinSelfForm, type ProfileData } from '@/features/join/JoinSelfForm'
 import { JoinGuardianForm } from '@/features/join/JoinGuardianForm'
 
 type Mode = 'selector' | 'self' | 'guardian'
 
 interface Props {
   code: string
+  profile: ProfileData | null
 }
 
-export function JoinFlowSelector({ code }: Props) {
+export function JoinFlowSelector({ code, profile }: Props) {
   const [mode, setMode] = useState<Mode>('selector')
 
   if (mode === 'self') {
-    return <JoinSelfForm code={code} onBack={() => setMode('selector')} />
+    return <JoinSelfForm code={code} profile={profile} onBack={() => setMode('selector')} />
   }
 
   if (mode === 'guardian') {

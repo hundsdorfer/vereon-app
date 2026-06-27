@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { JoinFlowSelector } from '@/features/join/JoinFlowSelector'
+import type { ProfileData } from '@/features/join/JoinSelfForm'
 import type { Json } from '@/types/database.types'
 
 export const dynamic = 'force-dynamic'
@@ -53,6 +54,16 @@ export default async function JoinPage({
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  let profile: ProfileData | null = null
+  if (user) {
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, date_of_birth')
+      .eq('id', user.id)
+      .single()
+    profile = profileData ?? null
+  }
 
   const redirectParam = encodeURIComponent(`/join/${code}`)
 
@@ -141,7 +152,7 @@ export default async function JoinPage({
                     </h2>
                   </CardHeader>
                   <CardContent>
-                    <JoinFlowSelector code={code} />
+                    <JoinFlowSelector code={code} profile={profile} />
                   </CardContent>
                 </Card>
               )}

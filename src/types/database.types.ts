@@ -268,6 +268,7 @@ export type Database = {
           birth_year: number | null
           created_at: string
           created_by: string | null
+          date_of_birth: string | null
           first_name: string
           id: string
           is_active: boolean
@@ -281,6 +282,7 @@ export type Database = {
           birth_year?: number | null
           created_at?: string
           created_by?: string | null
+          date_of_birth?: string | null
           first_name: string
           id?: string
           is_active?: boolean
@@ -294,6 +296,7 @@ export type Database = {
           birth_year?: number | null
           created_at?: string
           created_by?: string | null
+          date_of_birth?: string | null
           first_name?: string
           id?: string
           is_active?: boolean
@@ -767,26 +770,14 @@ export type Database = {
       }
       submit_join_request_guardian: {
         Args: {
-          p_birth_year?: number
+          p_child_date_of_birth: string
           p_code: string
           p_first_name: string
-          p_jersey_nr?: number
           p_last_name: string
-          p_position?: string
         }
         Returns: string
       }
-      submit_join_request_self: {
-        Args: {
-          p_birth_year?: number
-          p_code: string
-          p_first_name: string
-          p_jersey_nr?: number
-          p_last_name: string
-          p_position?: string
-        }
-        Returns: string
-      }
+      submit_join_request_self: { Args: { p_code: string }; Returns: string }
       update_player_basic_info: {
         Args: {
           p_birth_year?: number

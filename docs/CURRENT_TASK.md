@@ -49,33 +49,27 @@ Abgeschlossen:
   * Legal-Platzhalterseiten unter `/legal/terms` und `/legal/privacy`
   * Formularwerte bleiben bei Validierungsfehlern erhalten; Passwort und Checkboxen werden zurückgesetzt
   * Migration `20260628000000_add_profile_registration_fields` — lokal anwenden mit `npx supabase migration up`
+* Phase G.1 — Trainer sieht Beitrittsanfragen — abgeschlossen:
+  * `/teams/[teamId]/requests` Seite mit Approve/Reject-Aktionen
+  * Team-Detailseite zeigt Badge mit Anzahl offener Anfragen und CTA
+  * `approve_join_request` und `reject_join_request` Server Actions
+* Phase H.1 Profilbasierter Join-Flow — implementiert, Migration lokal anwenden:
+  * Self-Player: Profildaten (Name, Geburtsdatum) read-only anzeigen, kein Name-Spoofing
+  * Guardian: Pflicht-Datumsfeld `date_of_birth` statt optionalem `birth_year`
+  * Migration `20260629000000_add_join_flow_improvements` — lokal anwenden mit `npx supabase migration up`
 
 ## Aktuelle Hauptaufgabe
 
-Phase G.1 — Trainer sieht Beitrittsanfragen und kann annehmen oder ablehnen
+Keine. Nächste Schritte: Migration einspielen, Typen generieren, Lint + Build prüfen.
 
-### Ziel
+### Nächste Schritte (Benutzer führt aus)
 
-Team-Owner/Trainer können offene Beitrittsanfragen eines Teams einsehen und entscheiden.
-
-### Umfang
-
-* `/teams/[teamId]/requests` Seite bauen
-* Team-Detailseite um CTA „Beitrittsanfragen" erweitern
-* Pending Join Requests laden
-* Self-Player und Guardian-Child verständlich unterscheiden (keine technischen Begriffe im UI)
-* `approve_join_request()` über Server Action
-* `reject_join_request()` über Server Action
-* Nach Aktion revalidieren und Liste aktualisieren
-* keine neue Migration, außer ein echter RLS-/Leseblocker wird gefunden und vorher gemeldet
-
-### Nicht bauen
-
-* keine vollständige Spielerliste
-* keine Spielerprofilseite
-* keine Kommentare beim Ablehnen
-* keine Benachrichtigungen
-* kein QR-Code
+```
+npx supabase migration up
+npx supabase gen types typescript --local | Set-Content -Path .\src\types\database.types.ts -Encoding UTF8
+npm run lint
+npm run build
+```
 
 ## Erlaubt
 
@@ -100,6 +94,7 @@ Team-Owner/Trainer können offene Beitrittsanfragen eines Teams einsehen und ent
 | `20260627100000_add_team_public_code`  | public_code, generate_team_code(), create_independent_team() erweitert, Backfill         | Abgeschlossen und lokal verifiziert |
 | `20260627200000_add_join_request_type` | request_type, requester_user_id, guardian_user_id nullable, RLS, 3 neue Funktionen, Fix  | Abgeschlossen und lokal verifiziert |
 | `20260628000000_add_profile_registration_fields` | first_name, last_name, date_of_birth, onboarding_role, terms_accepted_at, privacy_accepted_at in profiles; handle_new_user Trigger aktualisiert | Lokal anwenden: `npx supabase migration up` |
+| `20260629000000_add_join_flow_improvements`      | players.date_of_birth; DROP alter submit_join_request_self/guardian (6-param); neue Funktionen ohne Name-Spoofing | Lokal anwenden: `npx supabase migration up` |
 | `003_mvp0b_club_flows`                 | Vereinsflows, Vereins-Einladungen                                                        | Offen                               |
 | `004_mvp1_players_full`                | vollständiges Spieler-/Elternmodell, Events, Anwesenheit                                 | Offen                               |
 | `005_mvp2_affiliation`                 | Team-Zuordnung zu verifiziertem Verein                                                   | Offen                               |
