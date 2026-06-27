@@ -33,56 +33,49 @@ Abgeschlossen:
   * `CreateInvitationLinkForm` Client Component mit `useActionState`
   * `/teams/[teamId]/invite` Formularseite mit One-Time-Token-Anzeige
   * CTA auf Team-Detailseite
-* Phase E.1A Automatischer Einladungscode — implementiert, lokal getestet, lint/build ok:
-  * Migration `20260627100000_add_team_public_code` — lokal angewendet
-  * `public_code` Spalte in `team_invitation_links` (Klartext, dauerhaft sichtbar)
-  * `token_hash` und `expires_at` nullable (backward-compat), CHECK-Constraint `til_has_identifier`
-  * `generate_team_code()` SECURITY DEFINER — Format `VRN-XXXX-XXXX-XXXX`, pgcrypto via `extensions.gen_random_bytes()`, 31-Zeichen-Zeichensatz (kein O/0/I/1/L), Keyspace 31¹² ≈ 1,8×10¹⁷
-  * `create_independent_team()` CREATE OR REPLACE — erstellt Code atomar bei Team-Erstellung
-  * `get_team_invite_code(p_team_id uuid)` — SQL-Funktion (kein SECURITY DEFINER), RLS greift
-  * Backfill aktiver Teams ohne aktiven public_code in der Migration
-  * `InviteCodeDisplay.tsx` — zeigt Code + Beitrittslink, je ein Copy-Button
-  * `/teams/[teamId]/invite` umgebaut: kein Formular, liest public_code direkt aus DB
-  * CTA-Text auf Team-Detailseite: „Spieler & Eltern einladen"
-  * `database.types.ts` aktualisiert: `public_code`, `token_hash`/`expires_at` nullable, neue RPCs
-* Phase F.1 Join Request Datenmodell — implementiert, lokal getestet, lint/build ok:
-  * Migration `20260627200000_add_join_request_type` — lokal angewendet
-  * `team_join_requests.request_type` TEXT NOT NULL CHECK IN ('self_player', 'guardian_child'), DEFAULT 'guardian_child'
-  * `team_join_requests.requester_user_id` UUID NOT NULL REFERENCES auth.users — universelles „Wer hat eingereicht"-Feld für RLS
-  * `team_join_requests.guardian_user_id` nullable (war NOT NULL) — für self_player leer
-  * Konsistenz-Constraint `tjr_request_type_consistent`: `(request_type = 'guardian_child') = (guardian_user_id IS NOT NULL)`
-  * Backfill: `requester_user_id = guardian_user_id` für bestehende Zeilen
-  * RLS: `tjr_select_guardian` → `tjr_select_requester` (requester_user_id = auth.uid())
-  * RLS: `players_select_own` neu (user_id = auth.uid(), für self_player nach Genehmigung)
-  * `get_public_invitation_info_by_code(p_code text)` SECURITY DEFINER STABLE — gibt jsonb `{valid, reason?, team_name?, age_group?, gender?}` zurück, keine internen IDs
-  * `submit_join_request_self(p_code, p_first_name, p_last_name, ...)` SECURITY DEFINER — players.user_id = auth.uid(), kein player_guardians-Eintrag, prüft Duplikat-pending + aktive Mitgliedschaft, FOR UPDATE Lock
-  * `submit_join_request_guardian(p_code, p_first_name, p_last_name, ...)` SECURITY DEFINER — players.user_id = NULL, legt player_guardians mit verified_at = now() an (DSGVO-Nachweis), FOR UPDATE Lock
-  * `withdraw_join_request()` CREATE OR REPLACE — Sicherheitsfix: Prüfung auf `requester_user_id` statt `guardian_user_id`
-  * `database.types.ts` aktualisiert: alle neuen Spalten + 5 neue RPC-Typen
+* Phase E.1A Automatischer Einladungscode — abgeschlossen, lokal verifiziert, lint/build ok
+* Phase F.1 Join Request Datenmodell — abgeschlossen, lokal verifiziert, lint/build ok
+* Phase F.2 Öffentliche `/join/[code]` Seite — abgeschlossen, lokal verifiziert, lint/build ok:
+  * gültiger Code zeigt Teaminfo
+  * Login/Register mit Redirect zurück zum Join-Link
+  * Auswahl: Selbstbeitritt oder Kind anmelden
+  * Self-Player- und Guardian-Child-Anfrage funktionieren
+  * Position und Trikotnummer werden nicht abgefragt
+* Phase B.3 Vollständiges Registrierungsprofil — abgeschlossen, lokal verifiziert, lint/build ok:
+  * Felder: Vorname, Nachname, E-Mail, Geburtsdatum, Telefonnummer, Rolle, Passwort
+  * Passwort: mindestens 8 Zeichen, Groß-/Kleinbuchstabe, Zahl, Sonderzeichen
+  * E-Mail- und Telefonnummernvalidierung verschärft
+  * Nutzungsbedingungen und Datenschutzerklärung als Pflicht-Checkboxen mit Links
+  * Legal-Platzhalterseiten unter `/legal/terms` und `/legal/privacy`
+  * Formularwerte bleiben bei Validierungsfehlern erhalten; Passwort und Checkboxen werden zurückgesetzt
+  * Migration `20260628000000_add_profile_registration_fields` — lokal anwenden mit `npx supabase migration up`
 
 ## Aktuelle Hauptaufgabe
 
-Phase F.2 — Öffentliche `/join/[code]` Seite
+Phase G.1 — Trainer sieht Beitrittsanfragen und kann annehmen oder ablehnen
 
-### Was zu bauen ist
+### Ziel
 
-* `/join/[code]` — öffentliche Route (bereits in `PUBLIC_PREFIXES` in `proxy.ts`)
-* Nicht eingeloggter User → Redirect zu `/login?redirect=/join/[code]` (oder `/register?redirect=...`)
-* Eingeloggter User sieht Team-Info via `get_public_invitation_info_by_code()` + Auswahl:
-  * „Ich trete selbst bei" → `JoinSelfForm`
-  * „Ich melde mein Kind an" → `JoinGuardianForm`
-* `JoinFlowSelector.tsx` — Client Component, steuert welches Formular sichtbar ist
-* `JoinSelfForm.tsx` — Formular mit `useActionState`, ruft `submitJoinRequestSelfAction` auf
-* `JoinGuardianForm.tsx` — Formular mit `useActionState`, ruft `submitJoinRequestGuardianAction` auf
-* `src/actions/join.ts` — `submitJoinRequestSelfAction` und `submitJoinRequestGuardianAction` via RPC
+Team-Owner/Trainer können offene Beitrittsanfragen eines Teams einsehen und entscheiden.
+
+### Umfang
+
+* `/teams/[teamId]/requests` Seite bauen
+* Team-Detailseite um CTA „Beitrittsanfragen" erweitern
+* Pending Join Requests laden
+* Self-Player und Guardian-Child verständlich unterscheiden (keine technischen Begriffe im UI)
+* `approve_join_request()` über Server Action
+* `reject_join_request()` über Server Action
+* Nach Aktion revalidieren und Liste aktualisieren
+* keine neue Migration, außer ein echter RLS-/Leseblocker wird gefunden und vorher gemeldet
 
 ### Nicht bauen
 
-* Kein Trainer-Approval-UI (Beitrittsanfragen-Dashboard)
-* Kein QR-Code
-* Keine neue Migration
-* Kein db reset / db push / Remote-DB-Zugriff
-* Keine neuen Packages
+* keine vollständige Spielerliste
+* keine Spielerprofilseite
+* keine Kommentare beim Ablehnen
+* keine Benachrichtigungen
+* kein QR-Code
 
 ## Erlaubt
 
@@ -106,6 +99,7 @@ Phase F.2 — Öffentliche `/join/[code]` Seite
 | `fix_authenticated_table_grants`       | SELECT-Grants für authenticated auf alle Tabellen                                        | Abgeschlossen und lokal verifiziert |
 | `20260627100000_add_team_public_code`  | public_code, generate_team_code(), create_independent_team() erweitert, Backfill         | Abgeschlossen und lokal verifiziert |
 | `20260627200000_add_join_request_type` | request_type, requester_user_id, guardian_user_id nullable, RLS, 3 neue Funktionen, Fix  | Abgeschlossen und lokal verifiziert |
+| `20260628000000_add_profile_registration_fields` | first_name, last_name, date_of_birth, onboarding_role, terms_accepted_at, privacy_accepted_at in profiles; handle_new_user Trigger aktualisiert | Lokal anwenden: `npx supabase migration up` |
 | `003_mvp0b_club_flows`                 | Vereinsflows, Vereins-Einladungen                                                        | Offen                               |
 | `004_mvp1_players_full`                | vollständiges Spieler-/Elternmodell, Events, Anwesenheit                                 | Offen                               |
 | `005_mvp2_affiliation`                 | Team-Zuordnung zu verifiziertem Verein                                                   | Offen                               |
