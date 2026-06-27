@@ -22,40 +22,56 @@ Abgeschlossen:
   * `revalidatePath` nach Team-Erstellung
   * `force-dynamic` auf /teams und /dashboard
   * Grant-Hotfix: SELECT-Grants für `authenticated` auf alle relevanten Tabellen
+* Phase D Team-Detailseite — committed:
+  * `/teams/[teamId]` lädt Teamdaten serverseitig via RLS
+  * Teamname, Altersgruppe, Geschlecht, Typ, Status, Erstellungsdatum
+  * `notFound()` bei fehlendem Zugriff oder unbekannter ID
+  * Teams in `/teams` sind klickbar (ganzer Card-Bereich verlinkt)
+  * Platzhalterbereiche für Spieler, Einladungslink, Beitrittsanfragen
 
 ## Aktuelle Hauptaufgabe
 
-Phase D planen und umsetzen: Team-Detailseite `/teams/[teamId]`.
+Phase E planen und umsetzen: Einladungslink für ein Team erstellen.
 
-Ziel: Ein eingeloggter User kann ein Team aus der Teamübersicht öffnen und eine einfache Team-Detailseite sehen.
+Ziel: Ein Team-Owner/Trainer kann aus der Team-Detailseite heraus einen Einladungslink erzeugen und diesen an Eltern weitergeben.
 
-## Scope Phase D
+## Scope Phase E
 
 ### Zu bauen
 
-* `src/app/(app)/teams/[teamId]/page.tsx` — Server Component
-  * Teamdaten serverseitig laden (`id`, `name`, `age_group`, `gender`, `ownership_type`, `status`, `created_at`)
-  * RLS filtert automatisch — kein Team-Mitglied → 404 oder Redirect
-  * Teamname, Altersgruppe, Geschlecht, Status, Typ anzeigen
-  * Navigation zurück zu `/teams`
-  * Vorbereitete (leere) Bereiche für: Spieler, Einladungslink, Beitrittsanfragen
-  * `force-dynamic`
+* `src/app/(app)/teams/[teamId]/invite/page.tsx` — Server Component, Formularseite
+* `src/features/teams/CreateInviteLinkForm.tsx` — Client Component mit `useActionState`
+* `src/actions/team.ts` erweitern — Server Action `createInviteLinkAction`
+  * Ruft bestehende RPC `create_invitation_link()` auf
+  * Parameter: `p_team_id`, `p_max_uses` (optional), `p_expires_in_days` (optional)
+  * Gibt nach Erfolg den fertigen Link zurück (kein Redirect)
+* Team-Detailseite `/teams/[teamId]` — CTA im Einladungslink-Platzhalterbereich ergänzen
+* Nach Erstellung: Link anzeigen, kopierbar machen (kein erneuter DB-Aufruf möglich — token wird nur einmal angezeigt)
+* Bestehende Links optional als Metadaten anzeigen (Anzahl, Ablaufdatum), raw token nicht rekonstruierbar
 
-### Nicht in Phase D
+### Produktprinzipien für Phase E
 
-* Kein Einladungslink-Flow
-* Kein `/join/[token]`
-* Kein `submit_join_request()` / `approve_join_request()`
+* UI darf nicht datenbankmäßig wirken — einfache deutsche Begriffe
+* Nutzerführung vor Rohdaten
+* Mobile-first
+* Formularbegriffe: „Maximale Einladungen" (statt `max_uses`), „Gültig für X Tage" (statt `expires_in_days`)
+
+### Nicht in Phase E
+
+* Kein `/join/[token]` Flow
+* Kein Elternformular
+* Kein `submit_join_request()` in der UI
+* Kein `approve_join_request()` in der UI
 * Kein Spieler-/Elternflow
-* Kein echtes Spielerlistung
 * Keine neue Migration
 * Kein db reset / db push
 
 ## Erlaubt
 
-* Phase D planen und App-Dateien umsetzen
+* Phase E planen und App-Dateien umsetzen
 * bestehende Supabase-Clients verwenden (`src/lib/supabase/server.ts`)
-* Teams über bestehende Tabellen lesen
+* RPC `create_invitation_link()` aufrufen
+* bestehende Tabellen lesen (`team_invitation_links`)
 * Lint und Build ausführen
 
 ## Verboten
@@ -68,7 +84,7 @@ Ziel: Ein eingeloggter User kann ein Team aus der Teamübersicht öffnen und ein
 * `.env.local` nicht anzeigen
 * Keine Packages installieren
 * Phase-A-Design, Dark Mode und Mobile nicht beschädigen
-* Kein Einladungslink-/Join-Request-Scope in Phase D
+* Kein Join-Request-Scope in Phase E
 
 ## Migrationsübersicht
 
@@ -83,4 +99,4 @@ Ziel: Ein eingeloggter User kann ein Team aus der Teamübersicht öffnen und ein
 
 ## Nächster Schritt
 
-Phase D kurz planen, dann nach Bestätigung umsetzen.
+Phase E kurz planen, dann nach Bestätigung umsetzen.
