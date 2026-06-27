@@ -483,10 +483,12 @@ export type Database = {
       team_join_requests: {
         Row: {
           created_at: string
-          guardian_user_id: string
+          guardian_user_id: string | null
           id: string
           invitation_link_id: string | null
           player_id: string | null
+          request_type: string
+          requester_user_id: string
           reviewed_at: string | null
           reviewed_by: string | null
           status: string
@@ -494,10 +496,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          guardian_user_id: string
+          guardian_user_id?: string | null
           id?: string
           invitation_link_id?: string | null
           player_id?: string | null
+          request_type?: string
+          requester_user_id: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -505,10 +509,12 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          guardian_user_id?: string
+          guardian_user_id?: string | null
           id?: string
           invitation_link_id?: string | null
           player_id?: string | null
+          request_type?: string
+          requester_user_id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: string
@@ -705,6 +711,10 @@ export type Database = {
       }
       generate_team_code: { Args: never; Returns: string }
       get_invitation_link_info: { Args: { p_token: string }; Returns: Json }
+      get_public_invitation_info_by_code: {
+        Args: { p_code: string }
+        Returns: Json
+      }
       get_team_invite_code: { Args: { p_team_id: string }; Returns: string }
       has_club_role: {
         Args: { p_club_id: string; p_role_key: string }
@@ -734,6 +744,28 @@ export type Database = {
           p_last_name: string
           p_position?: string
           p_token: string
+        }
+        Returns: string
+      }
+      submit_join_request_guardian: {
+        Args: {
+          p_birth_year?: number
+          p_code: string
+          p_first_name: string
+          p_jersey_nr?: number
+          p_last_name: string
+          p_position?: string
+        }
+        Returns: string
+      }
+      submit_join_request_self: {
+        Args: {
+          p_birth_year?: number
+          p_code: string
+          p_first_name: string
+          p_jersey_nr?: number
+          p_last_name: string
+          p_position?: string
         }
         Returns: string
       }
