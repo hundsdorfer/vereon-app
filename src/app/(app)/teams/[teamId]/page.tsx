@@ -143,15 +143,20 @@ export default async function TeamDetailPage({
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground">Einladungslink</h2>
-              <Badge variant="outline">Folgt später</Badge>
-            </div>
+            <h2 className="text-sm font-semibold text-foreground">Einladungslink</h2>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Über einen Einladungslink können Eltern und Kinder dem Team beitreten.
+              Teile den Einladungscode mit Spielern oder Eltern. Erwachsene können selbst beitreten, Eltern können ihr Kind anmelden.
             </p>
+            <div className="mt-4">
+              <Link
+                href={`/teams/${team.id}/invite`}
+                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
+              >
+                Spieler & Eltern einladen
+              </Link>
+            </div>
           </CardContent>
         </Card>
 

@@ -437,34 +437,37 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
-          expires_at: string
+          expires_at: string | null
           id: string
           max_uses: number
+          public_code: string | null
           revoked_at: string | null
           team_id: string
-          token_hash: string
+          token_hash: string | null
           use_count: number
         }
         Insert: {
           created_at?: string
           created_by?: string | null
-          expires_at: string
+          expires_at?: string | null
           id?: string
           max_uses?: number
+          public_code?: string | null
           revoked_at?: string | null
           team_id: string
-          token_hash: string
+          token_hash?: string | null
           use_count?: number
         }
         Update: {
           created_at?: string
           created_by?: string | null
-          expires_at?: string
+          expires_at?: string | null
           id?: string
           max_uses?: number
+          public_code?: string | null
           revoked_at?: string | null
           team_id?: string
-          token_hash?: string
+          token_hash?: string | null
           use_count?: number
         }
         Relationships: [
@@ -700,7 +703,9 @@ export type Database = {
         }
         Returns: string
       }
+      generate_team_code: { Args: never; Returns: string }
       get_invitation_link_info: { Args: { p_token: string }; Returns: Json }
+      get_team_invite_code: { Args: { p_team_id: string }; Returns: string }
       has_club_role: {
         Args: { p_club_id: string; p_role_key: string }
         Returns: boolean
