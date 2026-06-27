@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 
 export const dynamic = 'force-dynamic'
@@ -83,24 +82,25 @@ export default async function TeamsPage() {
           <ul className="space-y-3">
             {teams.map((team) => (
               <li key={team.id}>
-                <Card>
-                  <CardContent className="flex items-center justify-between gap-4 py-4">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-foreground">{team.name}</p>
-                      <p className="mt-0.5 text-sm text-muted-foreground">
-                        {[
-                          team.age_group,
-                          team.gender ? GENDER_LABEL[team.gender] : undefined,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ') || 'Keine weiteren Angaben'}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="flex-shrink-0">
-                      {team.ownership_type === 'independent' ? 'Eigenständig' : 'Vereinsteam'}
-                    </Badge>
-                  </CardContent>
-                </Card>
+                <Link
+                  href={`/teams/${team.id}`}
+                  className="flex items-center justify-between gap-4 rounded-lg border border-border bg-surface px-5 py-4 transition-colors hover:bg-surface-muted"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-foreground">{team.name}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                      {[
+                        team.age_group,
+                        team.gender ? GENDER_LABEL[team.gender] : undefined,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || 'Keine weiteren Angaben'}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="flex-shrink-0">
+                    {team.ownership_type === 'independent' ? 'Eigenständig' : 'Vereinsteam'}
+                  </Badge>
+                </Link>
               </li>
             ))}
           </ul>
