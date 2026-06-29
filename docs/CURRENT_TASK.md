@@ -73,6 +73,11 @@ Abgeschlossen:
   * Name als `font-semibold` prominenter dargestellt
   * Geburtsdatum/Jahrgang und Beitrittsart als separate Zeilen
   * kein technischer Begriff im UI, keine neue Datei, keine Migration
+* Phase K — QR-Code für Einladungslink — abgeschlossen, lint/build ok, committed und gepushed:
+  * `react-qr-code` installiert (lokale SVG-Generierung, keine externe API)
+  * QR-Code auf `/teams/[teamId]/invite` unter Code und Link angezeigt
+  * schwarzer Code auf weißem Hintergrund — funktioniert in Light und Dark Mode
+  * Code und Link bleiben weiterhin kopierbar
 * Phase H RLS-Hotfix — `20260629100000_fix_players_trainer_rls` — abgeschlossen, lint/build ok:
   * Root Cause: In EXISTS-Subqueries der alten Policies (`players_select_trainer_assignment`, `players_select_trainer_pending_request`) wurde `id` als innerer SQL-Scope (`pta.id` bzw. `tjr.id`) aufgelöst statt als `players.id` → Bedingung war immer false → 0 Zeilen
   * Fix: `can_trainer_read_player(p_player_id uuid)` und `can_trainer_read_player_pending(p_player_id uuid)` als SECURITY DEFINER-Hilfsfunktionen; keine Scope-Ambiguität möglich
@@ -80,34 +85,53 @@ Abgeschlossen:
 
 ## Aktuelle Hauptaufgabe
 
-Phase K — QR-Code für Einladungslink
+Phase L — MVP-Qualitätscheck und erste Automatisierung
 
-Ziel: Trainer können den Einladungslink auch als QR-Code anzeigen und teilen.
+Ziel: Aktuellen MVP-Kernflow absichern und dokumentiert testbar machen.
 
-Umfang:
+Möglicher Umfang:
 
-* Einladungsseite `/teams/[teamId]/invite` erweitern
-* QR-Code aus vollständigem Join-Link erzeugen
-* QR-Code gut sichtbar darstellen
-* Link und Code bleiben weiterhin kopierbar
-* Mobile und Dark Mode beachten
-* keine neue Migration
-* kein Join-Flow-Umbau
+* MVP-Testcheckliste erstellen
+* kompletten Kernflow manuell sauber prüfen
+* bekannte Edge Cases dokumentieren
+* GitHub Actions für automatische `npm run lint` und `npm run build` Checks vorbereiten
+* noch keine Playwright-E2E-Tests, außer vorher gesondert geplant
+* keine neuen Produktfeatures
+
+Aktueller MVP-Kernflow:
+
+Trainer registriert sich
+→ Team erstellen
+→ Einladungscode/Link/QR-Code verfügbar
+→ Spieler oder Eltern öffnen Join-Link
+→ Selbstbeitritt oder Kind anmelden
+→ Beitrittsanfrage wird erstellt
+→ Trainer sieht Anfrage
+→ Trainer nimmt an oder lehnt ab
+→ angenommener Spieler erscheint im Team
 
 Nicht bauen:
 
-* keine QR-Code-Downloadfunktion (außer sehr einfach ohne Zusatzaufwand möglich)
-* keine PDF-/Druckansicht
-* keine E-Mail-/WhatsApp-Integration
 * keine Spielerbearbeitung
+* keine Trikotnummer-/Positionsverwaltung
+* keine Spielerprofilseite
+* keine Elternverwaltung
 * keine Events
 * keine Anwesenheit
+* keine Benachrichtigungen
+* kein PDF-/Druck-Feature
 * kein db reset
 * kein db push
 * keine Remote-Datenbank
 * keine Secrets anzeigen
 
-Nächster Schritt: Phase K planen — falls ein QR-Code-Package nötig ist, zuerst begründen und auf Bestätigung warten.
+Produktprinzip:
+
+* UI darf aktuell für MVP-Tests noch einfach sein
+* final soll Vereon modern, einfach, übersichtlich, mobile-first und nicht datenbankmäßig wirken
+* Kernlogik, Sicherheit und Stabilität haben aktuell Vorrang vor finalem Design
+
+Nächster Schritt: Phase L kurz planen, dann nach Bestätigung umsetzen.
 
 ## Erlaubt
 
