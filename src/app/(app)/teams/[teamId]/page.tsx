@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { formatTrainingDateTime } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -97,6 +98,7 @@ export default async function TeamDetailPage({
   const [
     { count: pendingRequestCount },
     { data: rawAssignments, error: assignmentsError },
+    { data: upcomingTrainings },
   ] = await Promise.all([
     supabase
       .from('team_join_requests')
@@ -109,6 +111,15 @@ export default async function TeamDetailPage({
       .eq('team_id', teamId)
       .eq('status', 'active')
       .order('joined_at', { ascending: true }),
+    supabase
+      .from('events')
+      .select('id, title, starts_at, location')
+      .eq('team_id', teamId)
+      .eq('event_type', 'training')
+      .eq('is_cancelled', false)
+      .gte('starts_at', new Date().toISOString())
+      .order('starts_at', { ascending: true })
+      .limit(3),
   ])
 
   if (assignmentsError) {
@@ -293,18 +304,42 @@ export default async function TeamDetailPage({
 
         <Card>
           <CardHeader>
-            <h2 className="text-sm font-semibold text-foreground">Trainings</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-foreground">Trainings</h2>
+            </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Plane Trainings für dein Team. Spieler und Eltern werden automatisch benachrichtigt und können zu- oder absagen.
-            </p>
-            <div className="mt-4">
+            {upcomingTrainings && upcomingTrainings.length > 0 ? (
+              <ul className="divide-y divide-border">
+                {upcomingTrainings.map((training) => (
+                  <li key={training.id} className="py-3 first:pt-0 last:pb-0">
+                    <p className="text-sm font-semibold text-foreground">{training.title}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {formatTrainingDateTime(training.starts_at)}
+                    </p>
+                    {training.location && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">{training.location}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Noch keine Trainings geplant.
+              </p>
+            )}
+            <div className="mt-4 flex flex-wrap gap-2">
               <Link
                 href={`/teams/${team.id}/events/new`}
                 className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
               >
                 Training erstellen
+              </Link>
+              <Link
+                href={`/teams/${team.id}/events`}
+                className="inline-flex items-center justify-center rounded-md bg-surface border border-border px-4 py-2 text-sm font-medium text-foreground transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
+              >
+                Alle Trainings ansehen
               </Link>
             </div>
           </CardContent>
