@@ -71,7 +71,42 @@ Abgeschlossen:
 
 ## Aktuelle Hauptaufgabe
 
-Keine. Phase H abgeschlossen.
+Phase I — MVP-Kernflow Review & Stabilisierung
+
+Ziel: Der komplette MVP-Kernflow soll stabil, verständlich und ohne bekannte Blocker funktionieren.
+
+Zu prüfen:
+
+* Registrierung
+* Login/Register-Redirect über Join-Link
+* Team-Erstellung
+* automatischer Einladungscode
+* öffentliche Join-Seite
+* Selbstbeitritt
+* Kind anmelden
+* Beitrittsanfragen anzeigen
+* Anfrage annehmen/ablehnen
+* angenommene Spieler im Team anzeigen
+* Mobile/Dark Mode grob prüfen
+* keine Console Errors
+* keine unnötigen Logs
+* keine lokalen Arbeitsdateien im Git-Status
+
+Nicht bauen:
+
+* keine neuen Features
+* keine Spielerbearbeitung
+* keine Events
+* keine Anwesenheit
+* kein QR-Code
+* keine Benachrichtigungen
+* keine neue Migration, außer ein echter Blocker wird vorher berichtet
+* kein db reset
+* kein db push
+* keine Remote-Datenbank
+* keine Packages installieren
+
+Nächster Schritt: Phase I kurz planen, dann nach Bestätigung umsetzen.
 
 ## Erlaubt
 
