@@ -86,12 +86,18 @@ Abgeschlossen:
   * Trainer sehen RSVP-Übersicht nach Gruppen (Kommt / Kommt nicht / Vielleicht / Noch keine Antwort)
   * RLS-Hotfix `20260629300000_fix_player_event_rls`: `is_player_in_team()`, `is_guardian_in_team()`, Policies für `teams` und `events`
   * RLS-Hotfix `20260629400000_add_pta_player_policy`: `pta_select_player` — Self-Player kann eigene aktive Teamzuordnung lesen
+* Phase O — `/teams` UX für Spieler/Eltern — abgeschlossen, lint/build ok, committed und gepushed:
+  * Spieler/Eltern sehen kein „Team erstellen"-CTA mehr
+  * Titelzeile für Nicht-Trainer: „Deine Teams" ohne Trainer-Subtitle
+  * EmptyState für Nicht-Trainer: „Noch kein Team — Sobald du einem Team beigetreten bist, erscheint es hier."
+  * Neue Trainer ohne Team sehen weiterhin „Team erstellen" (konservativer Fallback via `onboarding_role`)
+  * Rollenlogik: aktive `team_memberships` + `profiles.onboarding_role` (`player`/`guardian` → kein CTA, alle anderen → CTA)
 
 ## Aktuelle Hauptaufgabe
 
-**Player-/Guardian-Dashboard UX prüfen**
+**Dashboard-UX für Spieler und Eltern prüfen**
 
-Ziel: Analysieren, was Spieler und Eltern nach dem Login sehen und ob `/dashboard`, `/teams` und relevante Terminseiten für Nicht-Trainer sinnvoll funktionieren.
+Ziel: Prüfen, was Trainer, Self-Player und Guardians nach Login auf `/dashboard` sehen und ob die Startseite für alle Rollen sinnvoll ist.
 
 **Nächster Schritt: Zuerst analysieren, nicht bauen.**
 
