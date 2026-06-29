@@ -73,6 +73,9 @@ Abgeschlossen:
   * Name als `font-semibold` prominenter dargestellt
   * Geburtsdatum/Jahrgang und Beitrittsart als separate Zeilen
   * kein technischer Begriff im UI, keine neue Datei, keine Migration
+* Phase L — MVP-Qualitätscheck und erste Automatisierung — abgeschlossen, lint/build ok:
+  * `docs/MVP_TEST_CHECKLIST.md` erstellt: 11-Schritte-Kernflow, 5 Fehlerfälle, lokale DB-Queries, DSGVO-Sichtbarkeitschecks, Abschlusskriterien
+  * `.github/workflows/ci.yml` erstellt: Trigger push/PR auf main, Node 20, npm ci + lint + build, Dummy-Env-Variablen (kein Secret, kein Remote-Zugriff)
 * Phase K — QR-Code für Einladungslink — abgeschlossen, lint/build ok, committed und gepushed:
   * `react-qr-code` installiert (lokale SVG-Generierung, keine externe API)
   * QR-Code auf `/teams/[teamId]/invite` unter Code und Link angezeigt
@@ -85,53 +88,7 @@ Abgeschlossen:
 
 ## Aktuelle Hauptaufgabe
 
-Phase L — MVP-Qualitätscheck und erste Automatisierung
-
-Ziel: Aktuellen MVP-Kernflow absichern und dokumentiert testbar machen.
-
-Möglicher Umfang:
-
-* MVP-Testcheckliste erstellen
-* kompletten Kernflow manuell sauber prüfen
-* bekannte Edge Cases dokumentieren
-* GitHub Actions für automatische `npm run lint` und `npm run build` Checks vorbereiten
-* noch keine Playwright-E2E-Tests, außer vorher gesondert geplant
-* keine neuen Produktfeatures
-
-Aktueller MVP-Kernflow:
-
-Trainer registriert sich
-→ Team erstellen
-→ Einladungscode/Link/QR-Code verfügbar
-→ Spieler oder Eltern öffnen Join-Link
-→ Selbstbeitritt oder Kind anmelden
-→ Beitrittsanfrage wird erstellt
-→ Trainer sieht Anfrage
-→ Trainer nimmt an oder lehnt ab
-→ angenommener Spieler erscheint im Team
-
-Nicht bauen:
-
-* keine Spielerbearbeitung
-* keine Trikotnummer-/Positionsverwaltung
-* keine Spielerprofilseite
-* keine Elternverwaltung
-* keine Events
-* keine Anwesenheit
-* keine Benachrichtigungen
-* kein PDF-/Druck-Feature
-* kein db reset
-* kein db push
-* keine Remote-Datenbank
-* keine Secrets anzeigen
-
-Produktprinzip:
-
-* UI darf aktuell für MVP-Tests noch einfach sein
-* final soll Vereon modern, einfach, übersichtlich, mobile-first und nicht datenbankmäßig wirken
-* Kernlogik, Sicherheit und Stabilität haben aktuell Vorrang vor finalem Design
-
-Nächster Schritt: Phase L kurz planen, dann nach Bestätigung umsetzen.
+Phase L abgeschlossen. Nächste Phase noch offen — auf Angabe warten.
 
 ## Erlaubt
 
