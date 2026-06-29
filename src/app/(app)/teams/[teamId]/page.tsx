@@ -42,6 +42,27 @@ function formatDate(iso: string): string {
   })
 }
 
+type PlayerRow = {
+  id: string
+  first_name: string
+  last_name: string
+  birth_year: number | null
+  date_of_birth: string | null
+  user_id: string | null
+}
+
+function formatBirth(dateOfBirth: string | null, birthYear: number | null): string | null {
+  if (dateOfBirth) {
+    return new Date(dateOfBirth).toLocaleDateString('de-AT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
+  }
+  if (birthYear != null) return `Jahrgang ${birthYear}`
+  return null
+}
+
 export default async function TeamDetailPage({
   params,
 }: {
@@ -73,11 +94,75 @@ export default async function TeamDetailPage({
     notFound()
   }
 
-  const { count: pendingRequestCount } = await supabase
-    .from('team_join_requests')
-    .select('id', { count: 'exact', head: true })
-    .eq('team_id', teamId)
-    .eq('status', 'pending')
+  const [
+    { count: pendingRequestCount },
+    { data: rawAssignments, error: assignmentsError },
+  ] = await Promise.all([
+    supabase
+      .from('team_join_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('team_id', teamId)
+      .eq('status', 'pending'),
+    supabase
+      .from('player_team_assignments')
+      .select('id, joined_at, player_id')
+      .eq('team_id', teamId)
+      .eq('status', 'active')
+      .order('joined_at', { ascending: true }),
+  ])
+
+  if (assignmentsError) {
+    console.error('Player assignments query error', {
+      message: assignmentsError.message,
+      code: assignmentsError.code,
+      hint: assignmentsError.hint,
+    })
+  }
+
+  const playerIds = rawAssignments?.map(a => a.player_id) ?? []
+  let playerMap = new Map<string, PlayerRow>()
+
+  if (playerIds.length > 0) {
+    const { data: playersData, error: playersError } = await supabase
+      .from('players')
+      .select('id, first_name, last_name, birth_year, date_of_birth, user_id')
+      .in('id', playerIds)
+
+    if (playersError) {
+      console.error('Team players query error', {
+        message: playersError.message,
+        code: playersError.code,
+        hint: playersError.hint,
+      })
+    }
+
+    playerMap = new Map((playersData ?? []).map(p => [p.id, p]))
+
+    if (playerMap.size === 0 && playerIds.length > 0) {
+      console.error('Team players query returned no rows', {
+        requestedCount: playerIds.length,
+        queryError: !!playersError,
+      })
+    }
+  }
+
+  const activeAssignments = (rawAssignments ?? []).map(a => ({
+    id: a.id,
+    joined_at: a.joined_at,
+    player_id: a.player_id,
+    player: playerMap.get(a.player_id) ?? null,
+  }))
+
+  for (const a of activeAssignments) {
+    if (!a.player) {
+      console.error('Player assignment without readable player', {
+        assignmentId: a.id,
+        playerId: a.player_id,
+      })
+    }
+  }
+
+  const playerCount = activeAssignments.length
 
   const statusVariant = STATUS_VARIANT[team.status] ?? 'default'
   const statusLabel = STATUS_LABEL[team.status] ?? team.status
@@ -138,13 +223,51 @@ export default async function TeamDetailPage({
           <CardHeader>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">Spieler</h2>
-              <Badge variant="outline">Folgt später</Badge>
+              {playerCount > 0 && (
+                <Badge variant="outline">{playerCount}</Badge>
+              )}
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Spielerverwaltung und Anwesenheitserfassung kommen in einer späteren Phase.
-            </p>
+            {assignmentsError ? (
+              <p className="text-sm text-muted-foreground">
+                Spieler konnten nicht geladen werden. Bitte Seite neu laden.
+              </p>
+            ) : playerCount === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Noch keine Spieler im Team. Angenommene Spieler erscheinen hier.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {activeAssignments.map((assignment) => {
+                  const { player } = assignment
+                  if (!player) {
+                    return (
+                      <li key={assignment.id} className="py-3 first:pt-0 last:pb-0">
+                        <p className="text-sm text-muted-foreground">
+                          Spielerprofil konnte nicht geladen werden.
+                        </p>
+                      </li>
+                    )
+                  }
+                  const birthDisplay = formatBirth(player.date_of_birth, player.birth_year)
+                  const joinLabel =
+                    player.user_id !== null
+                      ? 'Selbst beigetreten'
+                      : 'Über Erziehungsberechtigte/n angemeldet'
+                  return (
+                    <li key={assignment.id} className="py-3 first:pt-0 last:pb-0">
+                      <p className="text-sm font-medium text-foreground">
+                        {player.first_name} {player.last_name}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {[birthDisplay, joinLabel].filter(Boolean).join(' · ')}
+                      </p>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
           </CardContent>
         </Card>
 

@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -708,6 +708,14 @@ export type Database = {
     }
     Functions: {
       approve_join_request: { Args: { p_request_id: string }; Returns: string }
+      can_trainer_read_player: {
+        Args: { p_player_id: string }
+        Returns: boolean
+      }
+      can_trainer_read_player_pending: {
+        Args: { p_player_id: string }
+        Returns: boolean
+      }
       cleanup_expired_join_requests: { Args: never; Returns: number }
       create_club: {
         Args: { p_name: string; p_season_name?: string; p_slug: string }

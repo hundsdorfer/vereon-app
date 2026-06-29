@@ -58,25 +58,20 @@ Abgeschlossen:
   * Guardian: Pflicht-Datumsfeld `date_of_birth` statt optionalem `birth_year`
   * Migration `20260629000000_add_join_flow_improvements` — lokal anwenden mit `npx supabase migration up`
 
+* Phase H — Angenommene Spieler im Team anzeigen — abgeschlossen, lint/build ok:
+  * `player_team_assignments` mit `players`-Join serverseitig geladen (status = 'active')
+  * Spieler-Karte auf Team-Detailseite zeigt Name, Geburtsdatum (date_of_birth bevorzugt, birth_year als Fallback), Label „Selbst beigetreten" vs. „Über Erziehungsberechtigte/n angemeldet" (via user_id)
+  * Anzahl-Badge bei ≥ 1 Spieler
+  * Empty State wenn keine aktiven Spieler
+  * Query-Fehler: console.error + verständlicher Fehlertext im UI ohne Absturz
+* Phase H RLS-Hotfix — `20260629100000_fix_players_trainer_rls` — abgeschlossen, lint/build ok:
+  * Root Cause: In EXISTS-Subqueries der alten Policies (`players_select_trainer_assignment`, `players_select_trainer_pending_request`) wurde `id` als innerer SQL-Scope (`pta.id` bzw. `tjr.id`) aufgelöst statt als `players.id` → Bedingung war immer false → 0 Zeilen
+  * Fix: `can_trainer_read_player(p_player_id uuid)` und `can_trainer_read_player_pending(p_player_id uuid)` als SECURITY DEFINER-Hilfsfunktionen; keine Scope-Ambiguität möglich
+  * Beide Policies neu erstellt mit Verweis auf die Hilfsfunktionen
+
 ## Aktuelle Hauptaufgabe
 
-**Phase H — Angenommene Spieler im Team anzeigen**
-
-Ziel: Nachdem ein Trainer eine Beitrittsanfrage angenommen hat, soll der Spieler auf der Team-Detailseite sichtbar sein.
-
-Umfang:
-* Team-Detailseite um Spielerbereich erweitern
-* Angenommene/aktive Spieler serverseitig laden
-* Self-Player und Kind-Spieler müssen korrekt angezeigt werden
-* Keine Spielerbearbeitung
-* Keine Position/Trikotnummer-Verwaltung
-* Keine Spielerprofilseite
-* Keine Events, keine Anwesenheit
-* Keine neue Migration, außer ein echter RLS-/Leseblocker wird gefunden und vorher gemeldet
-
-### Nächster Schritt
-
-Phase H kurz planen, dann nach Bestätigung umsetzen.
+Keine. Phase H abgeschlossen.
 
 ## Erlaubt
 
@@ -101,7 +96,8 @@ Phase H kurz planen, dann nach Bestätigung umsetzen.
 | `20260627100000_add_team_public_code`  | public_code, generate_team_code(), create_independent_team() erweitert, Backfill         | Abgeschlossen und lokal verifiziert |
 | `20260627200000_add_join_request_type` | request_type, requester_user_id, guardian_user_id nullable, RLS, 3 neue Funktionen, Fix  | Abgeschlossen und lokal verifiziert |
 | `20260628000000_add_profile_registration_fields` | first_name, last_name, date_of_birth, onboarding_role, terms_accepted_at, privacy_accepted_at in profiles; handle_new_user Trigger aktualisiert | Lokal anwenden: `npx supabase migration up` |
-| `20260629000000_add_join_flow_improvements`      | players.date_of_birth; DROP alter submit_join_request_self/guardian (6-param); neue Funktionen ohne Name-Spoofing | Lokal anwenden: `npx supabase migration up` |
+| `20260629000000_add_join_flow_improvements`      | players.date_of_birth; DROP alter submit_join_request_self/guardian (6-param); neue Funktionen ohne Name-Spoofing | Abgeschlossen und lokal verifiziert |
+| `20260629100000_fix_players_trainer_rls`         | SECURITY DEFINER-Funktionen `can_trainer_read_player`, `can_trainer_read_player_pending`; DROP + Recreate beider players-Trainer-Policies | Abgeschlossen und lokal verifiziert |
 | `003_mvp0b_club_flows`                 | Vereinsflows, Vereins-Einladungen                                                        | Offen                               |
 | `004_mvp1_players_full`                | vollständiges Spieler-/Elternmodell, Events, Anwesenheit                                 | Offen                               |
 | `005_mvp2_affiliation`                 | Team-Zuordnung zu verifiziertem Verein                                                   | Offen                               |
