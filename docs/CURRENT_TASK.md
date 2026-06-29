@@ -92,24 +92,45 @@ Abgeschlossen:
   * Root Cause: In EXISTS-Subqueries der alten Policies (`players_select_trainer_assignment`, `players_select_trainer_pending_request`) wurde `id` als innerer SQL-Scope (`pta.id` bzw. `tjr.id`) aufgelöst statt als `players.id` → Bedingung war immer false → 0 Zeilen
   * Fix: `can_trainer_read_player(p_player_id uuid)` und `can_trainer_read_player_pending(p_player_id uuid)` als SECURITY DEFINER-Hilfsfunktionen; keine Scope-Ambiguität möglich
   * Beide Policies neu erstellt mit Verweis auf die Hilfsfunktionen
+* Phase N.1 — Events-Datenmodell, RLS, RPC und Trigger — abgeschlossen, lokal verifiziert, lint/build ok, committed und gepushed:
+  * Migration `20260629200000_add_events.sql` erstellt und angewendet
+  * Tabellen `events` und `event_attendance` angelegt (inkl. CHECK-Constraints, UNIQUE, ON DELETE)
+  * RLS für beide Tabellen: SELECT für Teammitglieder/Trainer/Self-Player/Guardian; INSERT/UPDATE nur Coaches; kein direktes DELETE
+  * Hilfsfunktionen `is_trainer_for_event()` und `is_own_player_attendance()` (SECURITY DEFINER, kein Scope-Shadowing)
+  * Auto-Attendance-Trigger: bei Event-Erstellung werden automatisch Attendance-Zeilen für alle aktiven Spieler des Teams angelegt
+  * `create_event()`, `respond_to_event()`, `cancel_event()` als SECURITY DEFINER RPCs
+  * `approve_join_request()` erweitert: Attendance-Backfill für zukünftige Events bei später angenommenen Spielern
+  * TypeScript-Typen neu generiert
 
 ## Aktuelle Hauptaufgabe
 
-Nächste Produktphase planen.
+**Phase N.2 — Training erstellen UI**
 
-Mögliche Optionen für Phase N:
+Ziel: Trainer kann über ein Formular ein Training anlegen. Kein Eventtyp-Auswahlfeld — immer `'training'`.
 
-* Phase N — erste Trainings-/Terminlogik planen
-* Phase N — Spielerbereich weiter ausbauen
-* Phase N — UI/UX-Prinzipien dokumentieren
-* Phase N — Profil-/Accountbereich planen
+### Scope
 
-Produktprinzip:
-* Kernlogik steht im MVP-Grundfluss — MVP 0A vollständig und lokal verifiziert
-* Nächste Features weiterhin klein planen, erst Bestätigung dann Umsetzung
-* Finales UI soll modern, einfach, übersichtlich, mobile-first und nicht datenbankmäßig wirken
+* Neue Seite `/teams/[teamId]/events/new` mit `CreateEventForm` Client Component
+* Felder: Titel, Datum+Uhrzeit (datetime-local → Europe/Vienna), Ort (optional), Beschreibung (optional)
+* Server Action `createEventAction` ruft RPC `create_event()` auf
+* CTA auf Team-Detailseite (z. B. „Training planen")
+* Nach Erstellung: `revalidatePath`, Redirect zurück zur Team-Detailseite
+* `useActionState` für Formular-State und Fehlerhandling
 
-Nächster Schritt: Entscheidung für Phase N abwarten.
+### Wichtig
+
+* `datetime-local` gibt lokale Zeit ohne Zeitzone zurück → muss als `Europe/Vienna` interpretiert und in UTC-ISO-String umgerechnet werden (z. B. via `Intl.DateTimeFormat` oder manueller Offset-Berechnung)
+* Keine Events-Liste in dieser Phase
+* Keine RSVP-UI in dieser Phase
+* Kein neuer `event_type`-Selector — immer `'training'`
+* Keine neue Migration
+* Kein `db reset`, kein `db push`
+
+### Nächste Schritte
+
+1. Dateien auflisten, kurz planen, auf Bestätigung warten
+2. Nach Bestätigung: Umsetzung
+3. `npm run lint` + `npm run build` nach Umsetzung
 
 ## Erlaubt
 
@@ -136,6 +157,7 @@ Nächster Schritt: Entscheidung für Phase N abwarten.
 | `20260628000000_add_profile_registration_fields` | first_name, last_name, date_of_birth, onboarding_role, terms_accepted_at, privacy_accepted_at in profiles; handle_new_user Trigger aktualisiert | Lokal anwenden: `npx supabase migration up` |
 | `20260629000000_add_join_flow_improvements`      | players.date_of_birth; DROP alter submit_join_request_self/guardian (6-param); neue Funktionen ohne Name-Spoofing | Abgeschlossen und lokal verifiziert |
 | `20260629100000_fix_players_trainer_rls`         | SECURITY DEFINER-Funktionen `can_trainer_read_player`, `can_trainer_read_player_pending`; DROP + Recreate beider players-Trainer-Policies | Abgeschlossen und lokal verifiziert |
+| `20260629200000_add_events`                      | Tabellen `events` und `event_attendance`, RLS, Auto-Attendance-Trigger, RPCs `create_event`, `respond_to_event`, `cancel_event`, Attendance-Backfill in `approve_join_request` | Abgeschlossen und lokal verifiziert |
 | `003_mvp0b_club_flows`                 | Vereinsflows, Vereins-Einladungen                                                        | Offen                               |
 | `004_mvp1_players_full`                | vollständiges Spieler-/Elternmodell, Events, Anwesenheit                                 | Offen                               |
 | `005_mvp2_affiliation`                 | Team-Zuordnung zu verifiziertem Verein                                                   | Offen                               |
