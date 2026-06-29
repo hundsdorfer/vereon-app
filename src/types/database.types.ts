@@ -162,6 +162,133 @@ export type Database = {
         }
         Relationships: []
       }
+      event_attendance: {
+        Row: {
+          attended: boolean | null
+          created_at: string
+          event_id: string
+          id: string
+          player_id: string
+          responded_at: string | null
+          responded_by_user_id: string | null
+          rsvp_note: string | null
+          rsvp_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          attended?: boolean | null
+          created_at?: string
+          event_id: string
+          id?: string
+          player_id: string
+          responded_at?: string | null
+          responded_by_user_id?: string | null
+          rsvp_note?: string | null
+          rsvp_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attended?: boolean | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          player_id?: string
+          responded_at?: string | null
+          responded_by_user_id?: string | null
+          rsvp_note?: string | null
+          rsvp_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_attendance_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_attendance_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          club_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          ends_at: string | null
+          event_type: string
+          id: string
+          is_cancelled: boolean
+          location: string | null
+          season_id: string | null
+          starts_at: string
+          team_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          club_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          ends_at?: string | null
+          event_type?: string
+          id?: string
+          is_cancelled?: boolean
+          location?: string | null
+          season_id?: string | null
+          starts_at: string
+          team_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          ends_at?: string | null
+          event_type?: string
+          id?: string
+          is_cancelled?: boolean
+          location?: string | null
+          season_id?: string | null
+          starts_at?: string
+          team_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           created_at: string
@@ -716,9 +843,22 @@ export type Database = {
         Args: { p_player_id: string }
         Returns: boolean
       }
+      cancel_event: { Args: { p_event_id: string }; Returns: undefined }
       cleanup_expired_join_requests: { Args: never; Returns: number }
       create_club: {
         Args: { p_name: string; p_season_name?: string; p_slug: string }
+        Returns: string
+      }
+      create_event: {
+        Args: {
+          p_description?: string
+          p_ends_at?: string
+          p_event_type?: string
+          p_location?: string
+          p_starts_at: string
+          p_team_id: string
+          p_title: string
+        }
         Returns: string
       }
       create_independent_team: {
@@ -755,10 +895,24 @@ export type Database = {
       }
       is_club_member: { Args: { p_club_id: string }; Returns: boolean }
       is_guardian_of: { Args: { p_player_id: string }; Returns: boolean }
+      is_own_player_attendance: {
+        Args: { p_player_id: string }
+        Returns: boolean
+      }
       is_super_admin: { Args: never; Returns: boolean }
       is_team_member: { Args: { p_team_id: string }; Returns: boolean }
+      is_trainer_for_event: { Args: { p_event_id: string }; Returns: boolean }
       reject_join_request: {
         Args: { p_request_id: string }
+        Returns: undefined
+      }
+      respond_to_event: {
+        Args: {
+          p_event_id: string
+          p_player_id: string
+          p_rsvp_note?: string
+          p_rsvp_status: string
+        }
         Returns: undefined
       }
       revoke_invitation_link: {
