@@ -4,15 +4,29 @@ import { PageHeader } from '@/components/ui/PageHeader'
 
 export const dynamic = 'force-dynamic'
 
+const NON_TRAINER_ROLES = ['player', 'guardian']
+
 export default async function DashboardPage() {
   const supabase = await createClient()
 
+  const { data: { user } } = await supabase.auth.getUser()
+
   const [
-    { data: { user } },
     { count: teamCount, error: countError },
+    { count: membershipCount },
+    { data: profile },
   ] = await Promise.all([
-    supabase.auth.getUser(),
     supabase.from('teams').select('id', { count: 'exact', head: true }).eq('is_active', true),
+    supabase
+      .from('team_memberships')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user?.id ?? '')
+      .eq('status', 'active'),
+    supabase
+      .from('profiles')
+      .select('onboarding_role')
+      .eq('id', user?.id ?? '')
+      .single(),
   ])
 
   if (countError) {
@@ -24,9 +38,18 @@ export default async function DashboardPage() {
     })
   }
 
+  const hasTrainerMembership = (membershipCount ?? 0) > 0
+  const onboardingRole = profile?.onboarding_role ?? null
+  const isNonTrainerProfile = onboardingRole !== null && NON_TRAINER_ROLES.includes(onboardingRole)
+  const showTrainerUI = hasTrainerMembership || !isNonTrainerProfile
+
   function teamCountText() {
     if (countError) return 'Teams konnten nicht geladen werden.'
-    if (teamCount === null || teamCount === 0) return 'Noch keine Teams erstellt.'
+    if (teamCount === null || teamCount === 0) {
+      return showTrainerUI
+        ? 'Noch keine Teams erstellt.'
+        : 'Du bist noch keinem Team zugeordnet.'
+    }
     return `${teamCount} ${teamCount === 1 ? 'Team' : 'Teams'}`
   }
 
