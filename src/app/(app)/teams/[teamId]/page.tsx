@@ -224,7 +224,7 @@ export default async function TeamDetailPage({
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">Spieler</h2>
               {playerCount > 0 && (
-                <Badge variant="outline">{playerCount}</Badge>
+                <span className="text-sm text-muted-foreground">{playerCount} Spieler</span>
               )}
             </div>
           </CardHeader>
@@ -257,12 +257,13 @@ export default async function TeamDetailPage({
                       : 'Über Erziehungsberechtigte/n angemeldet'
                   return (
                     <li key={assignment.id} className="py-3 first:pt-0 last:pb-0">
-                      <p className="text-sm font-medium text-foreground">
+                      <p className="text-sm font-semibold text-foreground">
                         {player.first_name} {player.last_name}
                       </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {[birthDisplay, joinLabel].filter(Boolean).join(' · ')}
-                      </p>
+                      {birthDisplay && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">{birthDisplay}</p>
+                      )}
+                      <p className="mt-0.5 text-xs text-muted-foreground">{joinLabel}</p>
                     </li>
                   )
                 })}
