@@ -99,6 +99,7 @@ export default async function TeamDetailPage({
     { count: pendingRequestCount },
     { data: rawAssignments, error: assignmentsError },
     { data: upcomingTrainings },
+    { data: isTrainer },
   ] = await Promise.all([
     supabase
       .from('team_join_requests')
@@ -120,6 +121,10 @@ export default async function TeamDetailPage({
       .gte('starts_at', new Date().toISOString())
       .order('starts_at', { ascending: true })
       .limit(3),
+    supabase.rpc('has_team_role', {
+      p_team_id: teamId,
+      p_role_keys: ['team_owner', 'head_coach', 'assistant_coach', 'team_manager'],
+    }),
   ])
 
   if (assignmentsError) {
@@ -283,24 +288,26 @@ export default async function TeamDetailPage({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <h2 className="text-sm font-semibold text-foreground">Einladungslink</h2>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Teile den Einladungscode mit Spielern oder Eltern. Erwachsene können selbst beitreten, Eltern können ihr Kind anmelden.
-            </p>
-            <div className="mt-4">
-              <Link
-                href={`/teams/${team.id}/invite`}
-                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
-              >
-                Spieler & Eltern einladen
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        {!!isTrainer && (
+          <Card>
+            <CardHeader>
+              <h2 className="text-sm font-semibold text-foreground">Einladungslink</h2>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Teile den Einladungscode mit Spielern oder Eltern. Erwachsene können selbst beitreten, Eltern können ihr Kind anmelden.
+              </p>
+              <div className="mt-4">
+                <Link
+                  href={`/teams/${team.id}/invite`}
+                  className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
+                >
+                  Spieler & Eltern einladen
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
@@ -313,13 +320,18 @@ export default async function TeamDetailPage({
               <ul className="divide-y divide-border">
                 {upcomingTrainings.map((training) => (
                   <li key={training.id} className="py-3 first:pt-0 last:pb-0">
-                    <p className="text-sm font-semibold text-foreground">{training.title}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {formatTrainingDateTime(training.starts_at)}
-                    </p>
-                    {training.location && (
-                      <p className="mt-0.5 text-xs text-muted-foreground">{training.location}</p>
-                    )}
+                    <Link
+                      href={`/teams/${team.id}/events/${training.id}`}
+                      className="block hover:opacity-80 transition-opacity"
+                    >
+                      <p className="text-sm font-semibold text-foreground">{training.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {formatTrainingDateTime(training.starts_at)}
+                      </p>
+                      {training.location && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">{training.location}</p>
+                      )}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -329,12 +341,14 @@ export default async function TeamDetailPage({
               </p>
             )}
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link
-                href={`/teams/${team.id}/events/new`}
-                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
-              >
-                Training erstellen
-              </Link>
+              {!!isTrainer && (
+                <Link
+                  href={`/teams/${team.id}/events/new`}
+                  className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
+                >
+                  Training erstellen
+                </Link>
+              )}
               <Link
                 href={`/teams/${team.id}/events`}
                 className="inline-flex items-center justify-center rounded-md bg-surface border border-border px-4 py-2 text-sm font-medium text-foreground transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
@@ -345,37 +359,39 @@ export default async function TeamDetailPage({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground">Beitrittsanfragen</h2>
-              {pendingRequestCount !== null && pendingRequestCount > 0 && (
-                <Badge variant="warning">{pendingRequestCount} offen</Badge>
+        {!!isTrainer && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-foreground">Beitrittsanfragen</h2>
+                {pendingRequestCount !== null && pendingRequestCount > 0 && (
+                  <Badge variant="warning">{pendingRequestCount} offen</Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {pendingRequestCount !== null && pendingRequestCount > 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  {pendingRequestCount === 1
+                    ? 'Eine Person möchte deinem Team beitreten.'
+                    : `${pendingRequestCount} Personen möchten deinem Team beitreten.`}
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Noch keine offenen Anfragen.
+                </p>
               )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {pendingRequestCount !== null && pendingRequestCount > 0 ? (
-              <p className="text-sm text-muted-foreground">
-                {pendingRequestCount === 1
-                  ? 'Eine Person möchte deinem Team beitreten.'
-                  : `${pendingRequestCount} Personen möchten deinem Team beitreten.`}
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Noch keine offenen Anfragen.
-              </p>
-            )}
-            <div className="mt-4">
-              <Link
-                href={`/teams/${team.id}/requests`}
-                className="inline-flex items-center justify-center rounded-md bg-surface border border-border px-4 py-2 text-sm font-medium text-foreground transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
-              >
-                Anfragen ansehen
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="mt-4">
+                <Link
+                  href={`/teams/${team.id}/requests`}
+                  className="inline-flex items-center justify-center rounded-md bg-surface border border-border px-4 py-2 text-sm font-medium text-foreground transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
+                >
+                  Anfragen ansehen
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

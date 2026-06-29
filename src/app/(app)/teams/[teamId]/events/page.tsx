@@ -19,12 +19,29 @@ export default async function TeamEventsPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: team, error: teamError } = await supabase
-    .from('teams')
-    .select('id, name')
-    .eq('id', teamId)
-    .eq('is_active', true)
-    .single()
+  const [
+    { data: team, error: teamError },
+    { data: trainings, error: trainingsError },
+    { data: isTrainer },
+  ] = await Promise.all([
+    supabase
+      .from('teams')
+      .select('id, name')
+      .eq('id', teamId)
+      .eq('is_active', true)
+      .single(),
+    supabase
+      .from('events')
+      .select('id, title, starts_at, location')
+      .eq('team_id', teamId)
+      .eq('event_type', 'training')
+      .eq('is_cancelled', false)
+      .order('starts_at', { ascending: false }),
+    supabase.rpc('has_team_role', {
+      p_team_id: teamId,
+      p_role_keys: ['team_owner', 'head_coach', 'assistant_coach', 'team_manager'],
+    }),
+  ])
 
   if (teamError || !team) {
     if (teamError && teamError.code !== 'PGRST116') {
@@ -35,14 +52,6 @@ export default async function TeamEventsPage({
     }
     notFound()
   }
-
-  const { data: trainings, error: trainingsError } = await supabase
-    .from('events')
-    .select('id, title, starts_at, location')
-    .eq('team_id', teamId)
-    .eq('event_type', 'training')
-    .eq('is_cancelled', false)
-    .order('starts_at', { ascending: false })
 
   if (trainingsError) {
     console.error('Events page trainings query error', {
@@ -70,14 +79,16 @@ export default async function TeamEventsPage({
 
       <div className="flex items-start justify-between gap-4">
         <PageHeader title="Trainings" subtitle={team.name} />
-        <div className="mt-1 flex-shrink-0">
-          <Link
-            href={`/teams/${teamId}/events/new`}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
-          >
-            Training erstellen
-          </Link>
-        </div>
+        {!!isTrainer && (
+          <div className="mt-1 flex-shrink-0">
+            <Link
+              href={`/teams/${teamId}/events/new`}
+              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
+            >
+              Training erstellen
+            </Link>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 space-y-4">
@@ -93,27 +104,38 @@ export default async function TeamEventsPage({
             ) : upcoming.length === 0 ? (
               <EmptyState
                 title="Keine kommenden Trainings"
-                description="Erstelle ein Training, damit es hier erscheint."
+                description={
+                  !!isTrainer
+                    ? 'Erstelle ein Training, damit es hier erscheint.'
+                    : 'Noch keine Trainings geplant.'
+                }
                 action={
-                  <Link
-                    href={`/teams/${teamId}/events/new`}
-                    className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
-                  >
-                    Training erstellen
-                  </Link>
+                  !!isTrainer ? (
+                    <Link
+                      href={`/teams/${teamId}/events/new`}
+                      className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
+                    >
+                      Training erstellen
+                    </Link>
+                  ) : undefined
                 }
               />
             ) : (
               <ul className="divide-y divide-border">
                 {upcoming.map((training) => (
                   <li key={training.id} className="py-3 first:pt-0 last:pb-0">
-                    <p className="text-sm font-semibold text-foreground">{training.title}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {formatTrainingDateTime(training.starts_at)}
-                    </p>
-                    {training.location && (
-                      <p className="mt-0.5 text-xs text-muted-foreground">{training.location}</p>
-                    )}
+                    <Link
+                      href={`/teams/${teamId}/events/${training.id}`}
+                      className="block hover:opacity-80 transition-opacity"
+                    >
+                      <p className="text-sm font-semibold text-foreground">{training.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {formatTrainingDateTime(training.starts_at)}
+                      </p>
+                      {training.location && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">{training.location}</p>
+                      )}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -130,13 +152,18 @@ export default async function TeamEventsPage({
               <ul className="divide-y divide-border">
                 {past.map((training) => (
                   <li key={training.id} className="py-3 first:pt-0 last:pb-0">
-                    <p className="text-sm font-semibold text-foreground">{training.title}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {formatTrainingDateTime(training.starts_at)}
-                    </p>
-                    {training.location && (
-                      <p className="mt-0.5 text-xs text-muted-foreground">{training.location}</p>
-                    )}
+                    <Link
+                      href={`/teams/${teamId}/events/${training.id}`}
+                      className="block hover:opacity-80 transition-opacity"
+                    >
+                      <p className="text-sm font-semibold text-foreground">{training.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {formatTrainingDateTime(training.starts_at)}
+                      </p>
+                      {training.location && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">{training.location}</p>
+                      )}
+                    </Link>
                   </li>
                 ))}
               </ul>

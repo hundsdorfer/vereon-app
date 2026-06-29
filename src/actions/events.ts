@@ -57,3 +57,46 @@ export async function createEventAction(
   revalidatePath(`/teams/${teamId}`)
   redirect(`/teams/${teamId}`)
 }
+
+export type RespondToEventState = { error: string } | null
+
+const VALID_RSVP = ['attending', 'declined', 'maybe'] as const
+
+export async function respondToEventAction(
+  _prevState: RespondToEventState,
+  formData: FormData,
+): Promise<RespondToEventState> {
+  const teamId   = (formData.get('team_id')     as string | null)?.trim()
+  const eventId  = (formData.get('event_id')    as string | null)?.trim()
+  const playerId = (formData.get('player_id')   as string | null)?.trim()
+  const status   = (formData.get('rsvp_status') as string | null)?.trim()
+  const note     = (formData.get('rsvp_note')   as string | null)?.trim() || null
+
+  if (!teamId)   return { error: 'Team-ID fehlt.' }
+  if (!eventId)  return { error: 'Event-ID fehlt.' }
+  if (!playerId) return { error: 'Spieler-ID fehlt.' }
+  if (!status || !VALID_RSVP.includes(status as (typeof VALID_RSVP)[number])) {
+    return { error: 'Ungültige Antwort.' }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('respond_to_event', {
+    p_event_id:    eventId,
+    p_player_id:   playerId,
+    p_rsvp_status: status,
+    p_rsvp_note:   note,
+  })
+
+  if (error) {
+    const msg = error.message.toLowerCase()
+    if (msg.includes('abgesagt'))           return { error: 'Dieses Training wurde abgesagt.' }
+    if (msg.includes('keine berechtigung')) return { error: 'Du hast keine Berechtigung für diese Aktion.' }
+    if (msg.includes('nicht gefunden'))     return { error: 'Kein Eintrag für diesen Spieler gefunden.' }
+    return { error: 'Antwort konnte nicht gespeichert werden. Bitte erneut versuchen.' }
+  }
+
+  revalidatePath(`/teams/${teamId}/events/${eventId}`)
+  revalidatePath(`/teams/${teamId}/events`)
+  revalidatePath(`/teams/${teamId}`)
+  redirect(`/teams/${teamId}/events/${eventId}`)
+}
