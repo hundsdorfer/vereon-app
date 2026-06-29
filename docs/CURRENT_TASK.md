@@ -76,6 +76,13 @@ Abgeschlossen:
 * Phase L — MVP-Qualitätscheck und erste Automatisierung — abgeschlossen, lint/build ok:
   * `docs/MVP_TEST_CHECKLIST.md` erstellt: 11-Schritte-Kernflow, 5 Fehlerfälle, lokale DB-Queries, DSGVO-Sichtbarkeitschecks, Abschlusskriterien
   * `.github/workflows/ci.yml` erstellt: Trigger push/PR auf main, Node 20, npm ci + lint + build, Dummy-Env-Variablen (kein Secret, kein Remote-Zugriff)
+* Phase M — MVP-Testcheckliste manuell durchtesten — abgeschlossen, lokal verifiziert:
+  * Kompletter MVP-Kernflow lokal erfolgreich durchlaufen
+  * Trainer registrieren, Team erstellen, Einladungscode/Link/QR-Code geprüft
+  * Selbstbeitritt und Kind-Anmeldung funktionieren
+  * Beitrittsanfragen annehmen/ablehnen funktionieren
+  * Angenommene Spieler erscheinen im Team
+  * GitHub Actions CI grün, lint und build sauber
 * Phase K — QR-Code für Einladungslink — abgeschlossen, lint/build ok, committed und gepushed:
   * `react-qr-code` installiert (lokale SVG-Generierung, keine externe API)
   * QR-Code auf `/teams/[teamId]/invite` unter Code und Link angezeigt
@@ -88,7 +95,21 @@ Abgeschlossen:
 
 ## Aktuelle Hauptaufgabe
 
-Phase L abgeschlossen. Nächste Phase noch offen — auf Angabe warten.
+Nächste Produktphase planen.
+
+Mögliche Optionen für Phase N:
+
+* Phase N — erste Trainings-/Terminlogik planen
+* Phase N — Spielerbereich weiter ausbauen
+* Phase N — UI/UX-Prinzipien dokumentieren
+* Phase N — Profil-/Accountbereich planen
+
+Produktprinzip:
+* Kernlogik steht im MVP-Grundfluss — MVP 0A vollständig und lokal verifiziert
+* Nächste Features weiterhin klein planen, erst Bestätigung dann Umsetzung
+* Finales UI soll modern, einfach, übersichtlich, mobile-first und nicht datenbankmäßig wirken
+
+Nächster Schritt: Entscheidung für Phase N abwarten.
 
 ## Erlaubt
 
