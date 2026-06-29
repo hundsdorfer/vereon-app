@@ -64,6 +64,10 @@ Abgeschlossen:
   * Anzahl-Badge bei ≥ 1 Spieler
   * Empty State wenn keine aktiven Spieler
   * Query-Fehler: console.error + verständlicher Fehlertext im UI ohne Absturz
+* Phase I — MVP-Kernflow Review & Stabilisierung — abgeschlossen, lint/build ok:
+  * Login/Register-Cross-Links erhalten nun den `?redirect=`-Parameter (kein Redirect-Verlust beim Wechsel)
+  * `build.log` und `supabase/snippets/` in `.gitignore` eingetragen
+  * MVP-Kernflow komplett geprüft und stabil — keine weiteren Blocker
 * Phase H RLS-Hotfix — `20260629100000_fix_players_trainer_rls` — abgeschlossen, lint/build ok:
   * Root Cause: In EXISTS-Subqueries der alten Policies (`players_select_trainer_assignment`, `players_select_trainer_pending_request`) wurde `id` als innerer SQL-Scope (`pta.id` bzw. `tjr.id`) aufgelöst statt als `players.id` → Bedingung war immer false → 0 Zeilen
   * Fix: `can_trainer_read_player(p_player_id uuid)` und `can_trainer_read_player_pending(p_player_id uuid)` als SECURITY DEFINER-Hilfsfunktionen; keine Scope-Ambiguität möglich
@@ -71,42 +75,42 @@ Abgeschlossen:
 
 ## Aktuelle Hauptaufgabe
 
-Phase I — MVP-Kernflow Review & Stabilisierung
+Phase J — Spielerbereich MVP verbessern
 
-Ziel: Der komplette MVP-Kernflow soll stabil, verständlich und ohne bekannte Blocker funktionieren.
+Ziel: Spielerbereich auf `/teams/[teamId]` übersichtlicher und nutzbarer machen, ohne Spielerbearbeitung oder Spielerprofile zu bauen.
 
-Zu prüfen:
+Umfang:
 
-* Registrierung
-* Login/Register-Redirect über Join-Link
-* Team-Erstellung
-* automatischer Einladungscode
-* öffentliche Join-Seite
-* Selbstbeitritt
-* Kind anmelden
-* Beitrittsanfragen anzeigen
-* Anfrage annehmen/ablehnen
-* angenommene Spieler im Team anzeigen
-* Mobile/Dark Mode grob prüfen
-* keine Console Errors
-* keine unnötigen Logs
-* keine lokalen Arbeitsdateien im Git-Status
+* Spieleranzahl sauber anzeigen
+* Spieler-Cards oder Liste besser strukturieren
+* Geburtsdatum oder Jahrgang anzeigen
+* „Selbst beigetreten" vs. „Über Erziehungsberechtigte/n angemeldet" verständlich darstellen
+* Empty State verbessern
+* Mobile und Dark Mode erhalten
+* keine neue Migration, außer ein echter Blocker wird zuerst berichtet
 
 Nicht bauen:
 
-* keine neuen Features
 * keine Spielerbearbeitung
+* keine Trikotnummer-/Positionsverwaltung
+* keine Spielerprofilseite
+* keine Elternverwaltung
 * keine Events
 * keine Anwesenheit
 * kein QR-Code
 * keine Benachrichtigungen
-* keine neue Migration, außer ein echter Blocker wird vorher berichtet
 * kein db reset
 * kein db push
 * keine Remote-Datenbank
 * keine Packages installieren
 
-Nächster Schritt: Phase I kurz planen, dann nach Bestätigung umsetzen.
+Produktprinzip:
+
+* UI darf für MVP-Tests noch einfach sein
+* keine unnötig technischen Begriffe im UI
+* noch keine große Designphase
+
+Nächster Schritt: Phase J kurz planen, dann nach Bestätigung umsetzen.
 
 ## Erlaubt
 
