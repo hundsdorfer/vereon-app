@@ -108,6 +108,17 @@ Abgeschlossen:
 
 Ziel: Trainer kann über ein Formular ein Training anlegen. Kein Eventtyp-Auswahlfeld — immer `'training'`.
 
+### Produktnotiz: Langfristige Terminlogik
+
+Vereon unterscheidet langfristig mehrere Terminarten:
+
+1. **Training** — einzelne Trainings; später: wiederkehrende Trainings
+2. **Match / Spiel** — später mit Gegner, Heim/Auswärts, Treffpunkt, Anstoßzeit; wichtig: Kader-Nominierung (nicht alle Spieler, nur Nominierte müssen zusagen)
+3. **Internes Event / Vereinsveranstaltung** — z. B. Weihnachtsfeier, Abschlussfeier, Elternabend, Teamabend, Vereinsfest
+4. **Turnier** — eigener großer Produktbereich; später mit Spielplan, Kader, mehreren Spielen, Ergebnissen, Tagesorganisation
+
+**Aktueller MVP-Scope bleibt:** nur einzelnes Training erstellen (Phase N.2) — keine wiederkehrenden Termine, keine Matches, keine Kader-Nominierung, keine Turniere, keine Vereinsevents.
+
 ### Scope
 
 * Neue Seite `/teams/[teamId]/events/new` mit `CreateEventForm` Client Component
@@ -131,6 +142,13 @@ Ziel: Trainer kann über ein Formular ein Training anlegen. Kein Eventtyp-Auswah
 1. Dateien auflisten, kurz planen, auf Bestätigung warten
 2. Nach Bestätigung: Umsetzung
 3. `npm run lint` + `npm run build` nach Umsetzung
+
+### Phase N.3 (nach N.2) — Trainings anzeigen
+
+* Team-Detailseite zeigt nächste Trainings
+* Einfache Trainingsliste pro Team
+* Noch keine RSVP-UI
+* Noch keine Event-Detailseite (außer vorher geplant)
 
 ## Erlaubt
 
