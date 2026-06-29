@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation'
 import { AppShell } from '@/components/layout/AppShell'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -9,6 +10,8 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { FormError } from '@/components/ui/FormError'
 
 export default function UiPreviewPage() {
+  if (process.env.NODE_ENV !== 'development') notFound()
+
   return (
     <AppShell>
       <div className="mx-auto max-w-5xl space-y-8 md:space-y-10">

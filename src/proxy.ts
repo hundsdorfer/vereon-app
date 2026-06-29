@@ -4,7 +4,11 @@ import { updateSession } from '@/lib/supabase/middleware'
 // Routen, die ohne Login zugänglich sind
 const PUBLIC_ROUTES = new Set(['/', '/login', '/register', '/auth/callback'])
 // Pfad-Präfixe, die ohne Login zugänglich sind
-const PUBLIC_PREFIXES = ['/join/', '/dev/', '/legal/']
+const PUBLIC_PREFIXES = [
+  '/join/',
+  '/legal/',
+  ...(process.env.NODE_ENV === 'development' ? ['/dev/'] : []),
+]
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_ROUTES.has(pathname)) return true
