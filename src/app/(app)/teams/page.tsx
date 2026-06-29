@@ -13,17 +13,37 @@ const GENDER_LABEL: Record<string, string> = {
   mixed: 'Gemischt',
 }
 
+// Rollen, bei denen kein "Team erstellen"-CTA angezeigt wird
+// (sofern der User auch keine aktive team_membership hat)
+const NON_TRAINER_ROLES = ['player', 'guardian']
+
 export default async function TeamsPage() {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: teams, error } = await supabase
-    .from('teams')
-    .select('id, name, age_group, gender, ownership_type, created_at')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
+  const [
+    { data: teams, error },
+    { count: membershipCount },
+    { data: profile },
+  ] = await Promise.all([
+    supabase
+      .from('teams')
+      .select('id, name, age_group, gender, ownership_type, created_at')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('team_memberships')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'active'),
+    supabase
+      .from('profiles')
+      .select('onboarding_role')
+      .eq('id', user.id)
+      .single(),
+  ])
 
   if (error) {
     console.error('Teams query error', {
@@ -33,6 +53,12 @@ export default async function TeamsPage() {
       code: error.code,
     })
   }
+
+  const hasTrainerMembership = (membershipCount ?? 0) > 0
+  const onboardingRole = profile?.onboarding_role ?? null
+  const isNonTrainerProfile = onboardingRole !== null && NON_TRAINER_ROLES.includes(onboardingRole)
+  // Zeige Trainer-UI wenn: bestehende Trainermitgliedschaft ODER kein eindeutiger Spieler-/Guardian-Hinweis
+  const showTrainerUI = hasTrainerMembership || !isNonTrainerProfile
 
   const createLink = (
     <Link
@@ -46,9 +72,9 @@ export default async function TeamsPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <PageHeader
-        title="Meine Teams"
-        subtitle="Eigenständige Teams verwalten"
-        action={createLink}
+        title={showTrainerUI ? 'Meine Teams' : 'Deine Teams'}
+        subtitle={showTrainerUI ? 'Eigenständige Teams verwalten' : undefined}
+        action={showTrainerUI ? createLink : undefined}
       />
 
       <div className="mt-6">
@@ -64,18 +90,18 @@ export default async function TeamsPage() {
         )}
 
         {!error && teams && teams.length === 0 && (
-          <EmptyState
-            title="Noch keine Teams"
-            description="Erstelle dein erstes eigenständiges Team — kein Verein nötig."
-            action={
-              <Link
-                href="/teams/new"
-                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation"
-              >
-                Team erstellen
-              </Link>
-            }
-          />
+          showTrainerUI ? (
+            <EmptyState
+              title="Noch keine Teams"
+              description="Erstelle dein erstes eigenständiges Team — kein Verein nötig."
+              action={createLink}
+            />
+          ) : (
+            <EmptyState
+              title="Noch kein Team"
+              description="Sobald du einem Team beigetreten bist, erscheint es hier."
+            />
+          )
         )}
 
         {!error && teams && teams.length > 0 && (
