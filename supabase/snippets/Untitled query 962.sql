@@ -1,1 +1,0 @@
-select auth.uid();
