@@ -60,16 +60,23 @@ Abgeschlossen:
 
 ## Aktuelle Hauptaufgabe
 
-Keine. Nächste Schritte: Migration einspielen, Typen generieren, Lint + Build prüfen.
+**Phase H — Angenommene Spieler im Team anzeigen**
 
-### Nächste Schritte (Benutzer führt aus)
+Ziel: Nachdem ein Trainer eine Beitrittsanfrage angenommen hat, soll der Spieler auf der Team-Detailseite sichtbar sein.
 
-```
-npx supabase migration up
-npx supabase gen types typescript --local | Set-Content -Path .\src\types\database.types.ts -Encoding UTF8
-npm run lint
-npm run build
-```
+Umfang:
+* Team-Detailseite um Spielerbereich erweitern
+* Angenommene/aktive Spieler serverseitig laden
+* Self-Player und Kind-Spieler müssen korrekt angezeigt werden
+* Keine Spielerbearbeitung
+* Keine Position/Trikotnummer-Verwaltung
+* Keine Spielerprofilseite
+* Keine Events, keine Anwesenheit
+* Keine neue Migration, außer ein echter RLS-/Leseblocker wird gefunden und vorher gemeldet
+
+### Nächster Schritt
+
+Phase H kurz planen, dann nach Bestätigung umsetzen.
 
 ## Erlaubt
 
