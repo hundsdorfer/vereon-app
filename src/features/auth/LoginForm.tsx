@@ -48,7 +48,10 @@ export function LoginForm({ redirectPath }: { redirectPath?: string }) {
 
       <p className="text-center text-sm text-muted-foreground">
         Noch kein Konto?{' '}
-        <Link href="/register" className="font-medium text-primary hover:underline">
+        <Link
+          href={redirectPath ? `/register?redirect=${encodeURIComponent(redirectPath)}` : '/register'}
+          className="font-medium text-primary hover:underline"
+        >
           Registrieren
         </Link>
       </p>

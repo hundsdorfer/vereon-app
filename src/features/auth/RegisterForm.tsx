@@ -214,7 +214,10 @@ export function RegisterForm({ redirectPath }: { redirectPath?: string }) {
 
       <p className="text-center text-sm text-muted-foreground">
         Bereits ein Konto?{' '}
-        <Link href="/login" className="font-medium text-primary hover:underline">
+        <Link
+          href={redirectPath ? `/login?redirect=${encodeURIComponent(redirectPath)}` : '/login'}
+          className="font-medium text-primary hover:underline"
+        >
           Anmelden
         </Link>
       </p>
