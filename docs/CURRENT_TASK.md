@@ -102,11 +102,23 @@ Abgeschlossen:
   * `approve_join_request()` erweitert: Attendance-Backfill für zukünftige Events bei später angenommenen Spielern
   * TypeScript-Typen neu generiert
 
+* Phase N.2 — Training erstellen UI — abgeschlossen, lint/build ok:
+  * `/teams/[teamId]/events/new` mit `CreateEventForm` Client Component
+  * `createEventAction` ruft RPC `create_event()` auf (event_type = 'training')
+  * Datetime-Local → UTC-Konvertierung via `Europe/Vienna`-Offset
+  * CTA auf Team-Detailseite
+* Phase N.3 — Trainings anzeigen — abgeschlossen, lint/build ok:
+  * `src/lib/format.ts`: zentrale `formatTrainingDateTime()` (de-AT, Europe/Vienna)
+  * Team-Detailseite zeigt nächste 3 kommende Trainings (Titel, Datum/Uhrzeit, Ort)
+  * Trainingsliste `/teams/[teamId]/events`: Kommende + Vergangene Trainings, EmptyState
+  * Beide CTAs: „Training erstellen" + „Alle Trainings ansehen"
+  * Keine Event-Detailseite, keine RSVP-UI
+
 ## Aktuelle Hauptaufgabe
 
-**Phase N.2 — Training erstellen UI**
+**Phase N.4 — Trainingsdetails und RSVP**
 
-Ziel: Trainer kann über ein Formular ein Training anlegen. Kein Eventtyp-Auswahlfeld — immer `'training'`.
+Ziel: Spieler/Eltern können zu Trainings zusagen oder absagen. Trainer sieht wer kommt, wer absagt, wer noch nicht geantwortet hat.
 
 ### Produktnotiz: Langfristige Terminlogik
 
@@ -121,34 +133,24 @@ Vereon unterscheidet langfristig mehrere Terminarten:
 
 ### Scope
 
-* Neue Seite `/teams/[teamId]/events/new` mit `CreateEventForm` Client Component
-* Felder: Titel, Datum+Uhrzeit (datetime-local → Europe/Vienna), Ort (optional), Beschreibung (optional)
-* Server Action `createEventAction` ruft RPC `create_event()` auf
-* CTA auf Team-Detailseite (z. B. „Training planen")
-* Nach Erstellung: `revalidatePath`, Redirect zurück zur Team-Detailseite
-* `useActionState` für Formular-State und Fehlerhandling
+* Event-Detailseite `/teams/[teamId]/events/[eventId]`
+* Trainingsliste und Team-Detailseite verlinken auf das Training
+* Trainer sieht RSVP-Übersicht (Zusagen / Absagen / Noch nicht geantwortet)
+* Self-Player kann für sich antworten
+* Elternteil kann für verknüpfte Kinder antworten, sofern bestehende RLS/RPC das unterstützt
+* Antworten: Zusagen, Absagen, Vielleicht
+* Kurze Notiz optional, wenn ohne Scope-Creep möglich
 
 ### Wichtig
 
-* `datetime-local` gibt lokale Zeit ohne Zeitzone zurück → muss als `Europe/Vienna` interpretiert und in UTC-ISO-String umgerechnet werden (z. B. via `Intl.DateTimeFormat` oder manueller Offset-Berechnung)
-* Keine Events-Liste in dieser Phase
-* Keine RSVP-UI in dieser Phase
-* Kein neuer `event_type`-Selector — immer `'training'`
-* Keine neue Migration
-* Kein `db reset`, kein `db push`
+* `respond_to_event()` RPC und `event_attendance`-Tabelle existieren bereits
+* Keine neue Migration, außer ein echter Blocker wird zuerst gemeldet
+* Keine Event-Bearbeitung, kein Termin absagen im UI
+* Kein db reset, kein db push
 
 ### Nächste Schritte
 
-1. Dateien auflisten, kurz planen, auf Bestätigung warten
-2. Nach Bestätigung: Umsetzung
-3. `npm run lint` + `npm run build` nach Umsetzung
-
-### Phase N.3 (nach N.2) — Trainings anzeigen
-
-* Team-Detailseite zeigt nächste Trainings
-* Einfache Trainingsliste pro Team
-* Noch keine RSVP-UI
-* Noch keine Event-Detailseite (außer vorher geplant)
+1. Phase N.4 zuerst planen, dann nach Bestätigung umsetzen
 
 ## Erlaubt
 
