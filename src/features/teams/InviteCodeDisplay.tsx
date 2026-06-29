@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import QRCode from 'react-qr-code'
 import { Button } from '@/components/ui/Button'
 
 interface Props {
@@ -82,6 +83,20 @@ export function InviteCodeDisplay({ code, origin }: Props) {
         <p className="mt-2 text-xs text-muted-foreground">
           Code oder Link per WhatsApp oder E-Mail teilen. Erwachsene Spieler können selbst eine Beitrittsanfrage stellen, Eltern können ihr Kind anmelden.
         </p>
+      </div>
+
+      <div>
+        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          QR-Code scannen
+        </p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="inline-block rounded-lg bg-white p-4">
+            <QRCode value={joinUrl} size={220} bgColor="#ffffff" fgColor="#000000" />
+          </div>
+          <p className="text-xs text-muted-foreground text-center max-w-xs">
+            Spieler oder Eltern können diesen Code scannen und eine Beitrittsanfrage stellen.
+          </p>
+        </div>
       </div>
     </div>
   )

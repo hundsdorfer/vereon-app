@@ -68,6 +68,11 @@ Abgeschlossen:
   * Login/Register-Cross-Links erhalten nun den `?redirect=`-Parameter (kein Redirect-Verlust beim Wechsel)
   * `build.log` und `supabase/snippets/` in `.gitignore` eingetragen
   * MVP-Kernflow komplett geprüft und stabil — keine weiteren Blocker
+* Phase J — Spielerbereich MVP verbessern — abgeschlossen, lint/build ok:
+  * Spieleranzahl im Header als Text „N Spieler" statt Badge
+  * Name als `font-semibold` prominenter dargestellt
+  * Geburtsdatum/Jahrgang und Beitrittsart als separate Zeilen
+  * kein technischer Begriff im UI, keine neue Datei, keine Migration
 * Phase H RLS-Hotfix — `20260629100000_fix_players_trainer_rls` — abgeschlossen, lint/build ok:
   * Root Cause: In EXISTS-Subqueries der alten Policies (`players_select_trainer_assignment`, `players_select_trainer_pending_request`) wurde `id` als innerer SQL-Scope (`pta.id` bzw. `tjr.id`) aufgelöst statt als `players.id` → Bedingung war immer false → 0 Zeilen
   * Fix: `can_trainer_read_player(p_player_id uuid)` und `can_trainer_read_player_pending(p_player_id uuid)` als SECURITY DEFINER-Hilfsfunktionen; keine Scope-Ambiguität möglich
@@ -75,42 +80,34 @@ Abgeschlossen:
 
 ## Aktuelle Hauptaufgabe
 
-Phase J — Spielerbereich MVP verbessern
+Phase K — QR-Code für Einladungslink
 
-Ziel: Spielerbereich auf `/teams/[teamId]` übersichtlicher und nutzbarer machen, ohne Spielerbearbeitung oder Spielerprofile zu bauen.
+Ziel: Trainer können den Einladungslink auch als QR-Code anzeigen und teilen.
 
 Umfang:
 
-* Spieleranzahl sauber anzeigen
-* Spieler-Cards oder Liste besser strukturieren
-* Geburtsdatum oder Jahrgang anzeigen
-* „Selbst beigetreten" vs. „Über Erziehungsberechtigte/n angemeldet" verständlich darstellen
-* Empty State verbessern
-* Mobile und Dark Mode erhalten
-* keine neue Migration, außer ein echter Blocker wird zuerst berichtet
+* Einladungsseite `/teams/[teamId]/invite` erweitern
+* QR-Code aus vollständigem Join-Link erzeugen
+* QR-Code gut sichtbar darstellen
+* Link und Code bleiben weiterhin kopierbar
+* Mobile und Dark Mode beachten
+* keine neue Migration
+* kein Join-Flow-Umbau
 
 Nicht bauen:
 
+* keine QR-Code-Downloadfunktion (außer sehr einfach ohne Zusatzaufwand möglich)
+* keine PDF-/Druckansicht
+* keine E-Mail-/WhatsApp-Integration
 * keine Spielerbearbeitung
-* keine Trikotnummer-/Positionsverwaltung
-* keine Spielerprofilseite
-* keine Elternverwaltung
 * keine Events
 * keine Anwesenheit
-* kein QR-Code
-* keine Benachrichtigungen
 * kein db reset
 * kein db push
 * keine Remote-Datenbank
-* keine Packages installieren
+* keine Secrets anzeigen
 
-Produktprinzip:
-
-* UI darf für MVP-Tests noch einfach sein
-* keine unnötig technischen Begriffe im UI
-* noch keine große Designphase
-
-Nächster Schritt: Phase J kurz planen, dann nach Bestätigung umsetzen.
+Nächster Schritt: Phase K planen — falls ein QR-Code-Package nötig ist, zuerst begründen und auf Bestätigung warten.
 
 ## Erlaubt
 
