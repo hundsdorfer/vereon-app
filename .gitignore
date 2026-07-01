@@ -44,3 +44,8 @@ next-env.d.ts
 # lokale Dev-Artefakte
 build.log
 supabase/snippets/
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
