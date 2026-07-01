@@ -43,21 +43,23 @@ Abgeschlossen:
   * `docs/DECISION_LOG.md` — langfristige Rollen-/Ansichtslogik
   * `docs/LEGAL_TODO.md` — DSGVO-Checkliste vor Pilotbetrieb
   * `docs/PROJECT_STATUS.md` — aktueller Gesamtstand
+* Phase UI.3 — Dashboard-Erweiterung — committed
+* Phase P.1 — Manueller MVP-Kernflow-Test — abgeschlossen (lokal)
+* Phase P.2A — 9 MVP-Testbefunde behoben (ohne Migration) — lokal umgesetzt:
+  * Redirect nach Team-Erstellung zu `/teams/[teamId]`
+  * Redirect nach Training-Erstellung zu `/teams/[teamId]/events/[eventId]`
+  * Telefonnummer optional bei Registrierung
+  * iOS Auto-Zoom-Fix: `h-11`, `text-base md:text-sm` in Input-Komponente
+  * RootLayout Script-Warnung behoben (`next/script beforeInteractive`)
+  * Join-Erfolgsscreen: „Zurück zum Dashboard"-Link
+  * Dashboard Spieler/Guardian: wartende Beitrittsanfragen mit Typ und Teamname
+  * Dashboard Trainer: Beitrittsanfragen mit Teamname und Direktlink je Team
+  * Training erstellen: Datum und Uhrzeit als getrennte Felder
+* Phase P.1-Retest nach P.2A-Fixes — abgeschlossen (2026-07-01)
 
 ## Aktuelle Hauptaufgabe
 
-**Phase UI.3 — Dashboard-Erweiterung** — abgeschlossen.
-
-Umgesetzt:
-* `src/components/ui/RsvpStatusBadge.tsx` — neue Komponente (attending/declined/maybe/null)
-* `src/app/(app)/dashboard/page.tsx` — vollständig erweitert:
-  * Nächste 5 Trainings mit Datum/Uhrzeit
-  * Trainer: RSVP-Zusammenfassung (zugesagt/offen), kontextabhängiger CTA (0/1/N Teams)
-  * Non-Trainer: RSVP-Status je Attendance-Row, Spieler-/Kindname wenn sichtbar
-  * Beitrittsanfragen-Card (nur für Trainer, nur wenn offen)
-  * Teams-Card mit rollenabhängigem CTA
-
-**Nächster Schritt: offen — auf neue Aufgabe warten.**
+**Nächste Phase: Playwright E2E-Tests für den MVP-Kernflow planen.**
 
 ## Nicht in der nächsten Phase
 

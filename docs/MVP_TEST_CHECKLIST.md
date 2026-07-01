@@ -1,6 +1,6 @@
 # MVP-Testcheckliste — Vereon
 
-**Stand:** 2026-06-29
+**Stand:** 2026-07-01
 **Zweck:** Manueller Qualitätscheck des MVP-Kernflows vor Releases und nach größeren Änderungen.
 
 > **Wichtig:** Alle Tests laufen auf der lokalen Supabase-Instanz (`npx supabase start`).
@@ -228,3 +228,27 @@ Der MVP-Kernflow gilt als bestanden, wenn:
 - [ ] DSGVO-Checks: Kindesdaten erst nach Trainer-Akzeptanz im Team sichtbar
 - [ ] `npm run lint` — keine Fehler
 - [ ] `npm run build` — kein Fehler
+
+---
+
+## Retest-Protokoll
+
+### Retest P.1 nach Phase P.2A — 2026-07-01
+
+Manueller Retest des Kernflows nach Umsetzung der 9 P.2A-Fixes. Alle Punkte bestanden.
+
+| Bereich | Ergebnis |
+|---------|----------|
+| Registrierung ohne Telefonnummer | ✓ funktioniert, kein Fehler |
+| Team-Erstellung → Redirect zu `/teams/[teamId]` | ✓ direkter Redirect zur Detailseite |
+| Training erstellen: Datum + Uhrzeit getrennt | ✓ zwei Felder, Wiener Zeit korrekt |
+| Training erstellen → Redirect zu Detailseite | ✓ landet direkt auf `/teams/[teamId]/events/[eventId]` |
+| Join-Erfolgsscreen: „Zurück zum Dashboard"-Link | ✓ vorhanden nach Self-Player und Guardian-Flow |
+| Dashboard Spieler: wartende Beitrittsanfrage | ✓ zeigt Typ (self/guardian), Teamname, Hinweistext |
+| Dashboard Trainer: Beitrittsanfragen mit Teamname | ✓ gruppiert nach Team, Direktlink zu `/teams/[teamId]/requests` |
+| iOS Auto-Zoom (Inputs, DevTools-Emulator) | ✓ kein Auto-Zoom bei Input-Focus |
+| RootLayout Script-Warnung | ✓ behoben via `next/script beforeInteractive` |
+| `npm run lint` | ✓ keine Fehler |
+| `npm run build` | ✓ erfolgreich, 18 Routen |
+
+**Nächster Schritt:** Playwright E2E-Tests für den Kernflow planen.

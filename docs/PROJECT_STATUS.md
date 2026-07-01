@@ -1,6 +1,6 @@
 # Project Status — Vereon
 
-**Stand:** 2026-06-29
+**Stand:** 2026-07-01
 
 ---
 
@@ -33,6 +33,15 @@ MVP-Kernflow vollständig implementiert und lokal verifiziert. Trainer können T
 | `/dashboard` minimale Rollenanpassung (kein falscher Leer-Text) | ✓ |
 | `/dev/ui-preview` in Production geschützt (404) | ✓ |
 | GitHub Actions CI (lint + build) | ✓ |
+| Dashboard: nächste Trainings, RSVP-Status, rollenabhängige CTAs | ✓ |
+| Registrierung: Telefonnummer optional | ✓ |
+| Redirect nach Team-/Training-Erstellung zu Detailseite | ✓ |
+| Join-Erfolgsscreen: Navigation zurück zum Dashboard | ✓ |
+| Dashboard Spieler/Guardian: wartende Beitrittsanfragen mit Typ + Teamname | ✓ |
+| Dashboard Trainer: Beitrittsanfragen gruppiert nach Team mit Direktlink | ✓ |
+| iOS Auto-Zoom-Fix (Input h-11, text-base mobile) | ✓ |
+| Training erstellen: Datum und Uhrzeit getrennt | ✓ |
+| Manueller MVP-Kernflow-Retest (P.1 nach P.2A) | ✓ 2026-07-01 |
 
 ---
 
@@ -128,8 +137,8 @@ MVP-Kernflow vollständig implementiert und lokal verifiziert. Trainer können T
 
 ## 8. Nächste empfohlene Schritte
 
-1. **Legal-Seiten finalisieren** — Verantwortlichen eintragen, Rechtstext ergänzen (externe Prüfung)
-2. **Dashboard verbessern** — nächste Trainings, offene RSVPs direkt auf `/dashboard` anzeigen
+1. **Playwright E2E-Tests** — Kernflow automatisiert abdecken (Trainer, Self-Player, Guardian)
+2. **Legal-Seiten finalisieren** — Verantwortlichen eintragen, Rechtstext ergänzen (externe Prüfung)
 3. **Langfristigen Rollen-/Ansichtswechsel planen** — UI-Switcher „Aktive Ansicht: Trainer ▼" (steht in `docs/DECISION_LOG.md`)
 4. **`cleanup_expired_join_requests()` schedulen** — pg_cron oder Supabase Edge Function
 5. **PWA / App-Installierbarkeit** — Nächster Schritt laut `docs/MOBILE_APP_STRATEGY.md`
