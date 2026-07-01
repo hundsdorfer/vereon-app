@@ -27,6 +27,11 @@ type AttendanceRow = {
 
 type PlayerEntry = { id: string; first_name: string; last_name: string }
 
+type PendingRequestRow = {
+  team_id: string
+  teams: { id: string; name: string } | null
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient()
 
@@ -40,7 +45,7 @@ export default async function DashboardPage() {
     { data: memberships },
     { data: profile },
     { data: rawEvents },
-    { count: pendingRequestCount },
+    { data: pendingRequestRows },
   ] = await Promise.all([
     supabase
       .from('team_memberships')
@@ -62,7 +67,7 @@ export default async function DashboardPage() {
       .limit(5),
     supabase
       .from('team_join_requests')
-      .select('id', { count: 'exact', head: true })
+      .select('team_id, teams(id, name)')
       .eq('status', 'pending'),
   ])
 
@@ -81,6 +86,25 @@ export default async function DashboardPage() {
         : { label: 'Teams öffnen', href: '/teams' }
 
   const events = (rawEvents as EventRow[] | null) ?? []
+  const pending = (pendingRequestRows as PendingRequestRow[] | null) ?? []
+
+  // Trainer: pending requests grouped by team (filtered to own trainer teams)
+  const trainerTeamIdSet = new Set(trainerTeamIds)
+  const requestsByTeam = new Map<string, { teamName: string; count: number }>()
+  if (showTrainerUI) {
+    for (const req of pending) {
+      if (trainerTeamIds.length > 0 && !trainerTeamIdSet.has(req.team_id)) continue
+      const existing = requestsByTeam.get(req.team_id) ?? {
+        teamName: req.teams?.name ?? 'Team',
+        count: 0,
+      }
+      existing.count++
+      requestsByTeam.set(req.team_id, existing)
+    }
+  }
+
+  // Non-trainer: own pending requests (RLS via tjr_select_requester returns only own rows)
+  const ownPendingRequests = showTrainerUI ? [] : pending
 
   let attendanceRows: AttendanceRow[] = []
   let playerMap = new Map<string, PlayerEntry>()
@@ -213,21 +237,47 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {showTrainerUI && (pendingRequestCount ?? 0) > 0 && (
+        {showTrainerUI && requestsByTeam.size > 0 && (
           <Card>
             <CardContent>
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-sm text-foreground">
-                  <span className="font-semibold">{pendingRequestCount}</span>{' '}
-                  offene Beitrittsanfrage{pendingRequestCount !== 1 ? 'n' : ''}
-                </p>
-                <Link
-                  href="/teams"
-                  className="flex-shrink-0 text-sm font-medium text-primary hover:underline"
-                >
-                  Zu meinen Teams →
-                </Link>
-              </div>
+              <ul className="divide-y divide-border">
+                {[...requestsByTeam.entries()].map(([teamId, { teamName, count }]) => (
+                  <li key={teamId} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                    <p className="text-sm text-foreground">
+                      <span className="font-semibold">{count}</span>{' '}
+                      offene Anfrage{count !== 1 ? 'n' : ''}{' '}
+                      <span className="text-muted-foreground">· {teamName}</span>
+                    </p>
+                    <Link
+                      href={`/teams/${teamId}/requests`}
+                      className="flex-shrink-0 text-sm font-medium text-primary hover:underline"
+                    >
+                      Ansehen →
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
+
+        {!showTrainerUI && ownPendingRequests.length > 0 && (
+          <Card>
+            <CardContent>
+              <ul className="divide-y divide-border">
+                {ownPendingRequests.map((req, i) => (
+                  <li key={`${req.team_id}-${i}`} className="py-3 first:pt-0 last:pb-0">
+                    <p className="text-sm font-medium text-foreground">
+                      Anfrage wartet auf Annahme
+                    </p>
+                    {req.teams?.name && (
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Team: {req.teams.name}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
         )}

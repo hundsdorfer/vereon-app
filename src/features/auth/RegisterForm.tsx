@@ -118,14 +118,13 @@ export function RegisterForm({ redirectPath }: { redirectPath?: string }) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="phone" required>Telefonnummer</Label>
+        <Label htmlFor="phone">Telefonnummer</Label>
         <Input
           id="phone"
           name="phone"
           type="tel"
           autoComplete="tel"
-          required
-          placeholder="+43 664 1234567"
+          placeholder="+43 664 1234567 (optional)"
           defaultValue={saved.phone}
         />
       </div>

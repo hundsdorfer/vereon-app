@@ -36,15 +36,27 @@ export function CreateEventForm({ teamId }: Props) {
         />
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="starts_at" required>Datum & Uhrzeit</Label>
-        <Input
-          id="starts_at"
-          name="starts_at"
-          type="datetime-local"
-          required
-          disabled={isPending}
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="starts_at_date" required>Datum</Label>
+          <Input
+            id="starts_at_date"
+            name="starts_at_date"
+            type="date"
+            required
+            disabled={isPending}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="starts_at_time" required>Uhrzeit</Label>
+          <Input
+            id="starts_at_time"
+            name="starts_at_time"
+            type="time"
+            required
+            disabled={isPending}
+          />
+        </div>
       </div>
 
       <div className="space-y-1.5">

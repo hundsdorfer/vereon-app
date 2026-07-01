@@ -19,7 +19,7 @@ export async function createTeamAction(
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.rpc('create_independent_team', {
+  const { data: teamId, error } = await supabase.rpc('create_independent_team', {
     p_team_name: teamName,
     p_age_group: ageGroup,
     p_gender: gender,
@@ -32,5 +32,5 @@ export async function createTeamAction(
 
   revalidatePath('/teams')
   revalidatePath('/dashboard')
-  redirect('/teams')
+  redirect(teamId ? `/teams/${teamId}` : '/teams')
 }

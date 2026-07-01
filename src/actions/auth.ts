@@ -93,15 +93,16 @@ export async function signUpAction(
   if (isNaN(dob.getTime())) return err('Bitte gib ein gültiges Geburtsdatum ein.')
   if (dob >= new Date()) return err('Geburtsdatum muss in der Vergangenheit liegen.')
 
-  if (!phone) return err('Telefonnummer ist erforderlich.')
-  // Schritt 1: nur erlaubte Zeichen (Ziffern, +, Leerzeichen, -, /, (, ), .)
-  if (!/^[+\d\s\-\(\)\/\.]+$/.test(phone)) {
-    return err('Bitte gib eine gültige Telefonnummer ein (z. B. +43 664 1234567).')
-  }
-  // Schritt 2: Formatzeichen entfernen, 7–15 Ziffern mit optionalem führendem +
-  const phoneDigits = phone.replace(/[\s\-\(\)\/\.]/g, '')
-  if (!/^\+?\d{7,15}$/.test(phoneDigits)) {
-    return err('Bitte gib eine gültige Telefonnummer ein (z. B. +43 664 1234567).')
+  if (phone) {
+    // Schritt 1: nur erlaubte Zeichen (Ziffern, +, Leerzeichen, -, /, (, ), .)
+    if (!/^[+\d\s\-\(\)\/\.]+$/.test(phone)) {
+      return err('Bitte gib eine gültige Telefonnummer ein (z. B. +43 664 1234567).')
+    }
+    // Schritt 2: Formatzeichen entfernen, 7–15 Ziffern mit optionalem führendem +
+    const phoneDigits = phone.replace(/[\s\-\(\)\/\.]/g, '')
+    if (!/^\+?\d{7,15}$/.test(phoneDigits)) {
+      return err('Bitte gib eine gültige Telefonnummer ein (z. B. +43 664 1234567).')
+    }
   }
 
   if (!onboardingRole || !VALID_ONBOARDING_ROLES.includes(onboardingRole as typeof VALID_ONBOARDING_ROLES[number])) {

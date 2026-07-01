@@ -19,15 +19,18 @@ export async function createEventAction(
   _prevState: CreateEventState,
   formData: FormData,
 ): Promise<CreateEventState> {
-  const teamId      = (formData.get('team_id')     as string | null)?.trim()
-  const title       = (formData.get('title')        as string | null)?.trim()
-  const startsAtRaw = (formData.get('starts_at')    as string | null)?.trim()
-  const location    = (formData.get('location')     as string | null)?.trim() || undefined
-  const description = (formData.get('description')  as string | null)?.trim() || undefined
+  const teamId       = (formData.get('team_id')        as string | null)?.trim()
+  const title        = (formData.get('title')           as string | null)?.trim()
+  const startsAtDate = (formData.get('starts_at_date')  as string | null)?.trim()
+  const startsAtTime = (formData.get('starts_at_time')  as string | null)?.trim()
+  const location     = (formData.get('location')        as string | null)?.trim() || undefined
+  const description  = (formData.get('description')     as string | null)?.trim() || undefined
 
-  if (!teamId)                          return { error: 'Team-ID fehlt.' }
-  if (!title)                           return { error: 'Titel ist erforderlich.' }
-  if (!startsAtRaw)                     return { error: 'Datum und Uhrzeit sind erforderlich.' }
+  if (!teamId)       return { error: 'Team-ID fehlt.' }
+  if (!title)        return { error: 'Titel ist erforderlich.' }
+  if (!startsAtDate) return { error: 'Datum ist erforderlich.' }
+  if (!startsAtTime) return { error: 'Uhrzeit ist erforderlich.' }
+  const startsAtRaw = `${startsAtDate}T${startsAtTime}`
 
   let startsAt: string
   try {
@@ -37,7 +40,7 @@ export async function createEventAction(
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.rpc('create_event', {
+  const { data: eventId, error } = await supabase.rpc('create_event', {
     p_team_id:     teamId,
     p_title:       title,
     p_starts_at:   startsAt,
@@ -55,7 +58,7 @@ export async function createEventAction(
   }
 
   revalidatePath(`/teams/${teamId}`)
-  redirect(`/teams/${teamId}`)
+  redirect(eventId ? `/teams/${teamId}/events/${eventId}` : `/teams/${teamId}`)
 }
 
 export type RespondToEventState = { error: string } | null

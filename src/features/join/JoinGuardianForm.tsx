@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState } from 'react'
 import { submitJoinRequestGuardianAction, type JoinState } from '@/actions/join'
 import { Button } from '@/components/ui/Button'
@@ -29,6 +30,12 @@ export function JoinGuardianForm({ code, onBack }: Props) {
             Die Anfrage wurde gesendet. Der Trainer bestätigt die Aufnahme deines Kindes.
           </p>
         </div>
+        <Link
+          href="/dashboard"
+          className="inline-flex w-full items-center justify-center rounded-md border border-border bg-surface px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          Zurück zum Dashboard
+        </Link>
       </div>
     )
   }
