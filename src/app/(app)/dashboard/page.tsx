@@ -28,8 +28,11 @@ type AttendanceRow = {
 type PlayerEntry = { id: string; first_name: string; last_name: string }
 
 type PendingRequestRow = {
+  id: string
   team_id: string
+  request_type: 'self_player' | 'guardian_child'
   teams: { id: string; name: string } | null
+  players: { id: string; first_name: string; last_name: string } | null
 }
 
 export default async function DashboardPage() {
@@ -67,7 +70,7 @@ export default async function DashboardPage() {
       .limit(5),
     supabase
       .from('team_join_requests')
-      .select('team_id, teams(id, name)')
+      .select('id, team_id, request_type, teams(id, name), players(id, first_name, last_name)')
       .eq('status', 'pending'),
   ])
 
@@ -263,20 +266,33 @@ export default async function DashboardPage() {
 
         {!showTrainerUI && ownPendingRequests.length > 0 && (
           <Card>
+            <CardHeader>
+              <h2 className="text-sm font-semibold text-foreground">Offene Beitrittsanfragen</h2>
+            </CardHeader>
             <CardContent>
               <ul className="divide-y divide-border">
-                {ownPendingRequests.map((req, i) => (
-                  <li key={`${req.team_id}-${i}`} className="py-3 first:pt-0 last:pb-0">
-                    <p className="text-sm font-medium text-foreground">
-                      Anfrage wartet auf Annahme
-                    </p>
-                    {req.teams?.name && (
+                {ownPendingRequests.map((req) => {
+                  const isSelf = req.request_type === 'self_player'
+                  const playerName = req.players
+                    ? `${req.players.first_name} ${req.players.last_name}`
+                    : null
+                  const mainText = isSelf
+                    ? 'Deine Beitrittsanfrage'
+                    : playerName ?? 'Beitrittsanfrage'
+                  const teamText = req.teams?.name ?? null
+
+                  return (
+                    <li key={req.id} className="py-3 first:pt-0 last:pb-0">
+                      <p className="text-sm font-medium text-foreground">{mainText}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        Team: {req.teams.name}
+                        {teamText ? `Team: ${teamText}` : 'Teambeitritt angefragt'}
                       </p>
-                    )}
-                  </li>
-                ))}
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Wartet auf Bestätigung durch den Trainer
+                      </p>
+                    </li>
+                  )
+                })}
               </ul>
             </CardContent>
           </Card>
