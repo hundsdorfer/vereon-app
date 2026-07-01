@@ -1,0 +1,43 @@
+name: E2E Tests
+
+on:
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRFA0NiK7W9oHkBMBfCyAy-7G_T4UhPOWQc5ERo7lKs
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Playwright Browser installieren
+        run: npx playwright install --with-deps chromium
+
+      - name: Supabase starten
+        run: npx supabase start
+
+      - name: E2E-Tests ausführen
+        run: npm run test:e2e
+
+      - name: Playwright Report hochladen
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
