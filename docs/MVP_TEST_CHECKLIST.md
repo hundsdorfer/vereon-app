@@ -251,4 +251,26 @@ Manueller Retest des Kernflows nach Umsetzung der 9 P.2A-Fixes. Alle Punkte best
 | `npm run lint` | ✓ keine Fehler |
 | `npm run build` | ✓ erfolgreich, 18 Routen |
 
-**Nächster Schritt:** Playwright E2E-Tests für den Kernflow planen.
+**Phase M abgeschlossen** — 5/5 E2E-Tests lokal und in GitHub Actions grün.
+
+---
+
+### Playwright E2E-Automatisierung — 2026-07-01
+
+Kernflow automatisiert mit Playwright. Alle Tests laufen lokal gegen die lokale Supabase-Instanz.
+
+```
+npm run test:e2e
+```
+
+Supabase (`npx supabase start`) und Dev-Server (`npm run dev`) müssen laufen.
+
+GitHub Actions: `.github/workflows/e2e.yml` — manuell via `workflow_dispatch` auslösbar (M.4). `ci.yml` bleibt für Lint + Build zuständig.
+
+| Test-Datei | Inhalt | Ergebnis |
+|------------|--------|----------|
+| `tests/e2e/smoke.spec.ts` | Login-Seite, Register-Seite, Root-Redirect | 3/3 ✓ |
+| `tests/e2e/core-flow-self-player.spec.ts` | Trainer → Team → Invite → Self-Player Join → Annahme → Training → RSVP → Trainer sieht „Kommt" | 1/1 ✓ |
+| `tests/e2e/core-flow-guardian.spec.ts` | Trainer → Team → Invite → Guardian → Kind anmelden → Annahme → Training → RSVP fürs Kind → Trainer sieht Kind unter „Kommt" | 1/1 ✓ |
+
+**Gesamt: 5/5 grün**

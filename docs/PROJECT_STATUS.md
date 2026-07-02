@@ -42,6 +42,10 @@ MVP-Kernflow vollständig implementiert und lokal verifiziert. Trainer können T
 | iOS Auto-Zoom-Fix (Input h-11, text-base mobile) | ✓ |
 | Training erstellen: Datum und Uhrzeit getrennt | ✓ |
 | Manueller MVP-Kernflow-Retest (P.1 nach P.2A) | ✓ 2026-07-01 |
+| Playwright E2E — Smoke-Tests | ✓ |
+| Playwright E2E — Self-Player Kernflow (M.2) | ✓ |
+| Playwright E2E — Guardian/Kind Kernflow (M.3) | ✓ |
+| GitHub Actions E2E-Workflow (M.4, manuell via `workflow_dispatch`) | ✓ |
 
 ---
 
@@ -137,11 +141,11 @@ MVP-Kernflow vollständig implementiert und lokal verifiziert. Trainer können T
 
 ## 8. Nächste empfohlene Schritte
 
-1. **Playwright E2E-Tests** — Kernflow automatisiert abdecken (Trainer, Self-Player, Guardian)
-2. **Legal-Seiten finalisieren** — Verantwortlichen eintragen, Rechtstext ergänzen (externe Prüfung)
+1. **Legal-Seiten finalisieren** — `/legal/privacy`, `/legal/terms` vor Pilotbetrieb erforderlich
+2. **Nächste Feature-Entscheidung** — PWA/App-Installierbarkeit, P.2B Einladungscode, Match-MVP
 3. **Langfristigen Rollen-/Ansichtswechsel planen** — UI-Switcher „Aktive Ansicht: Trainer ▼" (steht in `docs/DECISION_LOG.md`)
 4. **`cleanup_expired_join_requests()` schedulen** — pg_cron oder Supabase Edge Function
-5. **PWA / App-Installierbarkeit** — Nächster Schritt laut `docs/MOBILE_APP_STRATEGY.md`
+5. **E2E CI auf push/PR erweitern** — wenn `e2e.yml` stabil läuft
 
 ---
 

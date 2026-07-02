@@ -56,10 +56,21 @@ Abgeschlossen:
   * Dashboard Trainer: Beitrittsanfragen mit Teamname und Direktlink je Team
   * Training erstellen: Datum und Uhrzeit als getrennte Felder
 * Phase P.1-Retest nach P.2A-Fixes — abgeschlossen (2026-07-01)
+* Phase M.1 — Playwright Setup (`playwright.config.ts`, Smoke-Tests) — 3/3 grün
+* Phase M.2 — Self-Player E2E-Kernflow (`tests/e2e/core-flow-self-player.spec.ts`) — lokal grün
+* Phase M.3 — Guardian/Kind E2E-Kernflow (`tests/e2e/core-flow-guardian.spec.ts`) — lokal grün
+* Lokal gesamt: 5/5 Tests grün (`npm run test:e2e`)
+* Phase M.4 — GitHub Actions E2E-Workflow (`.github/workflows/e2e.yml`) — manuell via `workflow_dispatch`, grün
+* Phase M abgeschlossen — 5/5 E2E-Tests bestanden (lokal + CI)
 
 ## Aktuelle Hauptaufgabe
 
-**Nächste Phase: Playwright E2E-Tests für den MVP-Kernflow planen.**
+**Offen — nächste Entscheidung erforderlich:**
+
+* PWA / App-Installierbarkeit (laut `docs/MOBILE_APP_STRATEGY.md`)
+* P.2B — Einladungscode-Format vereinfachen
+* Legal-Seiten finalisieren (`/legal/privacy`, `/legal/terms`) — vor Pilotbetrieb erforderlich
+* Match-MVP planen
 
 ## Nicht in der nächsten Phase
 
