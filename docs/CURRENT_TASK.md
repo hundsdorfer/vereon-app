@@ -77,6 +77,11 @@ Abgeschlossen:
   * kein Offline-Modus
   * keine Push Notifications
   * kein praktischer Smartphone-Install-Test durchgeführt, kein Lighthouse-PWA-Audit durchgeführt
+* `/legal/imprint` als Platzhalter erstellt und aus `RegisterForm` verlinkt (dezente Info-Zeile, keine Zustimmungspflicht):
+  * Legal-Seiten (`/legal/privacy`, `/legal/terms`, `/legal/imprint`) weiterhin nicht final
+  * Betreiberangaben fehlen weiterhin
+  * Datenschutzfinalisierung bleibt offen
+  * Datenmodell-Abgleich `date_of_birth` vs. `birth_year` bleibt offen
 
 ## Aktuelle Hauptaufgabe
 

@@ -205,6 +205,17 @@ export function RegisterForm({ redirectPath }: { redirectPath?: string }) {
             <span className="ml-1 text-danger" aria-hidden>*</span>
           </span>
         </label>
+
+        <p className="text-xs text-muted-foreground">
+          <Link
+            href="/legal/imprint"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline"
+          >
+            Impressum
+          </Link>
+        </p>
       </div>
 
       <Button type="submit" loading={isPending} className="w-full" size="lg">

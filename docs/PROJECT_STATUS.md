@@ -130,7 +130,8 @@ MVP-Kernflow vollständig implementiert und lokal verifiziert. Trainer können T
 
 | Lücke | Priorität |
 |-------|-----------|
-| Legal-Seiten (`/legal/privacy`, `/legal/terms`) finalisieren | Hoch — vor echtem Pilotbetrieb |
+| Legal-Seiten (`/legal/privacy`, `/legal/terms`, `/legal/imprint`) finalisieren — `/legal/imprint` bisher nur als Platzhalter erstellt, Betreiberangaben fehlen weiterhin | Hoch — vor echtem Pilotbetrieb |
+| Datenmodell-Abgleich `players.date_of_birth` vs. dokumentiertes `birth_year`-Minimalprinzip klären | Mittel |
 | AV-Vertrag mit Supabase abschließen | Hoch |
 | `cleanup_expired_join_requests()` als Scheduled Job einrichten | Mittel |
 | Dashboard-UX für Spieler/Guardian verbessern (nächste Trainings, offene RSVP) | Mittel |
