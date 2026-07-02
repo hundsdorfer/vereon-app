@@ -17,11 +17,23 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Vereon',
   description: 'Vereinsmanagement für Fußballvereine',
+  icons: {
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
+  appleWebApp: {
+    title: 'Vereon',
+    statusBarStyle: 'default',
+  },
 }
 
 // viewport-fit=cover is required for env(safe-area-inset-*) to work on iOS notch devices
 export const viewport: Viewport = {
   viewportFit: 'cover',
+  themeColor: '#16a34a',
 }
 
 // Runs before React hydration to prevent theme flash.
