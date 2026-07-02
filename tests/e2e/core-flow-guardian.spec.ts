@@ -69,7 +69,7 @@ test('Kernflow: Trainer + Guardian + Kind', async ({ browser }) => {
     // ── 7. Kind-Daten eingeben ───────────────────────────────────────────────
     await gPage.fill('#child_first_name', childFirst)
     await gPage.fill('#child_last_name', childLast)
-    await gPage.fill('#child_date_of_birth', '2015-03-15')
+    await gPage.fill('#child_birth_year', '2015')
 
     // ── 8. Beitrittsanfrage senden ───────────────────────────────────────────
     // Achtung: Guardian-Form hat "Anfrage senden", nicht "Beitrittsanfrage senden"!

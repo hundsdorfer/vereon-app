@@ -47,20 +47,26 @@ export async function submitJoinRequestGuardianAction(
   const code      = (formData.get('code')       as string | null)?.trim()
   const firstName = (formData.get('first_name') as string | null)?.trim()
   const lastName  = (formData.get('last_name')  as string | null)?.trim()
-  const dob       = (formData.get('child_date_of_birth') as string | null)?.trim()
+  const birthYearRaw = (formData.get('child_birth_year') as string | null)?.trim()
+  const birthYear = birthYearRaw ? Number(birthYearRaw) : NaN
 
   if (!code)      return { error: 'Ungültiger Einladungscode.' }
   if (!firstName) return { error: 'Vorname des Kindes ist erforderlich.' }
   if (!lastName)  return { error: 'Nachname des Kindes ist erforderlich.' }
-  if (!dob)       return { error: 'Geburtsdatum des Kindes ist erforderlich.' }
+  if (!birthYearRaw || !Number.isInteger(birthYear)) {
+    return { error: 'Geburtsjahr des Kindes ist erforderlich.' }
+  }
+  if (birthYear < 1900 || birthYear > new Date().getFullYear()) {
+    return { error: 'Bitte ein gültiges Geburtsjahr angeben.' }
+  }
 
   const supabase = await createClient()
 
   const { error } = await supabase.rpc('submit_join_request_guardian', {
-    p_code:                 code,
-    p_first_name:           firstName,
-    p_last_name:            lastName,
-    p_child_date_of_birth:  dob,
+    p_code:               code,
+    p_first_name:         firstName,
+    p_last_name:          lastName,
+    p_child_birth_year:   birthYear,
   })
 
   if (error) {
@@ -68,8 +74,8 @@ export async function submitJoinRequestGuardianAction(
     if (msg.includes('bereits eine offene Beitrittsanfrage')) {
       return { error: 'Du hast bereits eine offene Beitrittsanfrage für dieses Team gesendet.' }
     }
-    if (msg.includes('in der Vergangenheit')) {
-      return { error: 'Das Geburtsdatum muss in der Vergangenheit liegen.' }
+    if (msg.includes('Ungültiges Geburtsjahr')) {
+      return { error: 'Bitte ein gültiges Geburtsjahr angeben.' }
     }
     if (msg.includes('widerrufen') || msg.includes('abgelaufen') || msg.includes('nicht gefunden') || msg.includes('maximale Nutzungen')) {
       return { error: 'Dieser Einladungslink ist nicht mehr gültig. Bitte wende dich an den Trainer.' }

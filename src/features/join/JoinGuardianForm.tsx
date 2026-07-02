@@ -19,7 +19,7 @@ export function JoinGuardianForm({ code, onBack }: Props) {
     null,
   )
 
-  const today = new Date().toISOString().split('T')[0]
+  const currentYear = new Date().getFullYear()
 
   if (state && 'success' in state) {
     return (
@@ -76,13 +76,16 @@ export function JoinGuardianForm({ code, onBack }: Props) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="child_date_of_birth" required>Geburtsdatum des Kindes</Label>
+        <Label htmlFor="child_birth_year" required>Geburtsjahr des Kindes</Label>
         <Input
-          id="child_date_of_birth"
-          name="child_date_of_birth"
-          type="date"
+          id="child_birth_year"
+          name="child_birth_year"
+          type="number"
+          inputMode="numeric"
           required
-          max={today}
+          min={1900}
+          max={currentYear}
+          placeholder={`z. B. ${currentYear - 10}`}
         />
       </div>
 
