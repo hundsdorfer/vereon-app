@@ -274,3 +274,24 @@ GitHub Actions: `.github/workflows/e2e.yml` — manuell via `workflow_dispatch` 
 | `tests/e2e/core-flow-guardian.spec.ts` | Trainer → Team → Invite → Guardian → Kind anmelden → Annahme → Training → RSVP fürs Kind → Trainer sieht Kind unter „Kommt" | 1/1 ✓ |
 
 **Gesamt: 5/5 grün**
+
+---
+
+### Phase PWA.1 — Basis-PWA-Metadaten / Installierbarkeit vorbereitet — 2026-07-02
+
+| Prüfpunkt | Ergebnis |
+|-----------|----------|
+| `/manifest.webmanifest` wird im Next.js-Build erzeugt | ✓ |
+| `public/icon-192.png` vorhanden | ✓ |
+| `public/icon-512.png` vorhanden | ✓ |
+| `public/apple-touch-icon.png` vorhanden | ✓ |
+| `metadata.icons` ergänzt | ✓ |
+| `metadata.appleWebApp` ergänzt | ✓ |
+| `viewport.themeColor` gesetzt | ✓ |
+| `npm run lint` | ✓ keine Fehler |
+| `npm run build` | ✓ erfolgreich |
+| Service Worker | nicht vorhanden (bewusst) |
+| Offline-Modus | nicht vorhanden (bewusst) |
+| Push Notifications | nicht vorhanden (bewusst) |
+
+**Nicht durchgeführt:** praktischer Install-Test auf iOS/Android, Lighthouse-PWA-Audit. Beides bleibt offen und wird nicht als erledigt markiert.

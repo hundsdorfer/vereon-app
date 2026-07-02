@@ -1,6 +1,6 @@
 # Project Status — Vereon
 
-**Stand:** 2026-07-01
+**Stand:** 2026-07-02
 
 ---
 
@@ -46,6 +46,7 @@ MVP-Kernflow vollständig implementiert und lokal verifiziert. Trainer können T
 | Playwright E2E — Self-Player Kernflow (M.2) | ✓ |
 | Playwright E2E — Guardian/Kind Kernflow (M.3) | ✓ |
 | GitHub Actions E2E-Workflow (M.4, manuell via `workflow_dispatch`) | ✓ |
+| PWA-Basismetadaten (Manifest, Icons, Apple Web App Metadata, Theme Color) — Installierbarkeit vorbereitet, nicht praktisch getestet | ✓ |
 
 ---
 
@@ -136,13 +137,15 @@ MVP-Kernflow vollständig implementiert und lokal verifiziert. Trainer können T
 | Self-Service Account-Löschung (Art. 17 DSGVO) | Mittel — aktuell manuell |
 | `DESIGN_SYSTEM.md` anlegen | Niedrig |
 | Supabase EU-Region für Datenspeicher bestätigen | Hoch — vor Launch |
+| Service Worker / Offline-Support — bewusst nicht im Scope von PWA.1 | — |
+| Praktischer Install-Test (iOS/Android) und Lighthouse-PWA-Audit — noch offen | Mittel |
 
 ---
 
 ## 8. Nächste empfohlene Schritte
 
 1. **Legal-Seiten finalisieren** — `/legal/privacy`, `/legal/terms` vor Pilotbetrieb erforderlich
-2. **Nächste Feature-Entscheidung** — PWA/App-Installierbarkeit, P.2B Einladungscode, Match-MVP
+2. **Nächste Feature-Entscheidung** — P.2B Einladungscode, Match-MVP
 3. **Langfristigen Rollen-/Ansichtswechsel planen** — UI-Switcher „Aktive Ansicht: Trainer ▼" (steht in `docs/DECISION_LOG.md`)
 4. **`cleanup_expired_join_requests()` schedulen** — pg_cron oder Supabase Edge Function
 5. **E2E CI auf push/PR erweitern** — wenn `e2e.yml` stabil läuft
@@ -161,3 +164,4 @@ MVP-Kernflow vollständig implementiert und lokal verifiziert. Trainer können T
 - Audit-Logs
 - Monetarisierung / Billing
 - ÖFB-Integration / offizielle Spielertransfers
+- Service Worker / Offline-Modus / Push Notifications (PWA.1 bewusst ohne)

@@ -62,12 +62,26 @@ Abgeschlossen:
 * Lokal gesamt: 5/5 Tests grün (`npm run test:e2e`)
 * Phase M.4 — GitHub Actions E2E-Workflow (`.github/workflows/e2e.yml`) — manuell via `workflow_dispatch`, grün
 * Phase M abgeschlossen — 5/5 E2E-Tests bestanden (lokal + CI)
+* Phase PWA.1 — Basis-PWA-Metadaten / Installierbarkeit vorbereitet — committed (61923e5):
+  * `src/app/manifest.ts` vorhanden
+  * `/manifest.webmanifest` wird im Next.js-Build erzeugt
+  * `public/icon-192.png` vorhanden
+  * `public/icon-512.png` vorhanden
+  * `public/apple-touch-icon.png` vorhanden
+  * `metadata.icons` ergänzt
+  * `metadata.appleWebApp` ergänzt
+  * `viewport.themeColor` gesetzt
+  * `npm run lint` erfolgreich
+  * `npm run build` erfolgreich
+  * kein Service Worker
+  * kein Offline-Modus
+  * keine Push Notifications
+  * kein praktischer Smartphone-Install-Test durchgeführt, kein Lighthouse-PWA-Audit durchgeführt
 
 ## Aktuelle Hauptaufgabe
 
 **Offen — nächste Entscheidung erforderlich:**
 
-* PWA / App-Installierbarkeit (laut `docs/MOBILE_APP_STRATEGY.md`)
 * P.2B — Einladungscode-Format vereinfachen
 * Legal-Seiten finalisieren (`/legal/privacy`, `/legal/terms`) — vor Pilotbetrieb erforderlich
 * Match-MVP planen
