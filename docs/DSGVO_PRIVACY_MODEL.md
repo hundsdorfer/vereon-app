@@ -44,7 +44,7 @@ Viele Spieler in Amateurfußballvereinen sind Minderjährige, oft unter 14 Jahre
 - Kein Account für Kinder unter 14 ohne Guardian-Verknüpfung empfohlen
 
 ### Architektonische Konsequenz:
-- `player_guardians.verified_at` ist nicht nur ein technisches Feld, sondern der Nachweis der Einwilligung
+- `player_guardians.verified_at` ist ein technischer Verknüpfungszeitpunkt (gesetzt beim Absenden der Beitrittsanfrage über den Einladungsflow) — **kein vollständiger Einwilligungsnachweis** im Sinne von Art. 8 DSGVO (keine Referenz auf eine konkrete Consent-Version, keine separate Protokollierung des Einwilligungsinhalts). Offener Punkt, siehe `docs/LEGAL_TODO.md`.
 - Guardian-Verknüpfung über Einladungsflow (nicht durch Kinder selbst)
 - Kinder ohne Account erscheinen in Anwesenheitslisten, haben aber keine eigene Authentifizierung
 
@@ -70,7 +70,7 @@ players (minimal):
 ### Was bewusst NICHT im MVP gespeichert wird:
 | Datenfeld | Begründung |
 |---|---|
-| Vollständiges Geburtsdatum | Geburtsjahr reicht für Altersklassen, weniger sensibel |
+| Vollständiges Geburtsdatum | Geburtsjahr reicht für Altersklassen, weniger sensibel. Technisch umgesetzt seit Migration `20260702000000_players_birth_year_only`: Der Join-Flow (`submit_join_request_self`, `submit_join_request_guardian`) befüllt `players.date_of_birth` nicht mehr. Die Spalte existiert weiterhin nullable als Bestandsspalte; ggf. vorhandene Altdaten aus früheren lokalen Testläufen wurden nicht rückwirkend bereinigt. `profiles.date_of_birth` ist ein separates Feld für das Profil des registrierten Nutzers (Trainer/Self-Player/Guardian selbst) und von dieser Umstellung nicht betroffen. |
 | Nationalität | Nicht nötig für Kernfunktionen |
 | Gesundheitsdaten | Streng sensibel nach Art. 9 DSGVO, nie in MVP |
 | Medizinische Informationen | Dito — separates Modul wenn überhaupt |

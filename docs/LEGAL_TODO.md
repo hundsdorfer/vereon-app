@@ -26,10 +26,10 @@ Relevante Grundlagen: DSGVO (EU 2016/679), DSG 2018 (Österreich), Art. 8 (Minde
 
 - [ ] **Verantwortlicher / Kontakt** — Name, Adresse, E-Mail-Kontakt für Datenschutzanfragen in `/legal/privacy` eintragen
 - [ ] **Welche personenbezogenen Daten werden verarbeitet?** Tatsächliches Datenmodell gegen Datenschutzerklärung abgleichen:
-  - Nutzerprofile: Vorname, Nachname, E-Mail, Geburtsdatum, Telefonnummer (falls angegeben)
-  - Spielerdaten: Vorname, Nachname, Geburtsdatum, Teamzuordnung
-  - Kinderdaten: Vorname, Nachname, Geburtsdatum (über Guardian-Flow erfasst)
-  - Guardian-/Elternbeziehung: `player_guardians.verified_at` als Einwilligung/Nachweis
+  - Nutzerprofile: Vorname, Nachname, E-Mail, Geburtsdatum (`profiles.date_of_birth`, unverändert), Telefonnummer (falls angegeben)
+  - Spielerdaten: Vorname, Nachname, Geburtsjahr (`players.birth_year`), Teamzuordnung — **Teilaspekt technisch bereinigt** seit Migration `20260702000000_players_birth_year_only`: Der Join-Flow befüllt `players.date_of_birth` nicht mehr; die Spalte bleibt nullable bestehen, ggf. vorhandene Altdaten wurden nicht rückwirkend bereinigt. Der übrige Datenschutz-/Legal-Abgleich (Zwecke, Rechtsgrundlagen, Speicherdauer, Betroffenenrechte) ist damit **nicht** erledigt.
+  - Kinderdaten: Vorname, Nachname, Geburtsjahr (über Guardian-Flow erfasst, seit `20260702000000` nur noch Jahr, kein volles Geburtsdatum mehr)
+  - Guardian-/Elternbeziehung: `player_guardians.verified_at` als technischer Verknüpfungszeitpunkt; kein vollständiger Einwilligungsnachweis
   - Trainings- und RSVP-Daten: Anwesenheitsstatus, optionale Notiz, Zeitstempel
   - Einladungs- und Join-Request-Daten (temporär, Löschfrist beachten)
 - [ ] **Zweck der Verarbeitung** — je Datenkategorie dokumentieren (Teamverwaltung, Anwesenheitserfassung, RSVP, Einladungsflow)

@@ -367,14 +367,16 @@ players (
 ```
 
 **DSGVO-Entscheidungen:**
-- `birth_year` statt `date_of_birth` — reicht für Altersklassenzuordnung, weniger sensibel
+- `birth_year` statt `date_of_birth` — reicht für Altersklassenzuordnung, weniger sensibel. Aktueller MVP-Stand, technisch umgesetzt seit Migration `20260702000000_players_birth_year_only`: Der Join-Flow befüllt `players.date_of_birth` nicht mehr.
 - Kein `nationality`, keine `notes`, keine `dominant_foot` im MVP — Datensparsamkeit
 - `full_name` → aufgeteilt in `first_name` / `last_name` für bessere Nutzbarkeit
 - Fotos: kein `avatar_url` im MVP für Minderjährige
 
+**Hinweis zu `players.date_of_birth`:** Die Spalte wurde in Migration `20260629000000_add_join_flow_improvements` ergänzt (nullable) und ist technisch weiterhin vorhanden, wird aber seit `20260702000000_players_birth_year_only` durch den Join-Flow nicht mehr befüllt. Ggf. vorhandene Altdaten aus früheren lokalen Testläufen wurden nicht rückwirkend bereinigt.
+
 **Was nicht gespeichert wird (MVP):** Gesundheitsdaten, medizinische Infos, vollständige Privatadresse, Fotos, detaillierte Leistungsnotizen.
 
-**Phase 2 ergänzt:** `date_of_birth` (wenn nötig), `nationality`, Spielerhistorie.
+**Phase 2 (falls fachlich nötig):** erneute Prüfung von `date_of_birth` (aktuell bewusst nicht genutzt), `nationality`, Spielerhistorie.
 **RLS:** Trainer und Admins lesen/schreiben. Spieler (via `user_id`) sehen nur eigene Daten.
 
 ---

@@ -19,7 +19,7 @@ MVP-Kernflow vollständig implementiert und lokal verifiziert. Trainer können T
 | Team erstellen (`create_independent_team()`) | ✓ |
 | Einladungscode, Einladungslink, QR-Code | ✓ |
 | Join-Flow Self-Player (Profil read-only, kein Name-Spoofing) | ✓ |
-| Join-Flow Guardian/Child (Vorname, Nachname, Geburtsdatum) | ✓ |
+| Join-Flow Guardian/Child (Vorname, Nachname, Geburtsjahr) | ✓ |
 | Beitrittsanfragen: Trainer sieht, nimmt an, lehnt ab | ✓ |
 | Orphan-Cleanup bei Ablehnung | ✓ |
 | Angenommene Spieler erscheinen im Team | ✓ |
@@ -66,14 +66,14 @@ MVP-Kernflow vollständig implementiert und lokal verifiziert. Trainer können T
 - Zu Trainings zusagen, absagen oder vielleicht wählen (inkl. Notiz)
 
 **Was ein Guardian (Elternteil) heute kann:**
-- Account erstellen, Kind über Einladungslink anmelden (Vorname, Nachname, Geburtsdatum)
+- Account erstellen, Kind über Einladungslink anmelden (Vorname, Nachname, Geburtsjahr)
 - Nach Annahme: RSVP für verknüpftes Kind
 
 ---
 
 ## 4. Datenbank/RLS-Stand
 
-**11 Migrationen lokal angewendet:**
+**12 Migrationen lokal angewendet:**
 
 | Migration | Inhalt |
 |-----------|--------|
@@ -88,6 +88,7 @@ MVP-Kernflow vollständig implementiert und lokal verifiziert. Trainer können T
 | `20260629200000_add_events` | events, event_attendance, RLS, RPCs, Trigger |
 | `20260629300000_fix_player_event_rls` | is_player_in_team(), is_guardian_in_team(), Policies für teams + events |
 | `20260629400000_add_pta_player_policy` | pta_select_player — Self-Player liest eigene aktive Assignment |
+| `20260702000000_players_birth_year_only` | submit_join_request_guardian auf birth_year umgestellt, submit_join_request_self befüllt players.date_of_birth nicht mehr |
 
 **RLS-Modell:** Variante B — Player/Guardian via eigene Relationen (nicht via team_memberships). SECURITY DEFINER Funktionen mit `SET search_path = ''` durchgängig umgesetzt.
 
@@ -131,13 +132,13 @@ MVP-Kernflow vollständig implementiert und lokal verifiziert. Trainer können T
 | Lücke | Priorität |
 |-------|-----------|
 | Legal-Seiten (`/legal/privacy`, `/legal/terms`, `/legal/imprint`) finalisieren — `/legal/imprint` bisher nur als Platzhalter erstellt, Betreiberangaben fehlen weiterhin | Hoch — vor echtem Pilotbetrieb |
-| Datenmodell-Abgleich `players.date_of_birth` vs. dokumentiertes `birth_year`-Minimalprinzip klären | Mittel |
 | AV-Vertrag mit Supabase abschließen | Hoch |
 | `cleanup_expired_join_requests()` als Scheduled Job einrichten | Mittel |
+| Consent-/Einwilligungsnachweis für Minderjährige verbessern (`player_guardians.verified_at` ist nur technischer Verknüpfungszeitpunkt, kein vollständiger Einwilligungsnachweis) | Hoch |
 | Dashboard-UX für Spieler/Guardian verbessern (nächste Trainings, offene RSVP) | Mittel |
 | Self-Service Account-Löschung (Art. 17 DSGVO) | Mittel — aktuell manuell |
 | `DESIGN_SYSTEM.md` anlegen | Niedrig |
-| Supabase EU-Region für Datenspeicher bestätigen | Hoch — vor Launch |
+| Supabase EU-Region für Datenspeicher offiziell dokumentieren | Hoch — vor Launch |
 | Service Worker / Offline-Support — bewusst nicht im Scope von PWA.1 | — |
 | Praktischer Install-Test (iOS/Android) und Lighthouse-PWA-Audit — noch offen | Mittel |
 

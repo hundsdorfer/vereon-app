@@ -81,14 +81,24 @@ Abgeschlossen:
   * Legal-Seiten (`/legal/privacy`, `/legal/terms`, `/legal/imprint`) weiterhin nicht final
   * Betreiberangaben fehlen weiterhin
   * Datenschutzfinalisierung bleibt offen
-  * Datenmodell-Abgleich `date_of_birth` vs. `birth_year` bleibt offen
+  * Datenmodell-Abgleich `date_of_birth` vs. `birth_year` für Player/Kinder technisch bereinigt; übrige Datenschutzfinalisierung bleibt offen
+* Player/Kinder-Join-Flow auf `birth_year` umgestellt — committed und gepusht (`69a913e`):
+  * Migration `20260702000000_players_birth_year_only` — lokal und remote (Supabase Cloud) angewendet
+  * `submit_join_request_guardian` neue Signatur (`p_code, p_first_name, p_last_name, p_child_birth_year integer`), alte Signatur mit `date`-Parameter gedroppt
+  * `submit_join_request_self` befüllt `players.date_of_birth` nicht mehr, leitet `birth_year` weiterhin aus `profiles.date_of_birth` ab
+  * `players.date_of_birth`-Spalte bleibt nullable bestehen (nicht gedroppt), wird aber im Join-Flow nicht mehr befüllt
+  * `profiles.date_of_birth` unverändert — separates Feld für das Profil des registrierten Nutzers
+  * `JoinGuardianForm.tsx`, `src/actions/join.ts` auf Geburtsjahr-Eingabe umgestellt
+  * `npm run lint`, `npm run build`, `npx supabase db reset`, Guardian- und Self-Player-E2E-Test erfolgreich
 
 ## Aktuelle Hauptaufgabe
 
 **Offen — nächste Entscheidung erforderlich:**
 
 * P.2B — Einladungscode-Format vereinfachen
-* Legal-Seiten finalisieren (`/legal/privacy`, `/legal/terms`) — vor Pilotbetrieb erforderlich
+* Legal-Seiten finalisieren (`/legal/privacy`, `/legal/terms`, `/legal/imprint`) — vor Pilotbetrieb erforderlich, Betreiberangaben fehlen weiterhin
+* `cleanup_expired_join_requests()` als Scheduled Job automatisieren
+* Consent-/Einwilligungsnachweis für Minderjährige verbessern (`verified_at` ist nur technischer Verknüpfungszeitpunkt)
 * Match-MVP planen
 
 ## Nicht in der nächsten Phase
@@ -129,6 +139,7 @@ Abgeschlossen:
 | `20260629200000_add_events` | events, event_attendance, RLS, RPCs, Trigger | Lokal angewendet |
 | `20260629300000_fix_player_event_rls` | is_player_in_team(), is_guardian_in_team(), Policies für teams + events | Lokal angewendet |
 | `20260629400000_add_pta_player_policy` | pta_select_player — Self-Player liest eigene aktive Assignment | Lokal angewendet |
+| `20260702000000_players_birth_year_only` | submit_join_request_guardian auf birth_year umgestellt, submit_join_request_self befüllt players.date_of_birth nicht mehr | Lokal + Supabase Cloud angewendet |
 | `003_mvp0b_club_flows` | Vereinsflows | Offen |
 | `004_mvp1_players_full` | vollständiges Spieler-/Elternmodell | Offen |
 | `005_mvp2_affiliation` | Team-Zuordnung zu verifiziertem Verein | Offen |
