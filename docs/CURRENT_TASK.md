@@ -96,10 +96,47 @@ Abgeschlossen:
   * `profiles.date_of_birth` unverändert — separates Feld für das Profil des registrierten Nutzers
   * `JoinGuardianForm.tsx`, `src/actions/join.ts` auf Geburtsjahr-Eingabe umgestellt
   * `npm run lint`, `npm run build`, `npx supabase db reset`, Guardian- und Self-Player-E2E-Test erfolgreich
+* Dokumentations-Inventar erstellt und committed:
+  * `docs/ARCHITECTURE.md`
+  * `docs/STATUS.md`
+  * `docs/DOCS_INVENTORY.md`
+  * Warnhinweise in 8 riskanten/veralteten docs-Dateien
+  * Commit: `51a97ee`
+* `docs/PROJECT_BRIEF.md` korrigiert und committed:
+  * neue Vorrangregel ergänzt
+  * idealisierte Migrationsliste klargestellt
+  * alten veralteten Abschnitt „Migration 001 noch leer" ersetzt
+  * Commit: `a8eaf85`
+
+## Aktueller Git-Zustand
+
+**Stand:** 2026-07-06, nach lokalem Commit a8eaf85
+
+* Lokaler Branch ist 2 Commits vor `origin/main`
+* Kein Push erfolgt
+* Weiterhin uncommitted:
+  * `.gitignore` — modifiziert
+  * `src/app/(app)/teams/[teamId]/page.tsx` — modifiziert
+  * `src/actions/players.ts` — untracked
+  * `src/components/ui/ConfirmButton.tsx` — untracked
+  * `src/features/players/` — untracked
+  * `supabase/migrations/20260704120000_remove_player_from_team.sql` — untracked
 
 ## Aktuelle Hauptaufgabe
 
-**Offen — nächste Entscheidung erforderlich:**
+**Priorität 1 — Remove-Player-Feature klären:**
+
+* Laut `docs/STATUS.md` vollständig implementiert, aber uncommitted im Arbeitsverzeichnis:
+  * `removePlayerFromTeamAction`
+  * `ConfirmButton`
+  * `RemovePlayerButton`
+  * Migration `20260704120000_remove_player_from_team.sql`
+  * Anpassung der Team-Detailseite (`src/app/(app)/teams/[teamId]/page.tsx`)
+* Die Migration schließt laut `docs/STATUS.md` zusätzlich eine RSVP-Autorisierungslücke (entfernte Spieler/Guardians konnten sonst weiter per RSVP antworten)
+* Entscheidung erforderlich: vollständig committen, bewusst verwerfen, oder vor Commit korrigieren
+* **Keine neue Feature-Entwicklung, bevor dieser Zustand geklärt ist**
+
+**Danach — weiterhin offen:**
 
 * P.2B — Einladungscode-Format vereinfachen
 * Legal-Seiten finalisieren (`/legal/privacy`, `/legal/terms`, `/legal/imprint`) — vor Pilotbetrieb erforderlich, Betreiberangaben fehlen weiterhin
@@ -146,6 +183,7 @@ Abgeschlossen:
 | `20260629300000_fix_player_event_rls` | is_player_in_team(), is_guardian_in_team(), Policies für teams + events | Lokal angewendet |
 | `20260629400000_add_pta_player_policy` | pta_select_player — Self-Player liest eigene aktive Assignment | Lokal angewendet |
 | `20260702000000_players_birth_year_only` | submit_join_request_guardian auf birth_year umgestellt, submit_join_request_self befüllt players.date_of_birth nicht mehr | Lokal + Supabase Cloud angewendet |
+| `20260704120000_remove_player_from_team` | remove_player_from_team()-RPC, RSVP-Autorisierungsfix | Uncommitted im Arbeitsverzeichnis / nicht als angewendet behandeln / zu prüfen |
 | `003_mvp0b_club_flows` | Vereinsflows | Offen |
 | `004_mvp1_players_full` | vollständiges Spieler-/Elternmodell | Offen |
 | `005_mvp2_affiliation` | Team-Zuordnung zu verifiziertem Verein | Offen |
