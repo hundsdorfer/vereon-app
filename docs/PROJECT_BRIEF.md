@@ -10,6 +10,15 @@
 
 ---
 
+## Aktuelle Vorrangregel
+
+- Für den tatsächlichen Code-Zustand: `docs/ARCHITECTURE.md`
+- Für aktuellen Arbeits-/Risikostand: `docs/STATUS.md`
+- Für kurzfristige nächste Aufgaben: `docs/CURRENT_TASK.md`, sofern nicht durch `docs/STATUS.md` überholt
+- Dieses Dokument (`PROJECT_BRIEF.md`) ist ein Kurzkompass, keine vollständige technische Spezifikation
+
+---
+
 ## 1. Produktvision
 
 SaaS-Plattform für Amateurfußball-Vereinsmanagement. Zielgruppe: Trainer, Vereinsfunktionäre, Eltern/Guardians.
@@ -61,6 +70,8 @@ Phase 3+→ Billing, official_club_registry, player_transfer_requests
 ```
 
 Migrationen: `001_init_mvp0_core` → `002_mvp0a_team_flows` → `003_mvp0b_invitations` → `004_mvp1_players_full` → `005_mvp2_affiliation`
+
+*Dies ist die fachliche Phasenlogik (Reihenfolge/Umfang), keine echten Dateinamen. Die tatsächlichen Migrationsdateien tragen timestamp-basierte Namen (z. B. `20260625190923_init_mvp0_core.sql`) und umfassen inzwischen weitere, hier nicht aufgeführte Migrationen. Für den realen Migrationsstand gilt `docs/ARCHITECTURE.md`.*
 
 Details: `docs/MVP_SCOPE.md`, `docs/USER_FLOWS.md`
 
@@ -161,16 +172,30 @@ Details: `docs/MONETIZATION_STRATEGY.md`
 
 ---
 
-## 9. Nächster geplanter technischer Schritt
+## 9. Aktueller Arbeitsstand und nächste Entscheidung
 
-**Migration 001 befüllen** (`supabase/migrations/20260625190923_init_mvp0_core.sql`)
+Stand laut `docs/ARCHITECTURE.md` und `docs/STATUS.md`: 2026-07-06.
 
-Inhalt: `roles` (21 Rollen inkl. team_owner, mit `key`/`name_de`), `permissions`, `role_permissions`, `profiles`, `clubs` (verification_status), `seasons`, `club_memberships`, `club_member_roles`, `teams` (nullable club_id, ownership_type, status), `team_memberships`, `team_member_roles`, Trigger (updated_at, handle_new_user, scope-Validierung), RLS, Hilfsfunktionen, `create_club()`, `create_independent_team()`, Indexes.
+**MVP-0A-Kernflow ist implementiert:**
+- Auth (Registrierung, Login, Callback, Logout)
+- Eigenständiges Team erstellen
+- Einladungscode / Join-Link
+- Self-Player-Join-Flow und Guardian/Kind-Join-Flow
+- Beitrittsanfragen annehmen/ablehnen
+- Trainings erstellen
+- RSVP für Self-Player und Guardian
+- Trainer-RSVP-Übersicht
+- Dashboard-/Team-Grundlogik
 
-Danach (separate Bestätigungen nötig):
-1. `npx supabase db reset` — Migration lokal testen
-2. `npx supabase gen types typescript --local > src/types/database.types.ts`
-3. Auth-Flow (MVP 0A): proxy.ts erweitern, /login, /register, /auth/callback
-4. MVP 0A Features: eigenständiges Team, team_invitation_links, join flow
+Lint, Build und CI sind laut Status sauber. Playwright-E2E existiert, ist aber nicht automatisch als CI-Gate auf jeden Push/PR aktiv (nur manuell auslösbar).
 
-Aktueller Migrationsstand: Datei angelegt, **noch leer**.
+**Wichtigster offener technischer Zustand:**
+Das „Remove player from team"-Feature liegt laut `docs/STATUS.md` vollständig, aber uncommitted im Arbeitsverzeichnis (Action, `ConfirmButton`, `RemovePlayerButton`, Migration, Teamseite-Anbindung). Es muss als nächstes geprüft und entweder committed oder verworfen werden — bevor neue Feature-Entwicklung beginnt.
+
+**Wichtige Pilot-Blocker:**
+- Legal-Seiten finalisieren
+- Cleanup für abgelehnte/abgelaufene Join-Requests automatisieren
+- Consent-/Einwilligungsnachweis für Minderjährige verbessern
+- Supabase-/Hosting-AV-Vertrag und EU-Datenregion dokumentieren
+
+Details: `docs/STATUS.md`, `docs/CURRENT_TASK.md`, `docs/LEGAL_TODO.md`
