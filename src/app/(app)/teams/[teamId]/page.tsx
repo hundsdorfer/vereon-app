@@ -5,6 +5,7 @@ import { formatTrainingDateTime } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { RemovePlayerButton } from '@/features/players/RemovePlayerButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,6 +101,7 @@ export default async function TeamDetailPage({
     { data: rawAssignments, error: assignmentsError },
     { data: upcomingTrainings },
     { data: isTrainer },
+    { data: canManageMembers },
   ] = await Promise.all([
     supabase
       .from('team_join_requests')
@@ -124,6 +126,10 @@ export default async function TeamDetailPage({
     supabase.rpc('has_team_role', {
       p_team_id: teamId,
       p_role_keys: ['team_owner', 'head_coach', 'assistant_coach', 'team_manager'],
+    }),
+    supabase.rpc('has_team_role', {
+      p_team_id: teamId,
+      p_role_keys: ['team_owner', 'head_coach'],
     }),
   ])
 
@@ -273,13 +279,24 @@ export default async function TeamDetailPage({
                       : 'Über Erziehungsberechtigte/n angemeldet'
                   return (
                     <li key={assignment.id} className="py-3 first:pt-0 last:pb-0">
-                      <p className="text-sm font-semibold text-foreground">
-                        {player.first_name} {player.last_name}
-                      </p>
-                      {birthDisplay && (
-                        <p className="mt-0.5 text-xs text-muted-foreground">{birthDisplay}</p>
-                      )}
-                      <p className="mt-0.5 text-xs text-muted-foreground">{joinLabel}</p>
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">
+                            {player.first_name} {player.last_name}
+                          </p>
+                          {birthDisplay && (
+                            <p className="mt-0.5 text-xs text-muted-foreground">{birthDisplay}</p>
+                          )}
+                          <p className="mt-0.5 text-xs text-muted-foreground">{joinLabel}</p>
+                        </div>
+                        {!!canManageMembers && (
+                          <RemovePlayerButton
+                            assignmentId={assignment.id}
+                            teamId={team.id}
+                            playerName={`${player.first_name} ${player.last_name}`}
+                          />
+                        )}
+                      </div>
                     </li>
                   )
                 })}
