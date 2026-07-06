@@ -1,5 +1,11 @@
 # Current Task — Vereon
 
+> **Dokumentationshinweis — Stand 2026-07-06:**
+> Diese Datei enthält laut `docs/DOCS_INVENTORY.md` veraltete oder zu prüfende Aussagen. Für den tatsächlichen Code-Zustand haben aktuell `docs/ARCHITECTURE.md` und `docs/STATUS.md` Vorrang. Diese Datei darf bis zur Überarbeitung nicht allein als Umsetzungsgrundlage verwendet werden.
+> Besonders kritisch: Das uncommitted „Remove player from team"-Feature ist laut `docs/STATUS.md` noch nicht vollständig im Phasenstand erfasst.
+
+---
+
 ## Aktueller Stand
 
 Abgeschlossen:

@@ -1,5 +1,10 @@
 # MVP Scope — Vereon
 
+> **Dokumentationshinweis — Stand 2026-07-06:**
+> Diese Datei enthält laut `docs/DOCS_INVENTORY.md` veraltete oder zu prüfende Aussagen. Für den tatsächlichen Code-Zustand haben aktuell `docs/ARCHITECTURE.md` und `docs/STATUS.md` Vorrang. Diese Datei darf bis zur Überarbeitung nicht allein als Umsetzungsgrundlage verwendet werden.
+
+---
+
 **Stand:** 2026-06-25 (überarbeitet: MVP in vier Stufen aufgeteilt, eigenständige Teams als Einstieg)
 
 ---

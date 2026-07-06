@@ -1,5 +1,11 @@
 # Project Brief — Vereon
 
+> **Dokumentationshinweis — Stand 2026-07-06:**
+> Diese Datei enthält laut `docs/DOCS_INVENTORY.md` veraltete oder zu prüfende Aussagen. Für den tatsächlichen Code-Zustand haben aktuell `docs/ARCHITECTURE.md` und `docs/STATUS.md` Vorrang. Diese Datei darf bis zur Überarbeitung nicht allein als Umsetzungsgrundlage verwendet werden.
+> Besonders kritisch: Der Abschnitt zum nächsten technischen Schritt ist laut Inventar veraltet.
+
+---
+
 **Kompaktzusammenfassung für Claude Code.** Details in den verlinkten Docs.
 
 ---
