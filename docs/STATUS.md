@@ -6,7 +6,7 @@
 
 ## 1. Kurzstatus
 
-Der MVP-0A-Kernflow (Team erstellen, Beitritt via Einladungscode, Trainings + RSVP) ist vollständig implementiert und funktioniert im Code konsistent. Lint und Build sind sauber, CI läuft. Es gibt jedoch **keine Unit-/Integrationstests** (nur 3 E2E-Specs, die nicht automatisch in CI laufen), ein fertiges Feature liegt **uncommitted** im Arbeitsverzeichnis, und mehrere DSGVO-/Sicherheitsrelevante Punkte sind vor einem Pilotbetrieb offen.
+Der MVP-0A-Kernflow (Team erstellen, Beitritt via Einladungscode, Trainings + RSVP) ist vollständig implementiert und funktioniert im Code konsistent, inklusive des zuletzt committeten „Remove player from team"-Features (`6b4e93b`). Lint und Build sind sauber, CI läuft. Es gibt jedoch **keine Unit-/Integrationstests** (nur 3 E2E-Specs, die nicht automatisch in CI laufen), und mehrere DSGVO-/Sicherheitsrelevante Punkte sind vor einem Pilotbetrieb offen.
 
 ---
 
@@ -28,17 +28,17 @@ Der MVP-0A-Kernflow (Team erstellen, Beitritt via Einladungscode, Trainings + RS
 
 ## 3. Unvollständig / Uncommitted
 
-### 3.1 „Remove player from team“-Feature ist nicht committet (wichtigster Befund)
+### 3.1 „Remove player from team“-Feature ist committed (zuvor wichtigster Befund, jetzt aufgelöst)
 
-`git status` zeigt folgende **untracked** Dateien sowie eine **modifizierte** Datei, die zusammen ein vollständiges Feature bilden, aber in keinem Commit stecken:
+Das Feature ist mit Commit `6b4e93b` committed. Die Migration wurde zuvor lokal mit `npx supabase db reset` gegen die vollständige Migrationskette verifiziert; `npm run lint` und `npm run build` waren danach erfolgreich.
 
-- `src/actions/players.ts` (neu) — `removePlayerFromTeamAction`
-- `src/components/ui/ConfirmButton.tsx` (neu) — generisches Zwei-Schritt-Bestätigungsmuster
-- `src/features/players/RemovePlayerButton.tsx` (neu)
-- `supabase/migrations/20260704120000_remove_player_from_team.sql` (neu) — RPC `remove_player_from_team()` (Soft-Delete via `status='left'`), **plus** ein `CREATE OR REPLACE` von `respond_to_event()`, das eine echte Autorisierungslücke schließt: bisher konnte ein aus dem Team entfernter Spieler (bzw. dessen Guardian) weiterhin per RSVP antworten, weil nur die Spieler-Zeile, nie die aktive Team-Zuordnung geprüft wurde
-- `src/app/(app)/teams/[teamId]/page.tsx` (modifiziert) — verdrahtet `canManageMembers` (`has_team_role(['team_owner','head_coach'])`) und rendert `RemovePlayerButton`
+Umfasst:
 
-Der Code selbst wirkt vollständig und konsistent (Fehlerbehandlung, RLS-Autorisierung, UI-Anbindung) — er ist nur **nicht in `docs/CURRENT_TASK.md` als abgeschlossene Phase erfasst** und liegt bislang nur im Arbeitsverzeichnis, nicht in der Git-Historie.
+- `src/actions/players.ts` — `removePlayerFromTeamAction`
+- `src/components/ui/ConfirmButton.tsx` — generisches Zwei-Schritt-Bestätigungsmuster
+- `src/features/players/RemovePlayerButton.tsx`
+- `src/app/(app)/teams/[teamId]/page.tsx` — verdrahtet `canManageMembers` (`has_team_role(['team_owner','head_coach'])`) und rendert `RemovePlayerButton`
+- `supabase/migrations/20260704120000_remove_player_from_team.sql` — RPC `remove_player_from_team()` (Soft-Delete via `status='left'`), **plus** ein `CREATE OR REPLACE` von `respond_to_event()`, das die RSVP-Autorisierungslücke schließt: zuvor konnte ein aus dem Team entfernter Spieler (bzw. dessen Guardian) weiterhin per RSVP antworten, weil nur die Spieler-Zeile, nie die aktive Team-Zuordnung geprüft wurde
 
 ### 3.2 Weitere offene Punkte
 
@@ -64,7 +64,7 @@ Der Code selbst wirkt vollständig und konsistent (Fehlerbehandlung, RLS-Autoris
 | `20260629100000_fix_players_trainer_rls` | SQL-Scope-Shadowing (`WHERE pta.player_id = id` löste `id` auf die falsche Tabelle auf) → Policy immer `false` | Neue SECURITY-DEFINER-Helper-Funktionen |
 | `20260629300000_fix_player_event_rls` | Self-Player/Guardian hatten keine SELECT-Policy auf `teams`/`events` → leere Listen | `is_player_in_team()`, `is_guardian_in_team()` ergänzt |
 | `20260629400000_add_pta_player_policy` | Self-Player konnte eigene aktive Zuordnung nicht lesen | Policy `pta_select_player` ergänzt |
-| `20260704120000_remove_player_from_team` (uncommitted) | Entfernte Spieler konnten weiterhin per RSVP antworten | `respond_to_event()` prüft jetzt zusätzlich aktive Team-Zuordnung |
+| `20260704120000_remove_player_from_team` (committed `6b4e93b`) | Entfernte Spieler konnten weiterhin per RSVP antworten | `respond_to_event()` prüft jetzt zusätzlich aktive Team-Zuordnung |
 
 ---
 

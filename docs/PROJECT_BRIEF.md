@@ -189,13 +189,14 @@ Stand laut `docs/ARCHITECTURE.md` und `docs/STATUS.md`: 2026-07-06.
 
 Lint, Build und CI sind laut Status sauber. Playwright-E2E existiert, ist aber nicht automatisch als CI-Gate auf jeden Push/PR aktiv (nur manuell auslösbar).
 
-**Wichtigster offener technischer Zustand:**
-Das „Remove player from team"-Feature liegt laut `docs/STATUS.md` vollständig, aber uncommitted im Arbeitsverzeichnis (Action, `ConfirmButton`, `RemovePlayerButton`, Migration, Teamseite-Anbindung). Es muss als nächstes geprüft und entweder committed oder verworfen werden — bevor neue Feature-Entwicklung beginnt.
+**Remove-Player-Feature:**
+Das „Remove player from team"-Feature wurde lokal getestet (`npx supabase db reset`, `npm run lint`, `npm run build` erfolgreich) und ist committed (`6b4e93b`). Der Arbeitsbaum ist clean.
 
-**Wichtige Pilot-Blocker:**
-- Legal-Seiten finalisieren
-- Cleanup für abgelehnte/abgelaufene Join-Requests automatisieren
-- Consent-/Einwilligungsnachweis für Minderjährige verbessern
-- Supabase-/Hosting-AV-Vertrag und EU-Datenregion dokumentieren
+**Nächste Entscheidungen:**
+- P.2B — Einladungscode-Format vereinfachen
+- Legal-/DSGVO-Pilot-Blocker
+- Cleanup-Job für Join-Requests
+- Consent-Nachweis Minderjährige
+- Match-MVP-Planung
 
 Details: `docs/STATUS.md`, `docs/CURRENT_TASK.md`, `docs/LEGAL_TODO.md`

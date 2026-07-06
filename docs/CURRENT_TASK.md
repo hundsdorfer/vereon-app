@@ -2,7 +2,6 @@
 
 > **Dokumentationshinweis — Stand 2026-07-06:**
 > Diese Datei enthält laut `docs/DOCS_INVENTORY.md` veraltete oder zu prüfende Aussagen. Für den tatsächlichen Code-Zustand haben aktuell `docs/ARCHITECTURE.md` und `docs/STATUS.md` Vorrang. Diese Datei darf bis zur Überarbeitung nicht allein als Umsetzungsgrundlage verwendet werden.
-> Besonders kritisch: Das uncommitted „Remove player from team"-Feature ist laut `docs/STATUS.md` noch nicht vollständig im Phasenstand erfasst.
 
 ---
 
@@ -107,36 +106,25 @@ Abgeschlossen:
   * idealisierte Migrationsliste klargestellt
   * alten veralteten Abschnitt „Migration 001 noch leer" ersetzt
   * Commit: `a8eaf85`
+* Remove-Player-Feature lokal getestet und committed:
+  * Commit: `6b4e93b`
+  * Migration `20260704120000_remove_player_from_team.sql`
+  * `npx supabase db reset` erfolgreich
+  * `npm run lint` erfolgreich
+  * `npm run build` erfolgreich
 
 ## Aktueller Git-Zustand
 
-**Stand:** 2026-07-06, nach lokalem Commit a8eaf85
+**Stand:** 2026-07-06, nach lokalem Commit 6b4e93b
 
-* Lokaler Branch ist 2 Commits vor `origin/main`
+* Arbeitsbaum ist clean
+* Lokaler Branch ist 5 Commits vor `origin/main`
 * Kein Push erfolgt
-* Weiterhin uncommitted:
-  * `.gitignore` — modifiziert
-  * `src/app/(app)/teams/[teamId]/page.tsx` — modifiziert
-  * `src/actions/players.ts` — untracked
-  * `src/components/ui/ConfirmButton.tsx` — untracked
-  * `src/features/players/` — untracked
-  * `supabase/migrations/20260704120000_remove_player_from_team.sql` — untracked
+* Keine uncommitted Remove-Player-Dateien mehr
 
 ## Aktuelle Hauptaufgabe
 
-**Priorität 1 — Remove-Player-Feature klären:**
-
-* Laut `docs/STATUS.md` vollständig implementiert, aber uncommitted im Arbeitsverzeichnis:
-  * `removePlayerFromTeamAction`
-  * `ConfirmButton`
-  * `RemovePlayerButton`
-  * Migration `20260704120000_remove_player_from_team.sql`
-  * Anpassung der Team-Detailseite (`src/app/(app)/teams/[teamId]/page.tsx`)
-* Die Migration schließt laut `docs/STATUS.md` zusätzlich eine RSVP-Autorisierungslücke (entfernte Spieler/Guardians konnten sonst weiter per RSVP antworten)
-* Entscheidung erforderlich: vollständig committen, bewusst verwerfen, oder vor Commit korrigieren
-* **Keine neue Feature-Entwicklung, bevor dieser Zustand geklärt ist**
-
-**Danach — weiterhin offen:**
+**Offen — nächste Entscheidung erforderlich:**
 
 * P.2B — Einladungscode-Format vereinfachen
 * Legal-Seiten finalisieren (`/legal/privacy`, `/legal/terms`, `/legal/imprint`) — vor Pilotbetrieb erforderlich, Betreiberangaben fehlen weiterhin
@@ -183,7 +171,7 @@ Abgeschlossen:
 | `20260629300000_fix_player_event_rls` | is_player_in_team(), is_guardian_in_team(), Policies für teams + events | Lokal angewendet |
 | `20260629400000_add_pta_player_policy` | pta_select_player — Self-Player liest eigene aktive Assignment | Lokal angewendet |
 | `20260702000000_players_birth_year_only` | submit_join_request_guardian auf birth_year umgestellt, submit_join_request_self befüllt players.date_of_birth nicht mehr | Lokal + Supabase Cloud angewendet |
-| `20260704120000_remove_player_from_team` | remove_player_from_team()-RPC, RSVP-Autorisierungsfix | Uncommitted im Arbeitsverzeichnis / nicht als angewendet behandeln / zu prüfen |
+| `20260704120000_remove_player_from_team` | remove_player_from_team()-RPC, RSVP-Autorisierungsfix | Lokal getestet und committed (6b4e93b) |
 | `003_mvp0b_club_flows` | Vereinsflows | Offen |
 | `004_mvp1_players_full` | vollständiges Spieler-/Elternmodell | Offen |
 | `005_mvp2_affiliation` | Team-Zuordnung zu verifiziertem Verein | Offen |
