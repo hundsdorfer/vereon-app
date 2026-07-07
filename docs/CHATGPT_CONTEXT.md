@@ -8,11 +8,11 @@ Diese Datei ist die kompakte Übergabequelle für ChatGPT. Sie ersetzt nicht die
 
 ## 2. Stand
 
-* **Datum:** 2026-07-06
+* **Datum:** 2026-07-07
 * **Aktueller Branch:** `main`
-* **Aktueller Commit:** `5337867` — „docs: update hot memory after remove player commit"
-* **Branch-Status zu `origin/main`:** 6 Commits voraus, kein Push
-* **Arbeitsbaum-Status:** clean bis auf `docs/CHATGPT_CONTEXT.md` selbst (untracked, wird gerade aktualisiert)
+* **Letzter abgeschlossener Projektstand vor dieser Kontext-Aktualisierung:** `d6d3c36` — „docs: restructure decision log"
+* **Branch-Status zu `origin/main`:** 8 Commits voraus, kein Push
+* **Arbeitsbaum-Status:** **nicht clean** — `docs/CHATGPT_CONTEXT.md` wird durch diese Aktualisierung gerade geändert und danach gezielt committed; `docs/DECISION_LOG.md` ist bereits committed (`d6d3c36`) und nicht mehr modifiziert
 * **Push-Status:** kein Push erfolgt
 
 ---
@@ -47,6 +47,10 @@ Diese Datei ist die kompakte Übergabequelle für ChatGPT. Sie ersetzt nicht die
 * `npm run lint` erfolgreich
 * `npm run build` erfolgreich
 * Hot-Memory-Dokumente (`docs/CURRENT_TASK.md`, `docs/PROJECT_BRIEF.md`, `docs/STATUS.md`) wurden nachgezogen und mit `5337867` committed
+* `docs/DECISION_LOG.md` wurde grundlegend überarbeitet und mit `d6d3c36` committed: neues Standardformat für Entscheidungen, Entscheidungsindex, sieben Initialentscheidungen `DEC-001` bis `DEC-007`
+  * `DEC-001` definiert die neue Dokumentationsstruktur und den künftigen manuellen ChatGPT-Doku-Prozess (Nutzer + ChatGPT entwerfen, Claude reviewt danach im Review-only-Modus)
+  * `docs/FEATURE_CATALOG.md` ist dadurch als künftige kanonische Funktionsquelle beschlossen, **existiert aber noch nicht**
+  * Claude-Review vor Commit ergab „commitfähig" — die Datei wurde unverändert übernommen und mit `d6d3c36` committed
 * Kein Push erfolgt (durch `git status` bestätigt)
 
 ---
@@ -55,6 +59,8 @@ Diese Datei ist die kompakte Übergabequelle für ChatGPT. Sie ersetzt nicht die
 
 Aus `git log --oneline -n 10` (reale Werte):
 
+* `d6d3c36` — docs: restructure decision log (`docs/DECISION_LOG.md` committed)
+* `61f7cc6` — docs: add chatgpt project context (`CHATGPT_CONTEXT.md` initial committed)
 * `5337867` — docs: update hot memory after remove player commit (`CURRENT_TASK.md`, `PROJECT_BRIEF.md`, `STATUS.md`)
 * `6b4e93b` — feat: allow coaches to remove players from team (Remove-Player-Feature committed)
 * `c2225b5` — chore: update gitignore (separater Commit, `.vercel`/`.env*` ignoriert)
@@ -63,8 +69,6 @@ Aus `git log --oneline -n 10` (reale Werte):
 * `51a97ee` — docs: add documentation inventory and stale-doc warnings (Dokumentations-Inventar + Warnhinweise)
 * `9632d40` — Document player birth year data minimization
 * `69a913e` — Use birth year for player join requests
-* `24a5650` — Add imprint placeholder page
-* `4f2d666` — Document PWA.1 metadata completion
 
 ---
 
@@ -72,17 +76,12 @@ Aus `git log --oneline -n 10` (reale Werte):
 
 Priorisiert:
 
-1. **`docs/CHATGPT_CONTEXT.md` prüfen und separat committen**
+1. **`docs/FEATURE_CATALOG.md` gemeinsam mit ChatGPT konzipieren** (nach dem in `DEC-001` festgelegten Prozess: ChatGPT entwirft, Nutzer fügt manuell ins Repo ein, Claude reviewt danach im Review-only-Modus gegen Repo/Code/Migrationen/Docs)
+   * `MVP_SCOPE.md` gegen den Feature-Katalog neu strukturieren
+   * `USER_FLOWS.md` entsprechend abgrenzen
+   * danach technische Kern-Dokumente: `DATABASE_MODEL.md`, `ROLES_AND_PERMISSIONS.md`, `SECURITY.md`
 
-2. Danach weiter mit Doku-Cleanup:
-   * `SECURITY.md`
-   * `PROJECT_STATUS.md`
-   * `ROADMAP.md`
-   * `TECH_STACK.md`
-   * `MVP_SCOPE.md` / `USER_FLOWS.md`
-   * `DATABASE_MODEL.md`
-
-3. Danach fachliche nächste Entscheidungen:
+2. Danach fachliche nächste Entscheidungen:
    * P.2B Einladungscode-Format
    * Legal-Seiten
    * Cleanup-Job für Join-Requests
@@ -93,6 +92,7 @@ Priorisiert:
 
 ## 7. Offene Risiken / Blocker
 
+* `docs/FEATURE_CATALOG.md` existiert noch nicht (als kanonische Funktionsquelle beschlossen, aber nicht erstellt)
 * Legal-Seiten weiterhin Platzhalter
 * Cleanup für abgelehnte/abgelaufene Join-Requests noch nicht automatisiert
 * Consent-/Einwilligungsnachweis für Minderjährige noch unzureichend
@@ -123,8 +123,10 @@ Priorisiert:
 
 * ChatGPT soll bei Projektfragen primär diese Datei als aktuellen Einstieg nutzen.
 * Ältere einzeln hochgeladene `.md`-Quellen können veraltet sein.
+* **Aktueller nächster Startpunkt:** `docs/FEATURE_CATALOG.md` gemeinsam mit ChatGPT konzipieren (`docs/DECISION_LOG.md` und `docs/CHATGPT_CONTEXT.md` sind bereits abgeschlossen und committed).
+* `docs/FEATURE_CATALOG.md` darf **nicht eigenmächtig durch Claude erstellt werden**. Sie wird nach dem in `DEC-001` festgelegten Prozess zuerst gemeinsam mit ChatGPT konzipiert, erst danach von Claude im Review-only-Modus geprüft.
 * Bei Widersprüchen gilt:
-  1. Nutzer-/Claude-Handoff im aktuellen Chat
+  1. Aktueller Nutzer-/Claude-Handoff im laufenden Chat und der tatsächliche Git-Status
   2. `CHATGPT_CONTEXT.md`
   3. `STATUS.md` / `ARCHITECTURE.md`
   4. ältere Dokumente mit Warnhinweis nur nach Prüfung
