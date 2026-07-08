@@ -1,315 +1,479 @@
 # MVP Scope — Vereon
 
-> **Dokumentationshinweis — Stand 2026-07-06:**
-> Diese Datei enthält laut `docs/DOCS_INVENTORY.md` veraltete oder zu prüfende Aussagen. Für den tatsächlichen Code-Zustand haben aktuell `docs/ARCHITECTURE.md` und `docs/STATUS.md` Vorrang. Diese Datei darf bis zur Überarbeitung nicht allein als Umsetzungsgrundlage verwendet werden.
+**Stand:** 2026-07-08  
+**Status:** Neufassung auf Basis von `docs/FEATURE_CATALOG.md`  
+**Dokumenttyp:** Scope-Control-Dokument, kein Implementierungsauftrag
 
 ---
 
-**Stand:** 2026-06-25 (überarbeitet: MVP in vier Stufen aufgeteilt, eigenständige Teams als Einstieg)
+## 1. Zweck dieser Datei
+
+`docs/MVP_SCOPE.md` legt fest, welche Feature-Catalog-Einträge in welche MVP-Phase gehören.
+
+Diese Datei beschreibt nicht erneut alle Produktfunktionen im Detail. Die fachliche Beschreibung der Funktionen liegt in `docs/FEATURE_CATALOG.md`.
+
+Die zentrale Frage dieser Datei lautet:
+
+> Welche Feature-Catalog-Einträge gehören in welche Phase — und warum?
+
+Diese Datei ist kein Umsetzungsauftrag für Code, Datenbank, Migrationen oder UI. Sie dient dazu, Scope-Grenzen, Prioritäten und bewusste Nicht-Ziele festzuhalten.
 
 ---
 
-## MVP-Philosophie
+## 2. Quellen und Vorrang
 
-Das MVP ist nicht die kleinste mögliche App — es ist die kleinstmögliche App, die einem Trainer täglich nützlich ist.
+| Bereich | Primäre Datei |
+|---|---|
+| Fachliche Produktfunktionen | `docs/FEATURE_CATALOG.md` |
+| MVP-Phasenzuordnung und Scope-Grenzen | `docs/MVP_SCOPE.md` |
+| User-Flows | `docs/USER_FLOWS.md` |
+| Rollen und Berechtigungen | `docs/ROLES_AND_PERMISSIONS.md` |
+| Datenmodell | `docs/DATABASE_MODEL.md` |
+| Security | `docs/SECURITY.md` |
+| Datenschutz / DSGVO | `docs/DSGVO_PRIVACY_MODEL.md` |
+| Testabdeckung / manuelle QA | `docs/MVP_TEST_CHECKLIST.md` |
+| Technischer Ist-Zustand | `docs/ARCHITECTURE.md`, `docs/STATUS.md` |
+| Verbindliche Entscheidungen | `docs/DECISION_LOG.md` |
 
-- **MVP 0A**: Ein einzelner Trainer kann sofort loslegen — ohne Verein, ohne Admin-Genehmigung
-- **MVP 0B**: Vereine können sich registrieren und mehrere Teams verwalten
-- **MVP 1**: Spieler, Eltern/Guardians, Anwesenheit, Spielberichte
-- **MVP 2**: Eigenständige Teams können sich einem Verein anschließen
-
-Jede Stufe ist für sich vollständig deploybar. Kein Schritt setzt den Abschluss des nächsten voraus.
-
----
-
-## MVP 0A — Eigenständiges Team
-
-*Ziel: Ein Trainer kann sich anmelden, ein eigenständiges Team anlegen, Eltern/Kinder per Link einladen und Termine erstellen.*
-
-**Kernentscheidung:** Teams existieren ohne Verein. Der Trainer braucht keine Genehmigung und wartet nicht auf Vereinsverifikation.
-
-### 1. Authentifizierung
-- Registrierung per E-Mail + Passwort
-- Login / Logout
-- Passwort-Reset per E-Mail
-- Serverseitige Session via Supabase SSR (Cookie-basiert)
-- `src/proxy.ts` schützt alle geschützten Routen
-
-### 2. Profil
-- Profil wird automatisch bei Registrierung via DB-Trigger angelegt
-- Bearbeitbar: Name, optional Telefon
-
-### 3. Eigenständiges Team anlegen
-- Trainer erstellt Team via `create_independent_team()` (SECURITY DEFINER)
-- Felder: Teamname, Altersgruppe (optional), Geschlecht (optional)
-- Trainer wird automatisch `team_owner` + `head_coach`
-- Team ist sofort aktiv — kein Vereins-Kontext, kein Warten
-
-### 4. Team-Einladungslink erstellen
-- `team_owner` oder `head_coach` erstellt einen Einladungslink
-- Einladungslink ist kryptografisch sicher (Token: 32 Byte), wiederverwendbar (bis max_uses), zeitlich begrenzt (Default: 30 Tage)
-- Link-Format: `/join/[token]`
-- Trainer teilt Link per WhatsApp, E-Mail, etc.
-
-### 5. Elternteil/Kind Self-Service-Beitritt
-- Elternteil öffnet Link → sieht Teamname
-- Elternteil registriert sich oder loggt sich ein
-- Elternteil gibt Kindsdaten ein: Vorname, Nachname, Geburtsjahr (optional: Position, Trikotnummer)
-- `team_join_request` wird mit Status `pending` angelegt
-- Kind ist NOCH NICHT im Team — keine Daten sichtbar für Trainer
-
-**Warum zwingend MVP 0A:**
-`team_join_requests` und `team_invitation_links` sind der Kern des Self-Service-Flows. Ohne diese beiden Tabellen ist der Flow "Trainer sendet Link → Eltern registrieren sich → Kind wird erstellt → Trainer nimmt an/lehnt ab" nicht umsetzbar. Dieser Flow ersetzt das manuelle Anlegen von Spielern und ist das differenzierende Feature für Amateurvereine.
-
-### 6. Trainer verwaltet Beitrittsanfragen
-- Trainer sieht offene Anfragen mit Kindsdaten (Vorname, Nachname, Geburtsjahr)
-- Trainer nimmt an → `player` wird in `players`-Tabelle angelegt, `team_join_request.status = 'approved'`
-- Trainer lehnt ab → `team_join_request.status = 'rejected'`, Kindsdaten nicht dauerhaft gespeichert
-
-### 7. Termine und RSVP
-- Trainer erstellt Termine: Training, Spiel, Sonstiges
-- Felder: Titel, Typ, Datum + Uhrzeit, Ort, optionale Beschreibung
-- `event_attendance`-Zeilen werden via Trigger für alle aktiven Spieler angelegt
-- Eltern geben RSVP für ihr Kind ab
-- Trainer sieht RSVP-Übersicht
-
-### 8. Basis-Dashboard
-- Übersicht nach Login: Meine Teams
-- Wenn kein Team vorhanden: Prompt "Team erstellen" oder "Team beitreten"
+Statuswerte in dieser Datei werden aus `docs/FEATURE_CATALOG.md` übernommen. Maßgeblich bleibt immer der Feature-Katalog. Wenn sich Feature-Status, Feature-Phase oder Feature-ID im Feature-Katalog ändern, muss `docs/MVP_SCOPE.md` im selben Dokumentationsschritt mitgeprüft werden.
 
 ---
 
-## MVP 0A — Akzeptanzkriterium
+## 3. Scope-Prinzipien
 
-Folgender Ablauf muss komplett funktionieren:
+### 3.1 Einzelteam zuerst
 
-1. Trainer A registriert sich und legt Team "U10 SK Musterstadt" an
-2. Trainer A ist automatisch `team_owner` + `head_coach`
-3. Trainer A erstellt einen Team-Einladungslink (30 Tage, max. 50 Nutzungen)
-4. Elternteil B öffnet Link, registriert sich, gibt Kindsdaten ein
-5. Kind erscheint als "ausstehende Anfrage" bei Trainer A
-6. Trainer A nimmt Anfrage an — Kind erscheint als aktiver Spieler im Team
-7. Trainer A erstellt ein Training für nächste Woche
-8. Elternteil B sagt für das Kind ab
-9. Trainer A sieht die Absage in der RSVP-Übersicht
+Vereon startet mit einer operativ nutzbaren Mannschaft.
 
----
+Eine sichtbare Vereins-/Mehrteam-Verwaltung ist nicht Teil von MVP-0A oder MVP-0B. Die technische Vorbereitung für spätere Vereinsstrukturen darf existieren, wird aber im frühen MVP nicht als sichtbare Club-Suite ausgebaut.
 
-## MVP 0A — Routen
+### 3.2 Zusammenspiel von Trainerteam, Spielern und Guardians
 
-```
-/                          → Redirect: /dashboard wenn eingeloggt, /login wenn nicht
-/login                     → Login
-/register                  → Registrierung
-/auth/callback             → Supabase Auth Callback
-/join/[token]              → Team-Einladungslink annehmen (Self-Service-Flow)
+Der MVP-Nutzungskern besteht aus Trainerteam, Spielern und Eltern/Erziehungsberechtigten.
 
-/(dashboard)/
-  dashboard/               → Übersicht
-  teams/new/               → Eigenständiges Team erstellen
-  teams/[teamId]/          → Team-Übersicht (eigenständig)
-  teams/[teamId]/join-requests/     → Beitrittsanfragen verwalten
-  teams/[teamId]/invitation-links/  → Einladungslinks verwalten
-  teams/[teamId]/events/
-  teams/[teamId]/events/new/
-  teams/[teamId]/events/[eventId]/
-  profile/
-```
+Trainer und Co-Trainer brauchen Verwaltungs- und Organisationsfunktionen. Spieler und Guardians brauchen einen klaren Zugang zu Terminen, Rückmeldungen und relevanten Informationen. Der Scope darf keine dieser Gruppen ignorieren, darf aber auch nicht jede Komfortfunktion sofort in den MVP ziehen.
 
----
+### 3.3 MVP-0B schließt Kernlücken
 
-## MVP 0A — Definition of Done
+MVP-0B ist keine Vereinsverwaltungsphase.
 
-- [ ] Auth-Flow komplett (Register, Login, Logout, Reset, Auth-Callback)
-- [ ] `create_independent_team()` SECURITY DEFINER implementiert
-- [ ] Eigenständiges Team anlegen funktioniert
-- [ ] Team-Einladungslink erstellen (kryptografischer Token, zeitlich begrenzt, multi-use)
-- [ ] Self-Service-Beitritt via Link (Elternteil registriert sich, gibt Kindsdaten ein)
-- [ ] Beitrittsanfragen: Trainer nimmt an/lehnt ab
-- [ ] Spieler erscheint nach Akzeptanz im Team
-- [ ] Kalender: Termine erstellen, bearbeiten, abbrechen
-- [ ] RSVP: Eltern geben Zu-/Absage für Kind ab
-- [ ] Basis-Dashboard mit Navigation
-- [ ] Mobil-responsive Layout
-- [ ] RLS auf allen MVP-0A-Tabellen
-- [ ] `proxy.ts` schützt alle geschützten Routen
+MVP-0B schließt kurzfristige Lücken, die den bestehenden Einzelteam-Kernflow im Alltag stören, unsicher machen oder einen kontrollierten Pilotbetrieb verhindern.
+
+### 3.4 Vereinsstruktur bleibt vorerst Hintergrundkontext
+
+Club-/Vereinsstrukturen dürfen technisch vorbereitet sein. Sichtbare Club-Dashboards, Mehrteam-Verwaltung, operative `club_admin`-Workflows und Team-Affiliation gehören nicht in MVP-0A oder MVP-0B.
+
+Sichtbare Vereinsfunktionen werden frühestens Post-MVP relevant, sofern der Einzelteam-Kern stabil funktioniert.
+
+### 3.5 Datenminimierung bei Minderjährigen
+
+Im MVP-Kontext wird bei Spielern nur das Geburtsjahr gespeichert und verwendet.
+
+Nicht Teil des aktuellen MVP-Scopes sind:
+
+- vollständiges Geburtsdatum
+- medizinische Daten
+- Ausweis-/Dokumentdaten
+- Gesundheitsnotizen
+- private Familieninformationen außerhalb des notwendigen Guardian-/Kontaktkontexts
+
+### 3.6 `team_owner` ist keine reine Trainerrolle
+
+`team_owner` ist die administrative Eigentümerrolle eines eigenständigen Teams.
+
+`team_owner` kann mit `head_coach` zusammenfallen, ist aber nicht automatisch dasselbe. Die Rolle ist wichtig für Teamhoheit, Team-Einstellungen und spätere Team-Affiliation. Operative Trainerarbeit und administrative Team-Eigentümerschaft müssen in Rollen- und Berechtigungsdokumenten sauber getrennt bleiben.
+
+### 3.7 Mobile Alltagstauglichkeit
+
+Mobile/PWA-Qualität gehört fachlich zu MVP-1. Trotzdem muss MVP-0B am Smartphone brauchbar responsiv sein, damit ein kontrollierter Pilot mit echten Nutzern nicht am Layout scheitert.
+
+Eine native iOS-/Android-App ist kein früher MVP-Scope.
 
 ---
 
-## MVP 0B — Verein erstellen
+## 4. Phasenmodell
 
-*Ziel: Vereinsverantwortliche können einen Verein registrieren, Teams zuordnen und Trainer einladen.*
-
-### 1. Verein anlegen
-- User erstellt Verein via `create_club()` (SECURITY DEFINER)
-- Felder: Vereinsname, Slug, Stadt, Land
-- Ersteller wird automatisch `club_admin`
-- Verein startet mit `verification_status = 'pending_verification'`
-- Verein ist intern sofort nutzbar — Verifizierung ist für öffentliche Sichtbarkeit und Affiliations-Flow
-
-### 2. Vereinsverifikation (manuell MVP)
-- Plattform-Admin setzt `verification_status = 'verified'` via Supabase Studio (MVP: kein UI)
-- Verifizierung ist in MVP 0B kein Blocker für den internen Betrieb
-
-### 3. Club-managed Teams anlegen
-- `club_admin` legt Teams an (club_id gesetzt, ownership_type = 'club_managed')
-- Felder: Name, Altersgruppe, Geschlecht, optional Saison
-
-### 4. Trainer einladen (Vereinskontext)
-- `club_admin` erstellt Einladungslink für `head_coach` (via `invitations`-Tabelle)
-- Ablauf: 7 Tage, Single-Use
-- Eingeladener registriert sich, bekommt `club_membership` + `team_membership` + `head_coach`-Rolle
-
-### 5. Vereins-Dashboard
-- Vereinsübersicht: Teams, Mitglieder
-- Navigation zwischen Vereins- und Team-Kontext
+| Phase | Bedeutung |
+|---|---|
+| `MVP-0A` | Bestehender oder unmittelbar grundlegender Kernflow für eine einzelne Mannschaft |
+| `MVP-0B` | Kurzfristige Kernlücken, damit der bestehende Kernflow alltagstauglicher, sicherer und pilotfähig wird |
+| `MVP-1` | Erste real nutzbare Testversion mit besserer Alltagstauglichkeit |
+| `Post-MVP` | Sinnvoll nach erstem echten Einsatz, aber nicht blockierend für den MVP |
+| `Later` | Langfristige Plattformfunktion |
+| `Unassigned / Rejected` | Nicht zugeordnet, bewusst verworfen oder ausdrücklich kein Produktfeature |
 
 ---
 
-## MVP 0B — Routen (zusätzlich zu MVP 0A)
+## 5. Prioritätsregeln
 
-```
-/(dashboard)/
-  clubs/new/                                         → Verein anlegen
-  clubs/[clubId]/                                    → Vereinsübersicht
-  clubs/[clubId]/teams/new/                          → Club-managed Team anlegen
-  clubs/[clubId]/teams/[teamId]/                     → Team-Übersicht (club-managed)
-  clubs/[clubId]/teams/[teamId]/events/              → (wie MVP 0A)
-  clubs/[clubId]/invitations/                        → Einladungen verwalten
-  /invite/[token]                                    → Vereinseinladung annehmen
-```
+Diese Regeln verhindern, dass interessante Zusatzfunktionen den Kern verdrängen.
 
----
-
-## MVP 0B — Definition of Done
-
-- [ ] `create_club()` SECURITY DEFINER mit Slug-Validierung
-- [ ] Verein anlegen funktioniert (club_admin automatisch)
-- [ ] Club-managed Team anlegen
-- [ ] Einladungsflow für head_coach (kryptografischer Token, Single-Use)
-- [ ] Vereins-Dashboard
-- [ ] Vereinsmitgliederliste (club_admin)
+1. Keine sichtbare Vereinsverwaltung vor stabiler Einzelteam-Nutzung.
+2. Kein Match-MVP vor Abschluss der MVP-0B-Kernlücken.
+3. Keine Reports vor separater Match-MVP-Entscheidung.
+4. Kein Taktikboard vor Training, RSVP, Rollen, Guardian-Flow und Anwesenheit.
+5. Keine Push-/E-Mail-Benachrichtigungen vor brauchbarem Mobile- und In-App-Hinweiskonzept.
+6. Keine Finanz-, Sponsoren-, Material-, Dokumenten-, Ehrenamts- oder Verbandsmodule im MVP.
+7. Keine vollständige Club-/Mehrteam-Suite aus rein technisch vorhandenen Tabellen ableiten.
+8. Keine neuen Features direkt aus `MVP_SCOPE.md` ableiten. Neue Features müssen zuerst in `docs/FEATURE_CATALOG.md` gepflegt werden.
 
 ---
 
-## MVP 1 — Spieler und Eltern vollständig
+## 6. MVP-0A — Bestehender Kernflow
 
-*Ziel: Vollständige Spielerverwaltung, Guardian-Verknüpfung, Anwesenheitserfassung, Spielberichte.*
+### 6.1 Ziel
 
-### 1. Vollständiges Spielerprofil
-- Trainer legt Spieler manuell an (auch ohne Account)
-- Felder: Vorname, Nachname, Geburtsjahr, Position, Trikotnummer
-- Spieler wird via `player_team_assignments` einem Team zugeordnet
+MVP-0A beschreibt den bestehenden oder unmittelbar grundlegenden Kernflow:
 
-### 2. Guardian-Einladung und Verknüpfung
-- Trainer erstellt Einladung vom Typ `player_guardian` mit eingebetteter `player_id`
-- Guardian registriert sich → `player_guardians`-Eintrag mit `verified_at = now()`
-- Guardian sieht Kalender des Kindes, kann RSVP abgeben
+Eine einzelne Mannschaft kann operativ genutzt werden. Nutzer können sich anmelden, ein Team kann erstellt werden, Spieler oder Guardians können über Join-/Invite-Flows eingebunden werden, Trainings können erstellt und angezeigt werden, und RSVP-Grundfunktionen sind vorhanden.
 
-### 3. Anwesenheit erfassen
-- `event_attendance`-Zeilen für alle Spieler via Trigger (bei Event-Erstellen)
-- Trainer sieht alle Spieler inkl. jene ohne Account
-- Trainer setzt `attended = true/false` via `player_id`
-- Anwesenheitsquote pro Spieler
+MVP-0A ist keine vollständige Vereinsplattform.
 
-### 4. Mein Team
-- Spieler: sieht Teamkollegen (Name, Position, Nummer)
-- Trainer: sieht alle Spieler mit RSVP-Status und Anwesenheitsquote
-- Guardian: sieht das Team seines Kindes
+Die Trennung zwischen Bestand und Prüfpunkten bedeutet: Bestand ist praktisch nutzbar oder im Feature-Katalog als implementiert/partial nachvollziehbar; Prüfpunkte sind fachlich oder technisch noch so unsicher, dass sie nicht als gesicherter Bestand behandelt werden dürfen.
 
-### 5. Einfacher Spielbericht
-- Trainer schreibt Bericht nach einem Spiel
-- Felder: Ergebnis, Zusammenfassung, interne Trainernotizen (`tactics_notes`)
-- Veröffentlichen → Spieler und Eltern sehen `summary`, nie `tactics_notes`
-- Kein Rich-Text-Editor — `<textarea>`
+### 6.2 MVP-0A — Bestand
 
-### 6. Rollenprüfung im UI
-- UI-Elemente rollenbasiert ein-/ausgeblendet
-- Alle Server Actions und Route Handlers prüfen Rollen serverseitig
-- Spieler sieht keine Admin-Funktionen
+| Modul | Feature-IDs | Status laut Feature-Katalog | Scope-Begründung |
+|---|---|---|---|
+| `AUTH` | `FC-AUTH-001`, `FC-AUTH-002`, `FC-AUTH-003`, `FC-AUTH-004` | `implemented` | Registrierung, Login, Logout und geschützte App-Bereiche sind Grundvoraussetzung für jede weitere Nutzung. |
+| `DASHBOARD` | `FC-DASHBOARD-002` | `implemented` | Nächste Termine sind der wichtigste Einstiegspunkt für den Alltag. |
+| `TEAM` | `FC-TEAM-001`, `FC-TEAM-002`, `FC-TEAM-004` | `implemented` | Mannschaft erstellen, anzeigen und Mitglieder sehen ist der Kern des Einzelteam-MVP. |
+| `ROLE` | `FC-ROLE-004` | `partial` | Rollenabhängige Navigation ist notwendig, ersetzt aber noch keine vollständige Rechteverwaltung. |
+| `PLAYER` | `FC-PLAYER-001` | `implemented` | Spieler müssen im Team sichtbar sein. |
+| `GUARDIAN` | `FC-GUARDIAN-001`, `FC-GUARDIAN-002`, `FC-GUARDIAN-003` | `implemented` | Guardian-/Kind-Logik ist für Jugendmannschaften zentral. |
+| `INVITE` | `FC-INVITE-001`, `FC-INVITE-002`, `FC-INVITE-003`, `FC-INVITE-004`, `FC-INVITE-005`, `FC-INVITE-006` | `implemented` | Einladungscode, Join-Link, Beitrittsanfragen und Freigabe sind differenzierende Kernfunktionen. |
+| `EVENT` | `FC-EVENT-001` | `implemented` | Die Terminliste ist Basis für Training, RSVP und spätere Anwesenheit. |
+| `TRAINING` | `FC-TRAINING-001`, `FC-TRAINING-002` | `implemented` | Trainings erstellen und anzeigen ist der operative Kernnutzen. |
+| `RSVP` | `FC-RSVP-001`, `FC-RSVP-002`, `FC-RSVP-004`, `FC-RSVP-005` | `implemented` | Spieler-/Guardian-RSVP, Trainerübersicht und Statusanzeige machen Termine praktisch nutzbar. |
 
----
+### 6.3 MVP-0A — Prüfpunkte
 
-## MVP 1 — Akzeptanzkriterium (aufbauend auf MVP 0A/0B)
+| Modul | Feature-IDs | Status laut Feature-Katalog | Prüffrage |
+|---|---|---|---|
+| `ORG` | `FC-ORG-001`, `FC-ORG-002`, `FC-ORG-004` | `partial` / `needs_review` | Ist die Club-/Mehrteam-Struktur nur technischer Hintergrundkontext, ohne sichtbare Vereinsverwaltung in den frühen MVP zu ziehen? |
 
-1. Trainer legt 3 Spieler manuell an (ohne Account)
-2. Trainer lädt 1 Elternteil ein, verknüpft mit Spieler 1
-3. Elternteil sieht Kalender des Kindes, gibt Absage für Training
-4. Trainer sieht Absage in der RSVP-Übersicht
-5. Nach dem Training: Trainer erfasst Anwesenheit für alle 3 Spieler
-6. Trainer legt ein Spiel an, trägt Ergebnis ein, schreibt Bericht
-7. Trainer veröffentlicht Bericht
-8. Eingeloggte Spieler sehen veröffentlichten Bericht, nicht die internen Notizen
+### 6.4 MVP-0A enthält ausdrücklich nicht
 
----
-
-## MVP 1 — Zusätzliche Routen
-
-```
-/(dashboard)/
-  teams/[teamId]/players/
-  teams/[teamId]/players/new/
-  teams/[teamId]/players/[playerId]/
-  teams/[teamId]/events/[eventId]/attendance/
-  teams/[teamId]/matches/[matchId]/report/
-```
+- vollständige Vereinsverwaltung
+- sichtbare Mehrteam-Verwaltung
+- Club-Dashboard
+- operative `club_admin`-Funktionen
+- Team-Affiliation
+- Training bearbeiten/löschen/absagen
+- Trainer-RSVP
+- Co-Trainer-Verwaltung
+- vollständige Anwesenheitserfassung
+- Matchday-Vollumfang
+- Reports
+- Push-/E-Mail-Benachrichtigungen
+- native App
 
 ---
 
-## MVP 2 — Team-Affiliation
+## 7. MVP-0B — Kurzfristige Kernlücken
 
-*Ziel: Eigenständige Teams können sich einem verifizierten Verein anschließen.*
+### 7.1 Ziel
 
-### Ablauf
-1. Verein (club_admin) sendet Anfrage an eigenständiges Team
-2. `team_owner` nimmt an oder lehnt ab
-3. Bei Akzeptanz: Plattform-Admin prüft optional (MVP: automatisch bei Verein verified)
-4. Team: `club_id` gesetzt, `ownership_type = 'club_managed'`, `status = 'club_affiliated'`
+MVP-0B macht den bestehenden Einzelteam-Kernflow alltagstauglicher, sicherer und weniger fehleranfällig.
 
-**Invariante:** Zuordnung passiert NIEMALS automatisch. Explizite Bestätigung des team_owners ist Pflicht.
+Nach MVP-0B soll ein kleiner, kontrollierter Pilot mit einer Mannschaft möglich sein. MVP-0B ist weiterhin keine sichtbare Vereinsverwaltungsplattform.
 
-### Neue Tabelle
-- `team_affiliation_requests`: team_id, club_id, status, requested_by, approved_by_team_owner, created_at
+### 7.2 Grobe Priorität innerhalb MVP-0B
+
+1. **Training / RSVP / Rollen**
+   - Training bearbeiten, löschen und absagen
+   - Trainer-RSVP
+   - Co-Trainer hinzufügen und entfernen
+
+2. **Auth / Legal / Join-Sicherheit**
+   - E-Mail-Verifizierung
+   - Passwort zurücksetzen
+   - Impressum, Datenschutzerklärung, Join-Flow-Hinweise
+   - minimaler Guardian-Consent für Pilotbetrieb
+
+3. **Feinschliff / Stabilisierung**
+   - Mannschaftsgrunddaten bearbeiten
+   - Einladungscode erneuern oder deaktivieren
+   - Beitrittsanfragen sauber ablehnen
+
+Diese Reihenfolge ist keine detaillierte Aufgabenplanung. Sie beschreibt nur Scope-Priorität.
+
+### 7.3 MVP-0B — bereits erledigter Bestand
+
+| Modul | Feature-IDs | Status laut Feature-Katalog | Scope-Begründung |
+|---|---|---|---|
+| `PLAYER` | `FC-PLAYER-002`, `FC-PLAYER-003` | `implemented` | Spieler entfernen und Spielerstammdaten mit Geburtsjahr erfassen gehören zur stabilen Teamverwaltung. |
+
+### 7.4 MVP-0B — offene Kernlücken
+
+| Modul | Feature-IDs | Status laut Feature-Katalog | Scope-Begründung |
+|---|---|---|---|
+| `AUTH` | `FC-AUTH-005`, `FC-AUTH-006` | `planned_mvp` | E-Mail-Verifizierung und Passwort-Reset sind grundlegende Sicherheits- und Recovery-Funktionen. |
+| `TEAM` | `FC-TEAM-003` | `planned_mvp` | Mannschaftsgrunddaten müssen korrigierbar sein. |
+| `ROLE` | `FC-ROLE-002`, `FC-ROLE-003` | `planned_mvp` | Co-Trainer müssen operativ mitarbeiten können, aber keine Team-/Rollenhoheit besitzen. |
+| `INVITE` | `FC-INVITE-007`, `FC-INVITE-008` | `partial` / `planned_mvp` | Beitrittsanfragen müssen ablehnbar sein; Einladungscodes müssen kontrollierbar bleiben. |
+| `TRAINING` | `FC-TRAINING-003`, `FC-TRAINING-004`, `FC-TRAINING-005` | `planned_mvp` | Training bearbeiten, löschen und absagen ist zentrale Alltagstauglichkeit. |
+| `RSVP` | `FC-RSVP-003` | `planned_mvp` | Trainer und Co-Trainer müssen eigene Teilnahme rückmelden können. |
+| `LEGAL` | `FC-LEGAL-001`, `FC-LEGAL-002`, `FC-LEGAL-003`, `FC-LEGAL-004` | `partial` / `planned_mvp` | Impressum, Datenschutz, Join-Flow-Hinweise und eine minimale Guardian-Berechtigungsbestätigung im Join-Flow sind vor externer Nutzung mit Minderjährigen erforderlich. |
+
+### 7.5 MVP-0B enthält ausdrücklich nicht
+
+- sichtbare Vereinsverwaltung
+- Club-Dashboard
+- mehrere Mannschaften sichtbar verwalten
+- Team-Switcher
+- operative `club_admin`-Funktionen
+- Team-Affiliation
+- vollständige Matchday-Funktionen
+- Reports
+- Serienverwaltung
+- Notification-Center
+- Push-/E-Mail-Benachrichtigungen
+- native App
+- Finanz-/Sponsoren-/Materialverwaltung
 
 ---
 
-## Nicht ins MVP (Phase 2+)
+## 8. Pilotfähigkeit
 
-| Feature | Begründung | Phase |
+### 8.1 Interner Test
+
+Ein interner Test kann mit Testaccounts und Testdaten vor MVP-0B erfolgen.
+
+Ziel ist technische und fachliche Validierung ohne echte externe Eltern, Spieler oder Vereinsdaten.
+
+### 8.2 Kontrollierter Pilot
+
+Ein kontrollierter Pilot mit einer echten Mannschaft ist erst sinnvoll, wenn MVP-0B-Kernlücken geschlossen sind.
+
+Für einen kontrollierten Pilot müssen mindestens erfüllt sein:
+
+- Auth-Grundflow funktioniert zuverlässig.
+- Eine Mannschaft kann erstellt und genutzt werden.
+- Spieler-/Guardian-Join-Flow funktioniert.
+- Beitrittsanfragen können angenommen und abgelehnt werden.
+- Trainings können erstellt, bearbeitet, gelöscht und abgesagt werden.
+- RSVP funktioniert für Spieler, Guardians und Trainerteam.
+- Co-Trainer können operativ eingebunden und wieder entfernt werden.
+- Impressum, Datenschutzerklärung und Join-Flow-Hinweise sind nicht mehr bloße Platzhalter.
+- Minimaler Guardian-Consent ist im Join-Flow vorhanden.
+- Mobile Nutzung ist zumindest brauchbar responsiv.
+
+Diese Kriterien sind keine technische Testcheckliste. Die eigentlichen Prüfungen gehören in `docs/MVP_TEST_CHECKLIST.md`.
+
+### 8.3 Breiter Rollout
+
+Ein breiter Rollout über mehrere Mannschaften oder Vereine ist nicht Ziel von MVP-0B.
+
+Dafür braucht es mindestens MVP-1-Erkenntnisse, stabilere Rollen-/Security-Dokumentation, geklärte Datenschutzprozesse und eine bewusste Entscheidung zur sichtbaren Vereins-/Mehrteam-Struktur.
+
+---
+
+## 9. MVP-1 — Erste real nutzbare Testversion
+
+### 9.1 Ziel
+
+MVP-1 ist die erste Version, die mit einer echten Mannschaft über mehrere Wochen sinnvoll getestet werden kann.
+
+MVP-1 erweitert den stabilisierten Einzelteam-Kern um bessere Alltagstauglichkeit, mobile Nutzung, Matchday-Grundlagen, Anwesenheit und strukturiertere Guardian-/Spielerfunktionen.
+
+MVP-1 ist eine Sammelphase. Größere Blöcke dürfen nicht automatisch gleichzeitig umgesetzt werden. Vor Umsetzung sind eigene Teilentscheidungen erforderlich.
+
+### 9.2 MVP-1 — Feature-Gruppen
+
+| Modul | Feature-IDs / Bereich | Status laut Feature-Katalog | Scope-Begründung / Hinweis |
+|---|---|---|---|
+| `AUTH` | `FC-AUTH-007` | `planned_mvp` | Nutzer müssen eigene Profilgrunddaten korrigieren können. |
+| `DASHBOARD` | `FC-DASHBOARD-001`, `FC-DASHBOARD-003` bis `FC-DASHBOARD-006` | `partial` / `planned_mvp` | Dashboard wird zur alltagstauglichen Arbeitszentrale, ohne frei konfigurierbare Widgets. |
+| `ORG` | `FC-ORG-003` | `planned_mvp` | Vereinsname, Sportart und weitere Club-Grunddaten pflegbar machen. Sichtbare Vereinsverwaltung darf trotzdem nicht unbewusst in MVP-1 rutschen. |
+| `TEAM` | `FC-TEAM-005`, `FC-TEAM-006`, `FC-TEAM-007` | `planned_mvp` | Teamansichten, primärer Team-Ort und Mannschaft archivieren/deaktivieren sind alltagsrelevant. |
+| `ROLE` | `FC-ROLE-001` | `planned_mvp` | Rollen sichtbar machen hilft bei Verwaltung und Support. |
+| `PLAYER` | `FC-PLAYER-004`, `FC-PLAYER-005`, `FC-PLAYER-006` | `planned_mvp` | Spielerprofil, sportliche Stammdaten und Statuslogik werden für echten Testbetrieb wichtig. |
+| `GUARDIAN` | `FC-GUARDIAN-004`, `FC-GUARDIAN-006`, `FC-GUARDIAN-007`, `FC-GUARDIAN-008` | `planned_mvp` | Mehrere Kinder, Kontaktpersonen und Kontaktdaten sind für Jugendmannschaften alltagsrelevant. |
+| `EVENT` | `FC-EVENT-002`, `FC-EVENT-003`, `FC-EVENT-004`, `FC-EVENT-005` | `planned_mvp` | Vergangene Termine, Filter, einfache Kalenderansicht und allgemeine interne Termine verbessern die Nutzung. |
+| `TRAINING` | `FC-TRAINING-006` bis `FC-TRAINING-012`, `FC-TRAINING-014` | `planned_mvp` | Trainingsdetails, Ort und einfache wiederkehrende Trainings bleiben MVP-1, aber erst nach MVP-0B-Kernlücken. |
+| `MATCH` | `FC-MATCH-001` bis `FC-MATCH-009` | `needs_review` / `planned_mvp` | Match bleibt MVP-1, aber nur als eigener offener Scope-Block nach separater Match-MVP-Entscheidung. |
+| `RSVP` | `FC-RSVP-006` bis `FC-RSVP-009` | `planned_mvp` | Deadline, Begründung und Sperrlogik trennen RSVP sauber von Anwesenheit. |
+| `ATTEND` | `FC-ATTEND-001` bis `FC-ATTEND-008` | `needs_review` / `planned_mvp` | Anwesenheitsliste anzeigen sowie Erfassen, Abschluss und Wiederöffnung bleiben MVP-1; Abschluss und Wiederöffnung sind vor Umsetzung bewusst zu prüfen. |
+| `REPORT` | `FC-REPORT-001` bis `FC-REPORT-007` | `needs_review` / `planned_mvp` | Reports bleiben MVP-1, aber erst nach separater Match-MVP-Entscheidung. |
+| `NOTIFY` | `FC-NOTIFY-001` bis `FC-NOTIFY-006` | `planned_mvp` | Kontextuelle Hinweise verbessern Alltagstauglichkeit ohne Notification-Center. |
+| `MOBILE` | `FC-MOBILE-001`, `FC-MOBILE-002`, `FC-MOBILE-003` | `planned_mvp` / `partial` | Hochwertige mobile Nutzung und PWA-Installierbarkeit sind zentral für Trainer, Spieler und Guardians. |
+| `LEGAL` | `FC-LEGAL-005`, `FC-LEGAL-007` | `planned_mvp` | Datenschutz-Kontaktweg und erweiterte Consent-/Berechtigungslogik (Folgeeintrag zum MVP-0B-Minimal-Consent) sind für belastbareren Pilotbetrieb wichtig. |
+
+### 9.3 MVP-1 — eigene Teilentscheidungen vor Umsetzung
+
+Vor Umsetzung dieser Blöcke sind eigene Scope-Entscheidungen erforderlich:
+
+- Match-MVP (`FC-MATCH-001` bis `FC-MATCH-009`)
+- Reports (`FC-REPORT-001` bis `FC-REPORT-007`)
+- Anwesenheit mit Abschluss und Wiederöffnung (`FC-ATTEND-005`, `FC-ATTEND-006`)
+- wiederkehrende Trainings (`FC-TRAINING-009` bis `FC-TRAINING-014`)
+- mobile App-Shell / PWA-Qualitätsgrenze (`FC-MOBILE-001` bis `FC-MOBILE-003`)
+- Guardian-Consent-Vollumfang (`FC-LEGAL-007`)
+
+### 9.4 MVP-1 enthält ausdrücklich nicht
+
+- vollständige Vereinsverwaltung
+- vollständige Mehrteam-Club-Suite
+- Finanzverwaltung
+- Sponsorenverwaltung
+- Materialverwaltung
+- vollständige Kommunikationsplattform
+- Chat
+- Kader-Nominierung
+- Aufstellungsplanung
+- detaillierte Spielerstatistiken
+- vollständige Taktikbibliothek
+- Notification-Center
+- Push-Benachrichtigungen
+- native App
+- Offlinefähigkeit
+- Verbandsintegration
+
+---
+
+## 10. Post-MVP
+
+### 10.1 Ziel
+
+Post-MVP umfasst Funktionen, die nach erstem echten Einsatz sinnvoll werden, aber den MVP nicht blockieren.
+
+Diese Funktionen können wichtig sein, dürfen aber nicht vor stabiler Einzelteam-Nutzung priorisiert werden.
+
+### 10.2 Post-MVP — Feature-Gruppen
+
+| Modul | Feature-IDs / Bereich | Scope-Begründung |
 |---|---|---|
-| Finanzen / Beitragsverwaltung | Eigene Komplexität, eigenes Modul | Phase 3 |
-| Sponsorenmanagement | Separates Modul | Phase 4 |
-| In-App-Chat / Messaging | Realtime-Infrastruktur | Phase 3 |
-| KI-Funktionen | Phase 5+ | — |
-| Saisonwechsel-Automatik | Phase 2 | — |
-| Push-Benachrichtigungen | PWA-Phase | Phase 2 |
-| Mehrsprachigkeit (i18n) | Phase 2 | — |
-| E-Mail-Benachrichtigungen | Außer Auth-E-Mails | Phase 2 |
-| Departments / Bereichsrollen | Für größere Vereine | Phase 2 |
-| Aufstellungen / Taktik | Phase 3 | — |
-| Export / Statistiken | Team Plus Feature | Phase 3 |
-| Bild-Upload | Kein Avatar, kein Vereinslogo im MVP | Phase 2 |
-| Offizieller ÖFB-Transfer | Externe Systeme | Phase 3+ |
+| `AUTH` | `FC-AUTH-008` | E-Mail-Änderung ist sinnvoll, aber nicht MVP-blockierend. |
+| `DASHBOARD` | `FC-DASHBOARD-007` | Warnhinweise/offene Aufgaben sind nützlich, aber kein Kernflow. |
+| `ORG` | `FC-ORG-005` | Sichtbare Mehrteam-Verwaltung gehört nach stabiler Einzelteam-Nutzung. |
+| `TEAM` | `FC-TEAM-008` | Teamwechsel wird erst bei mehreren sichtbaren Teams relevant. |
+| `TEAM` | `FC-TEAM-009` | Team-Affiliation (Beitritt zu einem Verein) darf nicht automatisch erfolgen und setzt eine sichtbare Vereins-/Mehrteam-Struktur voraus. |
+| `ROLE` | `FC-ROLE-005` | `club_admin` wird erst mit sichtbarer Club-/Mehrteam-Struktur operativ relevant. |
+| `PLAYER` | `FC-PLAYER-007` | Archivierung braucht Datenschutz-/Historienkonzept. |
+| `INVITE` | `FC-INVITE-009`, `FC-INVITE-010` | Automatisierte Bereinigung und Ablaufregeln sind sinnvoll, aber nicht Startblocker. |
+| `EVENT` | `FC-EVENT-006`, `FC-EVENT-007` | Allgemeine RSVP-Termine und Kalenderexport sind spätere Komfortfunktionen. |
+| `TRAINING` | `FC-TRAINING-013` | Echte Serienverwaltung ist langfristig wichtig, aber nicht erster Serienumfang. |
+| `MATCH` | `FC-MATCH-010` | Kader-Nominierung ist fachlich wichtig, aber nicht MVP-Matchday. |
+| `TACTIC` | `FC-TACTIC-001`, `FC-TACTIC-002` | Taktikboard darf Training/RSVP/Anwesenheit nicht verdrängen. |
+| `REPORT` | `FC-REPORT-008` | Detaillierte Spielerstatistiken würden den MVP zu stark ausweiten. |
+| `NOTIFY` | `FC-NOTIFY-007`, `FC-NOTIFY-008`, `FC-NOTIFY-009`, `FC-NOTIFY-010` | Notification-Center, Push und E-Mail brauchen eigene Infrastruktur und Einstellungen. |
+| `MOBILE` | `FC-MOBILE-004` | Mobile Push gehört zu Benachrichtigungen, nicht zum frühen MVP. |
+| `LEGAL` | `FC-LEGAL-006` | DSGVO-Self-Service ist rechtlich/technisch komplex und nicht MVP. |
 
 ---
 
-## Tech-Entscheidungen für das MVP
+## 11. Later
 
-- **Kein Rich-Text-Editor** — `<textarea>` für alle Textfelder
-- **Kein Supabase Realtime** — kein Live-Update, kein Polling im MVP
-- **Keine E-Mail-Benachrichtigungen** außer Supabase Auth-E-Mails
-- **Kein Bild-Upload** — kein Avatar, kein Vereinslogo in MVP
-- **Kein Onboarding-Wizard** — direkte UI ohne geführten Setup-Flow
-- **Kein Dunkelmodus** — eine Theme-Variante reicht für MVP
+### 11.1 Ziel
 
----
+Later umfasst langfristige Plattformfunktionen, die erst nach Validierung des MVP und nach bewusster Produktentscheidung ausgearbeitet werden dürfen.
 
-## Migrations-Reihenfolge (Tabellen nach MVP-Stufe)
+### 11.2 Later — Feature-Gruppen
 
-| Migration | Stufe | Tabellen |
+| Modul | Feature-IDs / Bereich | Scope-Begründung |
 |---|---|---|
-| `001_init_mvp0_core` | Fundament | roles, permissions, role_permissions, profiles, clubs, seasons, club_memberships, club_member_roles, teams, team_memberships, team_member_roles |
-| `002_mvp0a_team_flows` | MVP 0A | team_invitation_links, team_join_requests, players (minimal), events, event_attendance |
-| `003_mvp0b_invitations` | MVP 0B | invitations |
-| `004_mvp1_players_full` | MVP 1 | player_guardians, player_team_assignments, matches, match_reports, audit_logs |
-| `005_mvp2_affiliation` | MVP 2 | team_affiliation_requests |
+| `DASHBOARD` | `FC-DASHBOARD-008` | Personalisierbare Widgets sind komplex und nicht MVP-relevant. |
+| `ROLE` | `FC-ROLE-006` | `super_admin` als Plattformrolle ist ein späterer Kandidat und erfordert eigene Security-/Decision-Prüfung. |
+| `MATCH` | `FC-MATCH-011` | Strukturierte Gegner-/Vereinsdatenbank kann stark in Verbands-/Plattformlogik wachsen. |
+| `TACTIC` | `FC-TACTIC-003`, `FC-TACTIC-004`, `FC-TACTIC-005` | Speichern, Zuordnen und Teilen von Taktiken ist langfristig, nicht MVP. |
+| `MOBILE` | `FC-MOBILE-005`, `FC-MOBILE-006` | Offlinefähigkeit und native Apps sind langfristige Produkt-/Technikentscheidungen. |
+| `ADMIN` | `FC-ADMIN-001`, `FC-ADMIN-002`, `FC-ADMIN-003`, `FC-ADMIN-004`, `FC-ADMIN-005` | Internes Admin-Panel ist kein frühes MVP und sicherheitskritisch. |
+
+### 11.3 Future Platform Domains
+
+Folgende langfristige Bereiche sind keine MVP-Features und werden in `docs/MVP_SCOPE.md` nicht konkret ausgearbeitet:
+
+- `MEMBERSHIP`
+- `FINANCE`
+- `FACILITY`
+- `EQUIPMENT`
+- `COMMUNICATION`
+- `DOCUMENTS`
+- `VOLUNTEER`
+- `SPONSOR`
+- `SHOP`
+- `ANALYTICS`
+- `FEDERATION`
+
+Diese Bereiche dürfen erst nach separater Produktentscheidung in konkrete Features, Rollen, Datenmodelle oder User-Flows übersetzt werden.
+
+---
+
+## 12. Rejected / bewusst nicht enthalten
+
+Diese Feature-Catalog-Einträge sind bewusst nicht als normale Produktfunktionen vorgesehen:
+
+| Feature-ID | Scope-Entscheidung |
+|---|---|
+| `FC-PLAYER-008` | Spieler vollständig löschen ist kein normales MVP-Feature und muss über DSGVO-/Löschkonzept behandelt werden. |
+| `FC-GUARDIAN-005` | Mehrere eigenständige Guardian-Accounts pro Kind sind nicht vorgesehen. |
+| `FC-RSVP-010` | Trainerteam soll keine Spieler-RSVP nachtragen; tatsächliche Anwesenheit wird separat geführt. |
+| `FC-ADMIN-006` | Impersonation ist hochriskant und kein normales Produktfeature. |
+| `FC-ADMIN-007` | Direkter Datenbankzugriff über Admin-Panel ist kein Produktfeature. |
+
+---
+
+## 13. Nicht-Ziele, die nicht vorgezogen werden dürfen
+
+Diese Punkte sind besonders anfällig dafür, zu früh in den MVP gezogen zu werden. Sie bleiben ausdrücklich außerhalb von MVP-0A, MVP-0B und überwiegend auch außerhalb von MVP-1:
+
+- vollständige Vereinsverwaltung
+- sichtbare Mehrteam-Verwaltung
+- Club-Dashboard
+- Team-Affiliation vor Post-MVP
+- Kader-Nominierung vor Match-MVP-Klärung
+- Aufstellungsplanung
+- Taktikboard vor stabiler Training-/RSVP-/Anwesenheitslogik
+- detaillierte Spielerstatistiken
+- Notification-Center
+- Push-/E-Mail-Benachrichtigungen
+- native App
+- Offlinefähigkeit
+- Finanzverwaltung
+- Sponsorenverwaltung
+- Materialverwaltung
+- Verbandsintegration
+- internes Admin-Panel
+
+---
+
+## 14. Abgrenzung zu anderen Dokumenten
+
+`docs/MVP_SCOPE.md` darf nicht mit technischen oder prozessualen Detailinhalten aufgebläht werden.
+
+| Inhalt | Gehört nach |
+|---|---|
+| konkrete Routen und Screens | `docs/USER_FLOWS.md`, `docs/ARCHITECTURE.md` |
+| Schritt-für-Schritt-Abläufe | `docs/USER_FLOWS.md` |
+| Rollenrechte und Berechtigungsmatrix | `docs/ROLES_AND_PERMISSIONS.md` |
+| Tabellen, Spalten, Beziehungen | `docs/DATABASE_MODEL.md` |
+| RLS, SECURITY DEFINER, Zugriffsschutz | `docs/SECURITY.md` |
+| Datenschutzdetails, Löschung, Einwilligung, Minderjährige | `docs/DSGVO_PRIVACY_MODEL.md` |
+| manuelle Tests und QA-Kriterien | `docs/MVP_TEST_CHECKLIST.md` |
+| reale Routen-/Code-Struktur | `docs/ARCHITECTURE.md`, `docs/STATUS.md` |
+| konkrete Implementierung | Claude-Code-Aufträge, nicht dieses Dokument |
+| dauerhafte Produkt-/Architekturentscheidungen | `docs/DECISION_LOG.md` |
+
+---
+
+## 15. Feature-Catalog-Prüfpunkte
+
+Diese Punkte müssen mit `docs/FEATURE_CATALOG.md` in Einklang gebracht werden.
+
+| Punkt | Problem | Erwartete Klärung |
+|---|---|---|
+| Match-MVP | Viele Match-Features in MVP-1, teilweise `needs_review` | Vor Umsetzung eigene Match-MVP-Entscheidung treffen. |
+| Reports | Reports hängen fachlich am Match-Modul | Vor Umsetzung erst Match-MVP klären. |
+
+---
+
+## 16. Pflege-Regeln
+
+1. Neue Funktionen werden zuerst in `docs/FEATURE_CATALOG.md` angelegt.
+2. Danach wird entschieden, ob und in welcher Phase sie in `docs/MVP_SCOPE.md` erscheinen.
+3. Danach werden User-Flows, Rollen, Datenmodell, Security/DSGVO und Tests abgeleitet.
+4. `docs/MVP_SCOPE.md` darf keine technische Umsetzung, Migration oder RLS-Regel ersetzen.
+5. Wenn `docs/FEATURE_CATALOG.md` geändert wird, muss geprüft werden, ob `docs/MVP_SCOPE.md` angepasst werden muss.
+6. Wenn eine Funktion aus `Post-MVP` oder `Later` vorgezogen werden soll, braucht das zuerst eine bewusste Produktentscheidung.
+7. Rejected Features dürfen nicht still wieder als neue MVP-Funktionen auftauchen.
