@@ -186,3 +186,18 @@ Kompakter Überblick über alle `.md`-Dateien im Repo. Für Details siehe `docs/
 - `docs/ROADMAP.md` — veraltete Checkbox-Roadmap mit überholter Phasentaxonomie, Archivkandidat.
 - `docs/DOCS_INVENTORY.md` — Bestandsaufnahme/Pflegezustand aller `docs/`-Dateien; kein Statuswert-Ersatz, reines Cleanup-Hilfsdokument.
 - `docs/CHATGPT_CONTEXT.md` — diese Datei; kompakter ChatGPT-Handoff, keine technische Wahrheitsquelle.
+
+---
+
+## 12. Nächster Dokumentationsplan
+
+**Grundprinzip:** `Feature → Scope → Flow → Rollen → Datenmodell → Security/DSGVO → Tests`
+
+`docs/FEATURE_CATALOG.md` ist die kanonische fachliche Funktionsquelle. Die weiteren Dokumente sollen nicht isoliert erweitert werden, sondern gegen `FEATURE_CATALOG.md` abgeglichen und daraus abgeleitet werden — nicht alle gleichzeitig, sondern der Reihe nach:
+
+1. `docs/MVP_SCOPE.md` bereinigen — legt fest, welche Features wirklich in MVP-0A, MVP-0B, MVP-1, Post-MVP oder Later gehören.
+2. `docs/USER_FLOWS.md` ausarbeiten — beschreibt die wichtigsten Nutzerabläufe auf Basis des bereinigten Scopes.
+3. `docs/ROLES_AND_PERMISSIONS.md` konsolidieren — Rollen und Rechte aus Feature-Katalog und User-Flows zusammenführen.
+4. `docs/DATABASE_MODEL.md` gegen `FEATURE_CATALOG.md` prüfen — Datenmodell nicht isoliert von Produktlogik und Rollen entwickeln.
+5. `docs/SECURITY.md` und `docs/DSGVO_PRIVACY_MODEL.md` schärfen — insbesondere wegen Minderjährigen, Guardian-Logik, `birth_year`, Kontaktpersonen, RSVP, Anwesenheit und Spielberichten.
+6. `docs/MVP_TEST_CHECKLIST.md` daraus ableiten — abgeleitet aus Scope, Flows und Rollen.
