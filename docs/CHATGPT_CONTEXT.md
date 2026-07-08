@@ -49,7 +49,7 @@ Diese Datei ist die kompakte Übergabequelle für ChatGPT. Sie ersetzt nicht die
 * Hot-Memory-Dokumente (`docs/CURRENT_TASK.md`, `docs/PROJECT_BRIEF.md`, `docs/STATUS.md`) wurden nachgezogen und mit `5337867` committed
 * `docs/DECISION_LOG.md` wurde grundlegend überarbeitet und mit `d6d3c36` committed: neues Standardformat für Entscheidungen, Entscheidungsindex, sieben Initialentscheidungen `DEC-001` bis `DEC-007`
   * `DEC-001` definiert die neue Dokumentationsstruktur und den künftigen manuellen ChatGPT-Doku-Prozess (Nutzer + ChatGPT entwerfen, Claude reviewt danach im Review-only-Modus)
-  * `docs/FEATURE_CATALOG.md` ist dadurch als künftige kanonische Funktionsquelle beschlossen, **existiert aber noch nicht**
+  * `docs/FEATURE_CATALOG.md` ist dadurch als künftige kanonische Funktionsquelle beschlossen; die Datei existiert inzwischen und wurde mit Commit `00a103d` hinzugefügt (siehe Abschnitt 10)
   * Claude-Review vor Commit ergab „commitfähig" — die Datei wurde unverändert übernommen und mit `d6d3c36` committed
 * Kein Push erfolgt (durch `git status` bestätigt)
 
@@ -76,7 +76,7 @@ Aus `git log --oneline -n 10` (reale Werte):
 
 Priorisiert:
 
-1. **`docs/FEATURE_CATALOG.md` gemeinsam mit ChatGPT konzipieren** (nach dem in `DEC-001` festgelegten Prozess: ChatGPT entwirft, Nutzer fügt manuell ins Repo ein, Claude reviewt danach im Review-only-Modus gegen Repo/Code/Migrationen/Docs)
+1. **`docs/FEATURE_CATALOG.md` wurde erstellt (Commit `00a103d`) und ist die kanonische fachliche Funktionsquelle.** Nächster Schritt ist nicht mehr Konzeption, sondern Abgleich weiterer Dokumente dagegen:
    * `MVP_SCOPE.md` gegen den Feature-Katalog neu strukturieren
    * `USER_FLOWS.md` entsprechend abgrenzen
    * danach technische Kern-Dokumente: `DATABASE_MODEL.md`, `ROLES_AND_PERMISSIONS.md`, `SECURITY.md`
@@ -92,7 +92,6 @@ Priorisiert:
 
 ## 7. Offene Risiken / Blocker
 
-* `docs/FEATURE_CATALOG.md` existiert noch nicht (als kanonische Funktionsquelle beschlossen, aber nicht erstellt)
 * Legal-Seiten weiterhin Platzhalter
 * Cleanup für abgelehnte/abgelaufene Join-Requests noch nicht automatisiert
 * Consent-/Einwilligungsnachweis für Minderjährige noch unzureichend
@@ -123,11 +122,67 @@ Priorisiert:
 
 * ChatGPT soll bei Projektfragen primär diese Datei als aktuellen Einstieg nutzen.
 * Ältere einzeln hochgeladene `.md`-Quellen können veraltet sein.
-* **Aktueller nächster Startpunkt:** `docs/FEATURE_CATALOG.md` gemeinsam mit ChatGPT konzipieren (`docs/DECISION_LOG.md` und `docs/CHATGPT_CONTEXT.md` sind bereits abgeschlossen und committed).
-* `docs/FEATURE_CATALOG.md` darf **nicht eigenmächtig durch Claude erstellt werden**. Sie wird nach dem in `DEC-001` festgelegten Prozess zuerst gemeinsam mit ChatGPT konzipiert, erst danach von Claude im Review-only-Modus geprüft.
+* **Aktueller Stand:** `docs/FEATURE_CATALOG.md` wurde erstellt (Commit `00a103d`) und ist die kanonische fachliche Funktionsquelle (`docs/DECISION_LOG.md` und `docs/CHATGPT_CONTEXT.md` sind ebenfalls abgeschlossen und committed).
+* Weitere Dokumente sollen künftig gegen `docs/FEATURE_CATALOG.md` abgeglichen werden (`MVP_SCOPE.md`, `USER_FLOWS.md`, technische Kern-Dokumente); der in `DEC-001` festgelegte Konzeptions-/Review-Prozess gilt weiterhin für künftige neue kanonische Dokumente.
 * Bei Widersprüchen gilt:
   1. Aktueller Nutzer-/Claude-Handoff im laufenden Chat und der tatsächliche Git-Status
   2. `CHATGPT_CONTEXT.md`
   3. `STATUS.md` / `ARCHITECTURE.md`
   4. ältere Dokumente mit Warnhinweis nur nach Prüfung
 * Wenn ChatGPT unsicher ist, soll es gezielt nach aktuellem `git status`, `git log` oder Diff fragen, statt aus alten Quellen zu schließen.
+
+---
+
+## 10. Stand-Nachtrag (2026-07-08)
+
+* `docs/FEATURE_CATALOG.md` wurde mit Commit `00a103d` hinzugefügt.
+* `docs/DECISION_LOG.md` enthält nun `DEC-008` zum Feature-ID-Format `FC-[MODUL]-[NUMMER]`.
+* Der Arbeitsbaum war nach dem Commit clean.
+* Kein Push wurde ausgeführt.
+
+---
+
+## 11. Markdown-Dokumentenverzeichnis
+
+Kompakter Überblick über alle `.md`-Dateien im Repo. Für Details siehe `docs/DOCS_INVENTORY.md`. Diese Datei (`CHATGPT_CONTEXT.md`) ist selbst nur ein kompakter ChatGPT-Handoff/Projektkontext, keine Quelle für technische Wahrheit — dafür gelten `ARCHITECTURE.md`/`STATUS.md`.
+
+**Root:**
+- `AGENTS.md` — Hinweis, dass dieses Next.js 16 Breaking Changes ggü. Trainingswissen hat; vor Codeänderungen `node_modules/next/dist/docs/` lesen.
+- `CLAUDE.md` — Projektregeln für Claude Code (Pflichtlektüre, Arbeitsregeln, Hard Constraints).
+- `README.md` — Standard-`create-next-app`-Boilerplate, keine projektspezifische Doku.
+
+**docs/ — kanonische Funktions-/Entscheidungsquellen:**
+- `docs/FEATURE_CATALOG.md` — **neue kanonische fachliche Funktionsquelle**: Status, Phase, Rollen und Abgrenzung aller Produktfunktionen.
+- `docs/DECISION_LOG.md` — **verbindliches Entscheidungsprotokoll** für Produkt-, Architektur-, Security-, Privacy-, UX-, Business- und Dokumentationsentscheidungen.
+- `docs/MVP_SCOPE.md` — MVP-Philosophie und Funktionsumfang je Stufe (0A/0B/1/2); kritisch prüfen, idealisierte Migrationsnummerierung weicht von echten Dateien ab.
+- `docs/USER_FLOWS.md` — nummerierte Nutzerflows je MVP-Stufe; inhaltlich stark deckungsgleich mit `MVP_SCOPE.md`.
+
+**docs/ — technischer Ist-Zustand (verlässlichste Quellen):**
+- `docs/ARCHITECTURE.md` — code-basierte Architekturreferenz, aktuellster verlässlicher Ist-Zustand.
+- `docs/STATUS.md` — code-basiertes Audit (was funktioniert/uncommitted/offen), ebenfalls verlässlicher Ist-Zustand.
+- `docs/CURRENT_TASK.md` — laufender Phasen-/Aufgaben-Log; kritisch prüfen, Aktualisierungsstand kann hinter `STATUS.md` zurückliegen.
+- `docs/PROJECT_BRIEF.md` — Kompaktzusammenfassung für Claude Code; kritisch prüfen, enthält bekannte veraltete Einzelaussagen (siehe eigener Warnhinweis in der Datei).
+
+**docs/ — technischer Funktionskern (gegen Feature-Katalog/Code abzugleichen):**
+- `docs/DATABASE_MODEL.md` — kanonisches geplantes Datenmodell (DDL-artig); kritisch prüfen, idealisierte Migrationsnummerierung.
+- `docs/ROLES_AND_PERMISSIONS.md` — Rollen- und Berechtigungskonzept.
+- `docs/SECURITY.md` — Sicherheitsarchitektur-Referenz mit Risiken/Gegenmaßnahmen; kritisch prüfen, Status-Spalte veraltet (zeigt „Geplant" trotz Umsetzung).
+- `docs/DSGVO_PRIVACY_MODEL.md` — Datenschutz-/DSGVO-Referenz, Minderjährigenschutz, Datenminimierung.
+- `docs/SUPABASE_STRATEGY.md` — Supabase-Integrationsleitfaden (Clients, RLS, SECURITY DEFINER); kritisch prüfen, kleinere Widersprüche zu `ARCHITECTURE.md`.
+- `docs/TECH_STACK.md` — Tech-Stack-Übersicht; kritisch prüfen, veraltete Client-Anzahl und Zod-Status.
+
+**docs/ — UX und Qualität:**
+- `docs/DESIGN_SYSTEM.md` — UI-/UX-Leitfaden, Farbtoken- und Komponenten-Spezifikationen.
+- `docs/MVP_TEST_CHECKLIST.md` — manuelle QA-Checkliste für den MVP-Kernflow, aktiv gepflegt.
+
+**docs/ — Legal/Business/Strategie:**
+- `docs/LEGAL_TODO.md` — DSGVO-/Rechts-Checkliste vor Pilotbetrieb (Legal-Seiten sind Platzhalter).
+- `docs/MONETIZATION_STRATEGY.md` — Geschäfts-/Preismodell, Billing erst Phase 3.
+- `docs/PRODUCT_VISION.md` — Produktvision auf hoher Flughöhe (Nordstern-Dokument).
+- `docs/MOBILE_APP_STRATEGY.md` — gestuftes Mobile-Konzept (Web/PWA → später nativ via Capacitor).
+
+**docs/ — Archivkandidaten / nur Referenz:**
+- `docs/PROJECT_STATUS.md` — veraltetes Fortschritts-Tracking, nicht mehr primäre Statusquelle (siehe `STATUS.md`).
+- `docs/ROADMAP.md` — veraltete Checkbox-Roadmap mit überholter Phasentaxonomie, Archivkandidat.
+- `docs/DOCS_INVENTORY.md` — Bestandsaufnahme/Pflegezustand aller `docs/`-Dateien; kein Statuswert-Ersatz, reines Cleanup-Hilfsdokument.
+- `docs/CHATGPT_CONTEXT.md` — diese Datei; kompakter ChatGPT-Handoff, keine technische Wahrheitsquelle.
