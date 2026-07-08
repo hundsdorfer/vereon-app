@@ -245,8 +245,9 @@ Bei kleineren Entscheidungen dürfen einzelne Abschnitte kompakter sein oder ent
 | DEC-005 | 2026-07-06 | Web/PWA zuerst, native App später                        | accepted-retrospective | Product / UX / Technical            |
 | DEC-006 | 2026-07-06 | Server Actions + Supabase RPC/RLS als Sicherheitsmuster  | accepted-retrospective | Architecture / Security / Technical |
 | DEC-007 | 2026-07-06 | Datenminimierung bei Kinder-/Guardian-Daten              | accepted-retrospective | Privacy / Product / Security        |
+| DEC-008 | 2026-07-08 | Feature-Catalog-ID-Format `FC-[MODUL]-[NUMMER]`          | accepted               | Documentation                       |
 
-Hinweis: `FEATURE_CATALOG.md` ist zum Zeitpunkt dieser Version geplant, aber noch nicht erstellt.
+Hinweis: `FEATURE_CATALOG.md` wurde inzwischen erstellt und von Claude Code im Review-only-Modus geprüft (siehe `DEC-008`).
 
 ---
 
@@ -466,6 +467,66 @@ docs/MVP_SCOPE.md
 docs/USER_FLOWS.md
 docs/PROJECT_STATUS.md
 docs/ROADMAP.md
+```
+
+---
+
+## DEC-008 — 2026-07-08 — Feature-Catalog-ID-Format
+
+**Status:** accepted
+**Typ:** Documentation
+**Entscheidungszeitpunkt:** Am 2026-07-08 im Rahmen des ersten Claude-Code-Reviews von `docs/FEATURE_CATALOG.md` festgestellt und entschieden.
+**Ersetzt:** —
+**Ersetzt durch:** —
+
+### Kontext
+
+`DEC-001` legt für künftige Feature-IDs das Format `DOMAIN_ACTION` fest (Beispiele: `TEAM_CREATE`, `JOIN_REQUEST_APPROVE`, `PLAYER_REMOVE`).
+
+Die tatsächlich erstellte und von Claude Code im Review-only-Modus geprüfte Datei `docs/FEATURE_CATALOG.md` verwendet stattdessen durchgängig das Format `FC-[MODUL]-[NUMMER]` (Beispiele: `FC-TRAINING-001`, `FC-RSVP-003`, `FC-GUARDIAN-006`), inklusive eigener ID-Regeln in Abschnitt 6 der Datei (stabile IDs, keine Wiederverwendung, kein stilles Löschen).
+
+Dieser Widerspruch wurde im Claude-Code-Review von `FEATURE_CATALOG.md` als offener Konflikt zwischen zwei kanonischen Dokumenten identifiziert und musste vor einem möglichen Commit aufgelöst werden.
+
+### Entscheidung
+
+Für `docs/FEATURE_CATALOG.md` gilt verbindlich das Format `FC-[MODUL]-[NUMMER]`.
+
+Der in `DEC-001` skizzierte `DOMAIN_ACTION`-Ansatz wird für den Feature-Katalog nicht verwendet.
+
+### Begründung
+
+`FC-[MODUL]-[NUMMER]` ist für einen tabellarischen Feature-Katalog stabiler und lesbarer: Modul und laufende Nummer sind auf einen Blick erkennbar, IDs bleiben bei Umbenennung des Features unverändert, und neue Features lassen sich innerhalb eines Moduls einfach fortlaufend ergänzen, ohne dass ein sprechender Aktionsname wie bei `DOMAIN_ACTION` mehrdeutig oder mit der Zeit unpassend werden kann (z. B. wenn sich der fachliche Charakter einer Aktion ändert).
+
+### Verworfene Alternativen
+
+* Umstellung aller Feature-IDs in `docs/FEATURE_CATALOG.md` auf `DOMAIN_ACTION` gemäß ursprünglichem `DEC-001`-Wortlaut.
+* Parallelbetrieb beider ID-Formate (z. B. `DOMAIN_ACTION` als zusätzliches Alias-Feld je Feature-Zeile).
+
+### Gilt für
+
+* `docs/FEATURE_CATALOG.md`
+* künftige Erweiterungen des Feature-Katalogs um neue Module/Features
+
+### Gilt nicht für / Nicht entschieden
+
+* ID-Formate außerhalb von `FEATURE_CATALOG.md` (z. B. für technische Code-Identifier, Datenbank-Konstanten oder künftige Tracking-Systeme) — diese Entscheidung leitet keine Code-Identifier aus dem Feature-Katalog ab.
+* Die übrige Dokumentationsstruktur aus `DEC-001` bleibt unverändert gültig; nur der konkrete ID-Format-Punkt wird präzisiert.
+
+### Auswirkungen
+
+* `DEC-001` bleibt für die Dokumentationsstruktur gültig, wird aber hinsichtlich des Feature-ID-Formats durch `DEC-008` präzisiert/überschrieben.
+* Keine Umstellung bestehender Feature-IDs in `docs/FEATURE_CATALOG.md` nötig.
+* Künftige Claude-Code-Reviews von `FEATURE_CATALOG.md` sollen `FC-[MODUL]-[NUMMER]` als korrektes, verbindliches Format ansetzen.
+
+### Offene Folgeaufgaben
+
+* Keine.
+
+### Verwandte Docs
+
+```text
+docs/DECISION_LOG.md
+docs/FEATURE_CATALOG.md
 ```
 
 ---
