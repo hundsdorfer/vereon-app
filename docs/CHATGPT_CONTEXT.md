@@ -8,11 +8,11 @@ Diese Datei ist die kompakte Übergabequelle für ChatGPT. Sie ersetzt nicht die
 
 ## 2. Stand
 
-* **Datum:** 2026-07-07
+* **Datum:** 2026-07-08
 * **Aktueller Branch:** `main`
-* **Letzter abgeschlossener Projektstand vor dieser Kontext-Aktualisierung:** `d6d3c36` — „docs: restructure decision log"
-* **Branch-Status zu `origin/main`:** 8 Commits voraus, kein Push
-* **Arbeitsbaum-Status:** **nicht clean** — `docs/CHATGPT_CONTEXT.md` wird durch diese Aktualisierung gerade geändert und danach gezielt committed; `docs/DECISION_LOG.md` ist bereits committed (`d6d3c36`) und nicht mehr modifiziert
+* **Letzter abgeschlossener Projektstand vor dieser Kontext-Aktualisierung:** `83b9b4d` — „docs: update roles and permissions"
+* **Branch-Status zu `origin/main`:** 4 Commits voraus, kein Push
+* **Arbeitsbaum-Status:** **nicht clean** — `docs/CHATGPT_CONTEXT.md` wird durch diese Aktualisierung gerade geändert und danach gezielt committed; `docs/ROLES_AND_PERMISSIONS.md` ist bereits committed (`83b9b4d`) und nicht mehr modifiziert
 * **Push-Status:** kein Push erfolgt
 
 ---
@@ -51,14 +51,35 @@ Diese Datei ist die kompakte Übergabequelle für ChatGPT. Sie ersetzt nicht die
   * `DEC-001` definiert die neue Dokumentationsstruktur und den künftigen manuellen ChatGPT-Doku-Prozess (Nutzer + ChatGPT entwerfen, Claude reviewt danach im Review-only-Modus)
   * `docs/FEATURE_CATALOG.md` ist dadurch als künftige kanonische Funktionsquelle beschlossen; die Datei existiert inzwischen und wurde mit Commit `00a103d` hinzugefügt (siehe Abschnitt 10)
   * Claude-Review vor Commit ergab „commitfähig" — die Datei wurde unverändert übernommen und mit `d6d3c36` committed
+* `docs/MVP_SCOPE.md` wurde gegen `docs/FEATURE_CATALOG.md` neu strukturiert und mit `5d843be` committed.
+* `docs/USER_FLOWS.md` wurde als Neufassung auf Basis von `docs/FEATURE_CATALOG.md` und `docs/MVP_SCOPE.md` überarbeitet und ist jetzt mit `5c8d5df` committed:
+  * trennt MVP-0A- und MVP-0B-Flows sauber und beschreibt MVP-0B als Einzelteam-Stabilisierung (keine Vereinsverwaltungsphase)
+  * macht bekannte MVP-0B-Kernlücken (u. a. Training bearbeiten/löschen/absagen, Trainer-RSVP, Co-Trainer, Spieler entfernen, E-Mail-Verifizierung, Passwort-Reset, Legal-/Join-Hinweise, minimaler Guardian-Consent) als eigene User-Flows sichtbar
+  * vermeidet technische Details wie Tabellen, RPCs, RLS, Trigger, Server Actions und Migrationen
+  * hält sichtbare Vereinsverwaltung, Club-Dashboard, Mehrteam-Verwaltung und Team-Affiliation weiterhin aus MVP-0A/MVP-0B heraus
+  * beschreibt MVP-1 nur als Flow-Gruppen mit offenen Teilentscheidungen, Post-MVP/Later nur als kurze Flow-Kandidaten
+  * wurde von Claude Code in zwei Review-only-Runden geprüft (Erstreview plus gezielte Nachprüfung der vier daraus resultierenden Korrekturen); beide Runden ergaben zuletzt „commitfähig"
+* `docs/ROLES_AND_PERMISSIONS.md` wurde als konsolidierte Neufassung auf Basis von `docs/FEATURE_CATALOG.md`, `docs/MVP_SCOPE.md` und `docs/USER_FLOWS.md` überarbeitet und ist mit `83b9b4d` committed:
+  * Claude-Review-only bewertete die neue Fassung als **commitfähig**.
+  * `assistant_coach` ist jetzt fachlich als operative MVP-0B-Rolle mit begrenzten Rechten geklärt: darf keine Beitrittsanfragen annehmen/ablehnen, keine Co-Trainer hinzufügen/entfernen, keine Spieler entfernen, keine Trainings löschen und keine Mannschaftsgrunddaten bearbeiten.
+  * `club_admin` ist architektonisch vorgesehen, aber operativ erst Post-MVP / mit sichtbarer Club-Struktur relevant.
+  * MVP-0B bleibt Einzelteam-Stabilisierung und keine Vereinsverwaltungsphase.
+  * `team_owner`, `head_coach`, `assistant_coach`, `player`, `guardian`, Kind/Spielerprofil und Kontaktperson sind sauber getrennt.
+  * `team_manager` wird nicht als aktive Rolle weitergeführt; alte Vereinsrollen (`president`, `sporting_director`, `treasurer` u. a.) bleiben höchstens ungeprüfte spätere Kandidaten ohne MVP-Rechte.
+  * SQL-, RLS-, SECURITY-DEFINER-, Seed- und Migrationsinhalte wurden bewusst aus der Datei entfernt.
 * Kein Push erfolgt (durch `git status` bestätigt)
 
 ---
 
 ## 5. Letzte relevante Commits
 
-Aus `git log --oneline -n 10` (reale Werte):
+Aus `git log --oneline -n 12` (reale Werte):
 
+* `83b9b4d` — docs: update roles and permissions (`docs/ROLES_AND_PERMISSIONS.md` committed)
+* `5c8d5df` — docs: update user flows (`docs/USER_FLOWS.md` committed)
+* `5d843be` — docs: align MVP scope with feature catalog (`docs/MVP_SCOPE.md` committed)
+* `dbcc90e` — docs: add next documentation plan to chatgpt context
+* `f3aa651` — docs: update chatgpt context after feature catalog
 * `d6d3c36` — docs: restructure decision log (`docs/DECISION_LOG.md` committed)
 * `61f7cc6` — docs: add chatgpt project context (`CHATGPT_CONTEXT.md` initial committed)
 * `5337867` — docs: update hot memory after remove player commit (`CURRENT_TASK.md`, `PROJECT_BRIEF.md`, `STATUS.md`)
@@ -76,12 +97,13 @@ Aus `git log --oneline -n 10` (reale Werte):
 
 Priorisiert:
 
-1. **`docs/FEATURE_CATALOG.md` wurde erstellt (Commit `00a103d`) und ist die kanonische fachliche Funktionsquelle.** Nächster Schritt ist nicht mehr Konzeption, sondern Abgleich weiterer Dokumente dagegen:
-   * `MVP_SCOPE.md` gegen den Feature-Katalog neu strukturieren
-   * `USER_FLOWS.md` entsprechend abgrenzen
-   * danach technische Kern-Dokumente: `DATABASE_MODEL.md`, `ROLES_AND_PERMISSIONS.md`, `SECURITY.md`
+1. **`docs/FEATURE_CATALOG.md` (Commit `00a103d`), `docs/MVP_SCOPE.md` (Commit `5d843be`), `docs/USER_FLOWS.md` (Commit `5c8d5df`) und `docs/ROLES_AND_PERMISSIONS.md` (Commit `83b9b4d`) sind abgeschlossen und committed.** Nächster Schritt ist der Abgleich der übrigen technischen Kern-Dokumente:
+   * `docs/DATABASE_MODEL.md` gegen `FEATURE_CATALOG.md`, `MVP_SCOPE.md`, `USER_FLOWS.md` und `ROLES_AND_PERMISSIONS.md` prüfen
+   * danach `docs/SECURITY.md`, `docs/DSGVO_PRIVACY_MODEL.md`, `docs/MVP_TEST_CHECKLIST.md`
 
-2. Danach fachliche nächste Entscheidungen:
+2. **Rollen-Abgleichspunkt `assistant_coach` — geklärt:** Die frühere Unsicherheit (assistant_coach als operative Rolle bereits in MVP-0A/MVP-0B-Funktionen vs. mögliche spätere MVP-1-Aktivierung laut altem Rollen-Dokument) ist mit der Neufassung von `docs/ROLES_AND_PERMISSIONS.md` fachlich aufgelöst: `assistant_coach` ist eine operative MVP-0B-Rolle mit begrenzten Rechten (siehe Abschnitt 4).
+
+3. Danach fachliche nächste Entscheidungen:
    * P.2B Einladungscode-Format
    * Legal-Seiten
    * Cleanup-Job für Join-Requests
@@ -122,8 +144,8 @@ Priorisiert:
 
 * ChatGPT soll bei Projektfragen primär diese Datei als aktuellen Einstieg nutzen.
 * Ältere einzeln hochgeladene `.md`-Quellen können veraltet sein.
-* **Aktueller Stand:** `docs/FEATURE_CATALOG.md` wurde erstellt (Commit `00a103d`) und ist die kanonische fachliche Funktionsquelle (`docs/DECISION_LOG.md` und `docs/CHATGPT_CONTEXT.md` sind ebenfalls abgeschlossen und committed).
-* Weitere Dokumente sollen künftig gegen `docs/FEATURE_CATALOG.md` abgeglichen werden (`MVP_SCOPE.md`, `USER_FLOWS.md`, technische Kern-Dokumente); der in `DEC-001` festgelegte Konzeptions-/Review-Prozess gilt weiterhin für künftige neue kanonische Dokumente.
+* **Aktueller Stand:** `docs/FEATURE_CATALOG.md` (Commit `00a103d`), `docs/MVP_SCOPE.md` (Commit `5d843be`), `docs/USER_FLOWS.md` (Commit `5c8d5df`) und `docs/ROLES_AND_PERMISSIONS.md` (Commit `83b9b4d`) sind abgeschlossen, gegeneinander abgeglichen und committed (`docs/DECISION_LOG.md` und `docs/CHATGPT_CONTEXT.md` ebenfalls).
+* Nächstes Dokument im Abgleich: `docs/DATABASE_MODEL.md` gegen Feature-Katalog, MVP-Scope, User-Flows und Rollen-/Berechtigungskonzept prüfen, danach `docs/SECURITY.md`, `docs/DSGVO_PRIVACY_MODEL.md` und `docs/MVP_TEST_CHECKLIST.md`; der in `DEC-001` festgelegte Konzeptions-/Review-Prozess gilt weiterhin für künftige neue kanonische Dokumente.
 * Bei Widersprüchen gilt:
   1. Aktueller Nutzer-/Claude-Handoff im laufenden Chat und der tatsächliche Git-Status
   2. `CHATGPT_CONTEXT.md`
@@ -140,6 +162,10 @@ Priorisiert:
 * Der Arbeitsbaum war nach dem Commit clean.
 * Kein Push wurde ausgeführt.
 
+**Nachtrag:** `docs/MVP_SCOPE.md` wurde mit Commit `5d843be` neu strukturiert. `docs/USER_FLOWS.md` wurde mit Commit `5c8d5df` als Neufassung committed, nach zwei Claude-Code-Review-only-Runden (Erstreview plus Nachprüfung der vier daraus resultierenden Korrekturen — Ergebnis jeweils „commitfähig"). Der Arbeitsbaum war nach dem `USER_FLOWS.md`-Commit clean. Kein Push wurde ausgeführt.
+
+**Nachtrag:** `docs/ROLES_AND_PERMISSIONS.md` wurde als konsolidierte Neufassung auf Basis von `FEATURE_CATALOG.md`, `MVP_SCOPE.md` und `USER_FLOWS.md` überarbeitet, von Claude Code im Review-only-Modus als „commitfähig" bewertet und mit Commit `83b9b4d` committed. Der zuvor offene Rollen-Abgleichspunkt zu `assistant_coach` ist damit geklärt. Kein Push wurde ausgeführt.
+
 ---
 
 ## 11. Markdown-Dokumentenverzeichnis
@@ -155,7 +181,7 @@ Kompakter Überblick über alle `.md`-Dateien im Repo. Für Details siehe `docs/
 - `docs/FEATURE_CATALOG.md` — **neue kanonische fachliche Funktionsquelle**: Status, Phase, Rollen und Abgrenzung aller Produktfunktionen.
 - `docs/DECISION_LOG.md` — **verbindliches Entscheidungsprotokoll** für Produkt-, Architektur-, Security-, Privacy-, UX-, Business- und Dokumentationsentscheidungen.
 - `docs/MVP_SCOPE.md` — MVP-Philosophie und Funktionsumfang je Stufe (0A/0B/1/2); kritisch prüfen, idealisierte Migrationsnummerierung weicht von echten Dateien ab.
-- `docs/USER_FLOWS.md` — nummerierte Nutzerflows je MVP-Stufe; inhaltlich stark deckungsgleich mit `MVP_SCOPE.md`.
+- `docs/USER_FLOWS.md` — nummerierte Nutzerflows je MVP-Stufe (`UF-0A-*`, `UF-0B-*`, `UF-1-*`), abgeleitet aus und referenzierend auf `FEATURE_CATALOG.md`/`MVP_SCOPE.md`, aber inhaltlich eigenständig (Nutzerabläufe statt Scope-/Feature-Wiederholung); abgeschlossen und committed (`5c8d5df`).
 
 **docs/ — technischer Ist-Zustand (verlässlichste Quellen):**
 - `docs/ARCHITECTURE.md` — code-basierte Architekturreferenz, aktuellster verlässlicher Ist-Zustand.
@@ -165,7 +191,7 @@ Kompakter Überblick über alle `.md`-Dateien im Repo. Für Details siehe `docs/
 
 **docs/ — technischer Funktionskern (gegen Feature-Katalog/Code abzugleichen):**
 - `docs/DATABASE_MODEL.md` — kanonisches geplantes Datenmodell (DDL-artig); kritisch prüfen, idealisierte Migrationsnummerierung.
-- `docs/ROLES_AND_PERMISSIONS.md` — Rollen- und Berechtigungskonzept.
+- `docs/ROLES_AND_PERMISSIONS.md` — Rollen- und Berechtigungskonzept; konsolidierte Neufassung auf Basis von `FEATURE_CATALOG.md`/`MVP_SCOPE.md`/`USER_FLOWS.md`, Claude-Review „commitfähig", abgeschlossen und committed (`83b9b4d`).
 - `docs/SECURITY.md` — Sicherheitsarchitektur-Referenz mit Risiken/Gegenmaßnahmen; kritisch prüfen, Status-Spalte veraltet (zeigt „Geplant" trotz Umsetzung).
 - `docs/DSGVO_PRIVACY_MODEL.md` — Datenschutz-/DSGVO-Referenz, Minderjährigenschutz, Datenminimierung.
 - `docs/SUPABASE_STRATEGY.md` — Supabase-Integrationsleitfaden (Clients, RLS, SECURITY DEFINER); kritisch prüfen, kleinere Widersprüche zu `ARCHITECTURE.md`.
@@ -195,9 +221,9 @@ Kompakter Überblick über alle `.md`-Dateien im Repo. Für Details siehe `docs/
 
 `docs/FEATURE_CATALOG.md` ist die kanonische fachliche Funktionsquelle. Die weiteren Dokumente sollen nicht isoliert erweitert werden, sondern gegen `FEATURE_CATALOG.md` abgeglichen und daraus abgeleitet werden — nicht alle gleichzeitig, sondern der Reihe nach:
 
-1. `docs/MVP_SCOPE.md` bereinigen — legt fest, welche Features wirklich in MVP-0A, MVP-0B, MVP-1, Post-MVP oder Later gehören.
-2. `docs/USER_FLOWS.md` ausarbeiten — beschreibt die wichtigsten Nutzerabläufe auf Basis des bereinigten Scopes.
-3. `docs/ROLES_AND_PERMISSIONS.md` konsolidieren — Rollen und Rechte aus Feature-Katalog und User-Flows zusammenführen.
-4. `docs/DATABASE_MODEL.md` gegen `FEATURE_CATALOG.md` prüfen — Datenmodell nicht isoliert von Produktlogik und Rollen entwickeln.
+1. ~~`docs/MVP_SCOPE.md` bereinigen~~ — **abgeschlossen** (Commit `5d843be`).
+2. ~~`docs/USER_FLOWS.md` ausarbeiten~~ — **abgeschlossen und committed** (Commit `5c8d5df`, nach zwei Claude-Code-Review-only-Runden).
+3. ~~`docs/ROLES_AND_PERMISSIONS.md` konsolidieren~~ — **abgeschlossen und committed** (Commit `83b9b4d`); Abgleichspunkt zu `assistant_coach` dabei geklärt.
+4. **`docs/DATABASE_MODEL.md` gegen `FEATURE_CATALOG.md`, `MVP_SCOPE.md`, `USER_FLOWS.md` und `ROLES_AND_PERMISSIONS.md` prüfen — nächster Schritt.** Datenmodell nicht isoliert von Produktlogik und Rollen entwickeln.
 5. `docs/SECURITY.md` und `docs/DSGVO_PRIVACY_MODEL.md` schärfen — insbesondere wegen Minderjährigen, Guardian-Logik, `birth_year`, Kontaktpersonen, RSVP, Anwesenheit und Spielberichten.
 6. `docs/MVP_TEST_CHECKLIST.md` daraus ableiten — abgeleitet aus Scope, Flows und Rollen.
