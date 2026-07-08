@@ -1,242 +1,1013 @@
 # User Flows — Vereon
 
-**Stand:** 2026-06-25
-**Zweck:** Beschreibt die wichtigsten Nutzerflüsse für MVP 0A, 0B, 1 und 2. Dient als Referenz für Entwicklung und Produktentscheidungen.
+**Stand:** 2026-07-08  
+**Status:** Neufassung auf Basis von `docs/FEATURE_CATALOG.md` und `docs/MVP_SCOPE.md`  
+**Dokumenttyp:** Produkt-/UX-Flow-Dokument, kein Implementierungsauftrag
 
 ---
 
-## MVP 0A — Eigenständiges Team
+## 1. Zweck dieser Datei
 
-### Flow 1: Trainer erstellt eigenständiges Team
+`docs/USER_FLOWS.md` beschreibt die wichtigsten Nutzerabläufe von Vereon.
 
-```
-1. Trainer öffnet Vereon
-2. Trainer registriert sich (E-Mail + Passwort)
-3. Profil wird automatisch via Trigger angelegt
-4. Trainer wird zu "Team erstellen" geleitet
-5. Trainer gibt Teamname ein (z.B. "U10 SK Musterstadt")
-6. Optional: Altersgruppe, Geschlecht
-7. → create_independent_team() SECURITY DEFINER:
-     - Team wird angelegt (club_id = NULL, ownership_type = 'independent')
-     - Trainer bekommt team_membership
-     - Trainer bekommt Rolle team_owner
-     - Trainer bekommt Rolle head_coach (Default)
-8. Trainer landet auf Team-Dashboard
-```
+Diese Datei beantwortet je Flow:
 
-**Ergebnis:** Funktionierendes Team, Trainer hat volle Kontrolle, kein Verein nötig.
+- welche Rolle handelt,
+- welcher Auslöser den Ablauf startet,
+- welche groben Schritte passieren,
+- welches Ergebnis entsteht,
+- welche Feature-Catalog-IDs betroffen sind,
+- welche offenen UX-/Produktfragen bestehen.
+
+Diese Datei ersetzt weder den Feature-Katalog noch das Scope-Dokument. Die fachlichen Produktfunktionen liegen in `docs/FEATURE_CATALOG.md`. Die Phasenzuordnung und Scope-Grenzen liegen in `docs/MVP_SCOPE.md`.
 
 ---
 
-### Flow 2: Trainer erstellt Team-Einladungslink für Eltern/Kinder
+## 2. Quellen und Vorrang
 
-```
-1. Trainer öffnet Team → "Mitglieder" → "Einladen"
-2. Trainer erstellt Team-Einladungslink
-   → team_invitation_links:
-     - team_id
-     - created_by = auth.uid()
-     - token (32 Byte kryptografisch zufällig)
-     - expires_at (z.B. 30 Tage, konfigurierbar)
-     - max_uses (z.B. 50 für eine Gruppe)
-3. Trainer kopiert Link oder teilt ihn (WhatsApp, E-Mail, etc.)
-4. Link sieht aus wie: vereon.app/join/[token]
-```
+| Bereich | Primäre Datei |
+|---|---|
+| Fachliche Produktfunktionen und Feature-IDs | `docs/FEATURE_CATALOG.md` |
+| MVP-Phasen, Scope-Grenzen und Nicht-Ziele | `docs/MVP_SCOPE.md` |
+| User-Flows | `docs/USER_FLOWS.md` |
+| Rollen und Berechtigungen | `docs/ROLES_AND_PERMISSIONS.md` |
+| Datenmodell | `docs/DATABASE_MODEL.md` |
+| Security | `docs/SECURITY.md` |
+| Datenschutz / DSGVO | `docs/DSGVO_PRIVACY_MODEL.md` |
+| Tests / QA | `docs/MVP_TEST_CHECKLIST.md` |
+| Technischer Ist-Zustand | `docs/ARCHITECTURE.md`, `docs/STATUS.md` |
+| Verbindliche Entscheidungen | `docs/DECISION_LOG.md` |
 
-**Wichtig:** Der Link erzeugt noch keine Mitgliedschaft. Er öffnet nur den Beitrittsprozess.
-
----
-
-### Flow 3: Elternteil tritt über Einladungslink bei (Self-Service)
-
-```
-1. Elternteil öffnet vereon.app/join/[token]
-2. Link wird validiert (aktiv, nicht abgelaufen, max_uses nicht erreicht)
-3. Elternteil sieht: "Du wurdest eingeladen, dem Team [Teamname] beizutreten"
-4. Elternteil registriert sich oder loggt sich ein
-5. Elternteil landet auf "Kind hinzufügen"
-6. Elternteil gibt Kindsdaten ein:
-   - Vorname, Nachname (Pflicht)
-   - Geburtsjahr (Pflicht, für Altersklasse)
-   - Position (optional)
-   - Trikotnummer (optional)
-7. → Beitrittsanfrage wird erstellt:
-   → team_join_requests:
-     - team_id
-     - guardian_user_id = auth.uid()
-     - player info (eingebettet oder in players-Datensatz)
-     - status = 'pending'
-     - via_invitation_link_id = id des verwendeten Links
-8. Elternteil sieht: "Deine Anfrage wurde gesendet. Der Trainer wird sie bestätigen."
-9. Kind ist NOCH NICHT im Team. Daten sind NOCH NICHT für Trainer sichtbar.
-```
-
-**DSGVO-Hinweis:** Kindsdaten sind erst nach Akzeptanz durch den Trainer für das Team zugänglich.
+Wenn Feature-IDs, Status oder Phasen in `docs/FEATURE_CATALOG.md` geändert werden, muss dieses Dokument mitgeprüft werden.
 
 ---
 
-### Flow 4: Trainer nimmt Beitrittsanfragen an oder lehnt ab
+## 3. Abgrenzung
 
-```
-1. Trainer sieht Benachrichtigung: "3 neue Beitrittsanfragen"
-2. Trainer öffnet "Beitrittsanfragen"
-3. Für jede Anfrage: Name, Geburtsjahr, optional Position
-4. Trainer klickt "Annehmen" oder "Ablehnen"
-5. Bei Annehmen:
-   → player wird in players-Tabelle angelegt (falls noch nicht vorhanden)
-   → player_team_assignment wird erstellt (team_id, player_id)
-   → team_join_request.status = 'approved'
-   → Elternteil wird benachrichtigt
-6. Bei Ablehnen:
-   → team_join_request.status = 'rejected'
-   → Elternteil wird benachrichtigt (optional)
-   → Kindsdaten werden NICHT gespeichert / werden gelöscht
-```
+Diese Datei beschreibt **keine**:
 
----
+- Datenbanktabellen,
+- Spalten,
+- Migrationen,
+- RLS-Policies,
+- RPCs,
+- Server Actions,
+- konkrete Code-Dateien,
+- konkrete UI-Komponenten,
+- vollständige Testfälle,
+- vollständige Rechte-Matrix,
+- juristischen Detailtexte.
 
-### Flow 5: Trainer erstellt Termin und sieht RSVP
-
-```
-1. Trainer öffnet Kalender → "Termin erstellen"
-2. Felder: Titel, Typ (Training/Spiel/Sonstiges), Datum, Uhrzeit, Ort
-3. Termin wird gespeichert
-4. event_attendance-Zeilen werden via Trigger für alle aktiven Spieler angelegt
-5. Teammitglieder mit Account sehen den Termin in ihrem Kalender
-6. Eltern sehen Termin und können für ihr Kind zu-/absagen
-7. Trainer sieht RSVP-Liste
-```
+Technische Umsetzung gehört in Architektur-, Security-, Datenmodell- oder Claude-Code-Aufträge. Datenschutzdetails und juristische Formulierungen gehören in `docs/DSGVO_PRIVACY_MODEL.md` und juristische Prüfung.
 
 ---
 
-## MVP 0B — Verein erstellen / beanspruchen
+## 4. Flow-Format
 
-### Flow 6: Vereinsverantwortlicher erstellt offiziellen Verein
+Jeder Flow folgt grundsätzlich diesem Schema:
 
+```text
+Flow-ID: UF-[PHASE]-[NUMMER]
+Phase: MVP-0A / MVP-0B / MVP-1 / Post-MVP / Later
+Flow-Status: bestehend / offen / teilweise / prüfen
+Hauptrollen: technische Rollen aus dem Feature-Katalog
+Betroffene Feature-IDs: FC-...
+Auslöser: Warum beginnt der Flow?
+Grobe Schritte: Was passiert fachlich aus Nutzersicht?
+Ergebnis: Welcher nutzbare Zustand entsteht?
+Offene UX-/Produktfragen: Was muss vor Umsetzung oder Review geklärt werden?
 ```
-1. User (Obmann, Jugendleiter, Vereinsadmin) registriert sich
-2. User öffnet "Verein erstellen"
-3. Felder: Vereinsname, Slug, Stadt, Land
-4. → create_club() SECURITY DEFINER:
-   - Club wird angelegt (verification_status = 'pending_verification')
-   - User bekommt club_membership
-   - User bekommt Rolle club_admin
-5. User sieht: "Dein Verein wurde erstellt und wartet auf Verifizierung durch Vereon."
-6. Verein ist funktionsfähig (interne Nutzung), aber nicht offiziell "verifiziert"
-7. Plattform-Admin überprüft und setzt verification_status = 'verified' (manuell via Supabase Studio)
-```
+
+### 4.1 Flow-Status
+
+| Flow-Status | Bedeutung |
+|---|---|
+| `bestehend` | Der Flow ist laut Feature-Katalog und aktuellem Projektstand grundsätzlich vorhanden. Repo-Review bleibt möglich. |
+| `offen` | Der Flow ist fachlich vorgesehen, aber noch nicht oder nicht vollständig umgesetzt. |
+| `teilweise` | Teile des Flows existieren, aber der Ablauf ist noch nicht durchgängig vollständig. |
+| `prüfen` | Der Flow ist fachlich relevant, muss aber vor Umsetzung oder Dokumentationsübernahme gegen Repo, Rollen, Security oder DSGVO geprüft werden. |
+
+Die genaue Wahrheit zu Feature-Status und Feature-Phase bleibt im Feature-Katalog. Ein Flow kann mehrere Feature-IDs mit unterschiedlichen Statuswerten enthalten.
+
+### 4.2 Rollenbezeichnungen
+
+Diese Datei verwendet technische Rollenbezeichnungen aus `docs/FEATURE_CATALOG.md`, insbesondere:
+
+- `authenticated_user`
+- `team_owner`
+- `head_coach`
+- `assistant_coach`
+- `player`
+- `guardian`
+- `club_admin`
+- `super_admin`
+- `system`
+
+Die genaue Rechteabbildung gehört in `docs/ROLES_AND_PERMISSIONS.md`.
+
+**Rollenprüfpunkt:** `assistant_coach` wird in dieser Datei als operative Trainerteamrolle geführt, weil `docs/FEATURE_CATALOG.md` diese Rolle in mehreren Training-, RSVP-, Match- und Anwesenheitsfunktionen verwendet. Falls `docs/ROLES_AND_PERMISSIONS.md` abweichend eine spätere Aktivierung von `assistant_coach` beschreibt, ist dieses Rollen-Dokument später gegen Feature-Katalog und User-Flows nachzuziehen.
 
 ---
 
-### Flow 7: Vereinsverantwortlicher legt club-managed Team an
+## 5. MVP-0A — Bestehender Einzelteam-Kernflow
 
-```
-1. Eingeloggter club_admin öffnet Vereinsdashboard → "Teams" → "Team anlegen"
-2. Felder: Teamname, Altersgruppe, Geschlecht, optional Saison
-3. → club_admin INSERT auf teams (club_id gesetzt, ownership_type = 'club_managed')
-4. Team ist sofort aktiv
-5. club_admin kann head_coach einladen
-```
+### 5.1 Ziel
 
----
+MVP-0A beschreibt den bestehenden Kernablauf für eine einzelne Mannschaft:
 
-### Flow 8: club_admin lädt head_coach ein
+Ein Nutzer kann sich registrieren oder anmelden, eine Mannschaft erstellen, andere Nutzer über Join-/Invite-Flows einbinden, Trainings erstellen und grundlegende RSVP nutzen.
 
-```
-1. club_admin öffnet Team → "Trainer einladen"
-2. Einladungslink wird erstellt (via invitations-Tabelle)
-   - Token: 32 Byte kryptografisch zufällig
-   - Ablauf: 7 Tage
-   - Zielrolle: head_coach
-3. Link wird geteilt
-4. Eingeladener öffnet Link, registriert sich oder loggt sich ein
-5. Server Action:
-   - Einladungstoken validieren (aktiv, nicht abgelaufen, nicht eingelöst)
-   - team_membership anlegen
-   - head_coach-Rolle vergeben
-   - invitation.status = 'accepted', used_at = now()
-6. Trainer landet auf Team-Dashboard
-```
+MVP-0A ist keine Vereinsplattform und keine sichtbare Mehrteam-Verwaltung.
 
 ---
 
-## MVP 1 — Spieler und Guardians vollständig
+### UF-0A-01 — Account erstellen, anmelden und geschützten Bereich öffnen
 
-### Flow 9: Guardian-Verknüpfung mit Spieler
+**Phase:** `MVP-0A`  
+**Flow-Status:** `bestehend`  
+**Hauptrollen:** `authenticated_user`  
+**Betroffene Feature-IDs:** `FC-AUTH-001`, `FC-AUTH-002`, `FC-AUTH-003`, `FC-AUTH-004`, `FC-DASHBOARD-002`
 
-```
-1. Trainer erstellt Einladung für Guardian eines bestimmten Spielers
-   - Einladungslink enthält player_id
-2. Guardian öffnet Link, registriert sich oder loggt sich ein
-3. Server Action:
-   - Einladung validieren
-   - player_guardians-Eintrag erstellen:
-     guardian_user_id, player_id, relationship, verified_at = now()
-4. Guardian sieht nun den Kalender des Kindes
-5. Guardian kann RSVP für Kind abgeben
-```
+**Auslöser:** Ein Nutzer möchte Vereon verwenden.
 
----
+**Grobe Schritte:**
 
-### Flow 10: Anwesenheit erfassen
+1. Nutzer registriert sich mit E-Mail und Passwort oder meldet sich an.
+2. Nach erfolgreicher Anmeldung öffnet sich der geschützte App-Bereich.
+3. Der Nutzer sieht je nach Zustand relevante nächste Schritte oder kommende Termine.
+4. Der Nutzer kann sich wieder abmelden.
 
-```
-1. Termin ist vergangen
-2. Trainer öffnet Termin → "Anwesenheit erfassen"
-3. Liste aller zugeordneten Spieler (via player_team_assignments)
-4. Trainer setzt attended = true/false pro Spieler (via player_id)
-5. Auch Spieler ohne Account erscheinen in der Liste
-```
+**Ergebnis:** Der Nutzer hat einen nutzbaren Account und Zugriff auf geschützte Vereon-Bereiche.
+
+**Offene UX-/Produktfragen:**
+
+- Ab MVP-0B muss geklärt sein, welche App-Bereiche ohne bestätigte E-Mail blockiert werden.
 
 ---
 
-## MVP 2 — Vereins-Team-Affiliation
+### UF-0A-02 — Mannschaft erstellen
 
-### Flow 11: Verein beantragt Zuordnung eines eigenständigen Teams
+**Phase:** `MVP-0A`  
+**Flow-Status:** `bestehend`  
+**Hauptrollen:** `authenticated_user`, `team_owner`, `head_coach`  
+**Betroffene Feature-IDs:** `FC-TEAM-001`, `FC-TEAM-002`, `FC-TEAM-004`, `FC-ROLE-004`, `FC-ORG-002`
 
-```
-1. Verifizierter Verein (club_admin) öffnet "Teams zuordnen"
-2. Suche nach eigenständigem Team (z.B. "U10 SK Musterstadt")
-3. Verein sendet Anfrage:
-   → team_affiliation_requests:
-     team_id, club_id, status = 'pending', requested_by = auth.uid()
-4. team_owner des Teams sieht Benachrichtigung: "[Vereinsname] möchte dein Team aufnehmen"
-5. team_owner akzeptiert oder lehnt ab
-6. Bei Akzeptanz:
-   - Plattform-Admin prüft optional
-   - teams.club_id = club_id
-   - teams.ownership_type = 'club_managed'
-   - teams.status = 'club_affiliated'
-7. Team ist nun Teil des Vereins
-```
+**Auslöser:** Ein eingeloggter Nutzer möchte eine neue operative Mannschaft starten.
 
-**Wichtig:** Zuordnung passiert NIEMALS automatisch. Immer explizite Bestätigung des team_owners erforderlich.
+**Grobe Schritte:**
+
+1. Nutzer startet den Mannschafts-Erstellungsflow.
+2. Nutzer gibt die notwendigen Mannschaftsgrunddaten ein.
+3. Die Mannschaft wird erstellt.
+4. Der erstellende Nutzer erhält die notwendigen Rollen für Teamhoheit und operative Trainerverwaltung.
+5. Der Nutzer landet in der Mannschaftsansicht oder im Dashboard.
+
+**Ergebnis:** Eine einzelne Mannschaft ist operativ nutzbar. Der Ersteller kann sie verwalten.
+
+**Offene UX-/Produktfragen:**
+
+- Die Trennung zwischen `team_owner` und `head_coach` muss in UI und Rollenlogik sichtbar genug sein, ohne den MVP unnötig zu verkomplizieren.
 
 ---
 
-## Zukünftige Flows (Phase 2+)
+### UF-0A-03 — Team-Einladungscode anzeigen und teilen
 
-### Vereon-interner Vereinswechsel (Phase 2)
-```
-Spieler → Beitrittsanfrage neuer Verein
-→ player_transfer_requests
-→ Genehmigung alter + neuer Verein
-→ Spielerhistorie bleibt erhalten
-```
+**Phase:** `MVP-0A`  
+**Flow-Status:** `bestehend`  
+**Hauptrollen:** `team_owner`, `head_coach`  
+**Betroffene Feature-IDs:** `FC-INVITE-001`, `FC-INVITE-002`
 
-*Kein offizieller ÖFB-Transfer. Nur interne Vereon-Dokumentation.*
+**Auslöser:** Ein Teamverantwortlicher möchte Spieler oder Guardians zur Mannschaft einladen.
 
-### ÖFB-Vereinsreferenz (Phase 3+)
-```
-Plattform-Admin importiert official_club_registry
-→ Verein verknüpft sich mit official_registry_id
-→ optional: halbautomatische Verifikation für bekannte Vereine
-```
+**Grobe Schritte:**
 
-### Saisonwechsel (Phase 2)
-```
-club_admin erstellt neue Saison
-→ Teams können neuer Saison zugeordnet werden
-→ Kader kann für neue Saison neu zusammengestellt werden
-→ Alte Saison wird archiviert (nicht gelöscht)
-```
+1. `team_owner` oder `head_coach` öffnet den Einladungsbereich der Mannschaft.
+2. Der vorhandene Einladungscode oder Join-Link wird angezeigt.
+3. Der Link oder Code wird kopiert und außerhalb von Vereon geteilt.
+4. Eingeladene Personen können über den Link oder Code den Join-Flow starten.
+
+**Ergebnis:** Eingeladene Nutzer können eine Beitrittsanfrage starten. Der Einladungscode erzeugt noch keine automatische Mitgliedschaft.
+
+**Offene UX-/Produktfragen:**
+
+- Ab MVP-0B muss der Code erneuerbar oder deaktivierbar sein.
+
+---
+
+### UF-0A-04 — Volljähriger Spieler tritt über Join-Flow bei
+
+**Phase:** `MVP-0A`  
+**Flow-Status:** `bestehend`  
+**Hauptrollen:** `player`, `authenticated_user`, `head_coach`  
+**Betroffene Feature-IDs:** `FC-INVITE-002`, `FC-INVITE-003`, `FC-INVITE-005`, `FC-INVITE-006`, `FC-PLAYER-003`
+
+**Hinweis zur Feature-Phase:** Der Flow selbst bleibt `MVP-0A`. `FC-PLAYER-003` ist laut Feature-Katalog und Scope als `MVP-0B`-Bestand geführt, wird hier aber als mitgenutzte Spielerstammdaten-Funktion des Join-Flows referenziert.
+
+**Auslöser:** Ein volljähriger Spieler erhält einen Team-Link oder Team-Code.
+
+**Grobe Schritte:**
+
+1. `player` öffnet den Join-Link oder gibt den Code ein.
+2. `player` registriert sich oder meldet sich an.
+3. `player` wählt den Self-Player-Beitritt.
+4. `player` gibt die notwendigen Spielerstammdaten ein.
+5. Der Beitritt wird als Anfrage an das Trainerteam übermittelt.
+6. `head_coach` kann die Anfrage annehmen.
+
+**Ergebnis:** Der Spieler wird nicht automatisch Teammitglied, sondern erst nach Freigabe durch `head_coach`.
+
+**Offene UX-/Produktfragen:**
+
+- Der Flow muss klar zwischen volljährigem Self-Player-Beitritt und Guardian-Kind-Beitritt unterscheiden.
+
+---
+
+### UF-0A-05 — Guardian meldet Kind über Join-Flow an
+
+**Phase:** `MVP-0A`  
+**Flow-Status:** `bestehend`  
+**Hauptrollen:** `guardian`, `authenticated_user`, `head_coach`  
+**Betroffene Feature-IDs:** `FC-INVITE-002`, `FC-INVITE-004`, `FC-INVITE-005`, `FC-INVITE-006`, `FC-GUARDIAN-001`, `FC-GUARDIAN-002`, `FC-PLAYER-003`
+
+**Hinweis zur Feature-Phase:** Der Flow selbst bleibt `MVP-0A`. `FC-PLAYER-003` ist laut Feature-Katalog und Scope als `MVP-0B`-Bestand geführt, wird hier aber als mitgenutzte Spielerstammdaten-Funktion des Guardian-Join-Flows referenziert.
+
+**Auslöser:** Ein Guardian erhält einen Team-Link oder Team-Code für ein Kind.
+
+**Grobe Schritte:**
+
+1. `guardian` öffnet den Join-Link oder gibt den Code ein.
+2. `guardian` registriert sich oder meldet sich an.
+3. `guardian` wählt den Kind-/Guardian-Beitritt.
+4. `guardian` gibt die notwendigen Daten des Kindes ein.
+5. Die Beitrittsanfrage wird an das Trainerteam übermittelt.
+6. Das Kind wird erst nach Freigabe aktives Teammitglied.
+
+**Ergebnis:** Ein Guardian kann ein Kind anmelden, ohne dass das Kind sofort Mitglied der Mannschaft wird.
+
+**Offene UX-/Produktfragen:**
+
+- Ab MVP-0B muss dieser Flow minimale Join-Hinweise und eine Berechtigungsbestätigung enthalten.
+- Der Flow darf keine unnötigen Daten wie vollständiges Geburtsdatum, medizinische Daten oder Dokumente verlangen.
+
+---
+
+### UF-0A-06 — Beitrittsanfragen anzeigen und annehmen
+
+**Phase:** `MVP-0A`  
+**Flow-Status:** `bestehend`  
+**Hauptrollen:** `head_coach`  
+**Weitere Rollen:** `player`, `guardian`  
+**Betroffene Feature-IDs:** `FC-INVITE-005`, `FC-INVITE-006`, `FC-PLAYER-001`, `FC-TEAM-004`, `FC-GUARDIAN-001`
+
+**Auslöser:** Eine neue Beitrittsanfrage liegt vor.
+
+**Grobe Schritte:**
+
+1. `head_coach` öffnet die offenen Beitrittsanfragen.
+2. `head_coach` sieht die für die Entscheidung notwendigen Anfragedaten.
+3. `head_coach` nimmt eine passende Anfrage an.
+4. Die Person oder das Kind wird der Mannschaft zugeordnet.
+5. Die Teamansicht zeigt das neue Mitglied rollenabhängig an.
+
+**Ergebnis:** Eine Beitrittsanfrage wird zu einer aktiven Teamzuordnung.
+
+**Offene UX-/Produktfragen:**
+
+- Die Anzeige von Anfragedaten muss klar von der Anzeige regulärer Team-/Kaderdaten getrennt bleiben.
+- Ablehnen wird als MVP-0B-Kernlücke separat geführt.
+
+---
+
+### UF-0A-07 — Training erstellen und anzeigen
+
+**Phase:** `MVP-0A`  
+**Flow-Status:** `bestehend`  
+**Hauptrollen:** `team_owner`, `head_coach`, `assistant_coach`  
+**Weitere Rollen:** `player`, `guardian`  
+**Betroffene Feature-IDs:** `FC-TRAINING-001`, `FC-TRAINING-002`, `FC-EVENT-001`, `FC-DASHBOARD-002`
+
+**Auslöser:** Das Trainerteam möchte ein Training planen.
+
+**Grobe Schritte:**
+
+1. Berechtigte Trainerrolle öffnet den Bereich zur Trainingserstellung.
+2. Die notwendigen Trainingsdaten werden eingetragen.
+3. Das Training wird erstellt.
+4. Das Training erscheint in der Terminliste und in relevanten Übersichten.
+5. Spieler und Guardians können den Termin sehen.
+
+**Ergebnis:** Ein Training ist für alle relevanten Rollen sichtbar.
+
+**Offene UX-/Produktfragen:**
+
+- Bearbeiten, Löschen und Absagen sind nicht MVP-0A, sondern MVP-0B.
+
+---
+
+### UF-0A-08 — RSVP für Training abgeben und anzeigen
+
+**Phase:** `MVP-0A`  
+**Flow-Status:** `bestehend`  
+**Hauptrollen:** `player`, `guardian`, `head_coach`, `assistant_coach`  
+**Betroffene Feature-IDs:** `FC-RSVP-001`, `FC-RSVP-002`, `FC-RSVP-004`, `FC-RSVP-005`, `FC-GUARDIAN-003`
+
+**Auslöser:** Ein Training steht bevor und ein Spieler oder Guardian soll Rückmeldung geben.
+
+**Grobe Schritte:**
+
+1. `player` oder `guardian` öffnet den Termin.
+2. `player` gibt die eigene RSVP ab oder `guardian` gibt RSVP für das Kind ab.
+3. Der RSVP-Status wird gespeichert.
+4. `head_coach` und `assistant_coach` sehen die Rückmeldungen in der Übersicht.
+
+**Ergebnis:** Das Trainerteam sieht, wer zu- oder abgesagt hat.
+
+**Offene UX-/Produktfragen:**
+
+- Trainer-RSVP ist in MVP-0A nicht enthalten und wird in MVP-0B separat ergänzt.
+
+---
+
+## 6. MVP-0B — Kernlücken und Pilotfähigkeit
+
+### 6.1 Ziel
+
+MVP-0B stabilisiert den Einzelteam-Kernflow.
+
+MVP-0B ist keine Vereinsverwaltungsphase. Es schließt Lücken, die den Alltag stören, Sicherheit reduzieren oder einen kontrollierten Pilot mit echten Nutzern verhindern.
+
+---
+
+### UF-0B-01 — E-Mail-Verifizierung für produktive Nutzung
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `authenticated_user`  
+**Betroffene Feature-IDs:** `FC-AUTH-005`
+
+**Auslöser:** Ein Nutzer registriert sich oder versucht, produktive Teamaktionen auszuführen.
+
+**Grobe Schritte:**
+
+1. Nutzer registriert sich.
+2. Vereon weist auf die notwendige E-Mail-Verifizierung hin.
+3. Nutzer bestätigt die E-Mail-Adresse.
+4. Erst danach werden produktive Teamaktionen freigegeben.
+
+**Ergebnis:** Unverifizierte Accounts können keine kritischen Teamaktionen ausführen.
+
+**Offene UX-/Produktfragen:**
+
+- Welche Bereiche bleiben unverifiziert sichtbar und welche Aktionen werden blockiert?
+- Wie deutlich wird der Verifizierungsstatus im UI angezeigt?
+
+---
+
+### UF-0B-02 — Passwort zurücksetzen
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `authenticated_user`  
+**Betroffene Feature-IDs:** `FC-AUTH-006`
+
+**Auslöser:** Ein Nutzer kann sich nicht mehr anmelden.
+
+**Grobe Schritte:**
+
+1. Nutzer öffnet den Passwort-Reset-Flow.
+2. Nutzer gibt die E-Mail-Adresse ein.
+3. Nutzer erhält einen Reset-Hinweis per E-Mail.
+4. Nutzer setzt ein neues Passwort.
+5. Nutzer kann sich wieder anmelden.
+
+**Ergebnis:** Account-Recovery funktioniert ohne Trainer- oder Admin-Eingriff.
+
+**Offene UX-/Produktfragen:**
+
+- Reset-Meldungen dürfen keine Account-Existenz unnötig offenlegen.
+
+---
+
+### UF-0B-03 — Mannschaftsgrunddaten bearbeiten
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `team_owner`  
+**Betroffene Feature-IDs:** `FC-TEAM-003`
+
+**Auslöser:** Mannschaftsgrunddaten sind falsch, unvollständig oder haben sich geändert.
+
+**Grobe Schritte:**
+
+1. `team_owner` öffnet die Mannschaftseinstellungen.
+2. `team_owner` bearbeitet erlaubte Grunddaten.
+3. Vereon speichert die Änderungen.
+4. Relevante Ansichten zeigen die aktualisierten Daten.
+
+**Ergebnis:** Grunddaten der Mannschaft können korrigiert werden, ohne eine neue Mannschaft anzulegen.
+
+**Offene UX-/Produktfragen:**
+
+- Muss `head_coach` diese Einstellungen sehen, aber nicht bearbeiten können?
+- Welche Felder gelten als Grunddaten und welche gehören erst in MVP-1?
+
+---
+
+### UF-0B-04 — Co-Trainer hinzufügen
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `team_owner`, `head_coach`  
+**Weitere Rollen:** `assistant_coach`  
+**Betroffene Feature-IDs:** `FC-ROLE-002`
+
+**Auslöser:** Ein Team benötigt weitere operative Unterstützung im Trainerteam.
+
+**Grobe Schritte:**
+
+1. `team_owner` oder `head_coach` öffnet die Team-/Rollenverwaltung.
+2. Eine Person wird als Co-Trainer eingeladen oder hinzugefügt.
+3. Die Person erhält die Rolle `assistant_coach`.
+4. `assistant_coach` kann freigegebene operative Funktionen nutzen.
+
+**Ergebnis:** Ein Co-Trainer kann im Team mitarbeiten.
+
+**Offene UX-/Produktfragen:**
+
+- Erfolgt die Aufnahme über Einladungscode, E-Mail oder Auswahl bestehender Mitglieder?
+- Welche Funktionen sieht `assistant_coach` sofort nach Aufnahme?
+
+---
+
+### UF-0B-05 — Co-Trainer entfernen
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `team_owner`, `head_coach`  
+**Weitere Rollen:** `assistant_coach`  
+**Betroffene Feature-IDs:** `FC-ROLE-003`
+
+**Auslöser:** Ein Co-Trainer soll keinen Zugriff mehr auf die Mannschaft haben.
+
+**Grobe Schritte:**
+
+1. `team_owner` oder `head_coach` öffnet die Team-/Rollenverwaltung.
+2. Eine bestehende `assistant_coach`-Rolle wird ausgewählt.
+3. Die Entfernung wird bestätigt.
+4. Die betroffene Person verliert die Co-Trainer-Berechtigung.
+
+**Ergebnis:** Nicht mehr berechtigte Co-Trainer haben keinen operativen Zugriff mehr.
+
+**Offene UX-/Produktfragen:**
+
+- Muss mindestens ein `head_coach` oder `team_owner` erhalten bleiben?
+- Wird eine entfernte Person weiterhin als normales Teammitglied geführt oder vollständig aus dem Team entfernt?
+
+---
+
+### UF-0B-06 — Einladungscode erneuern oder deaktivieren
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `team_owner`, `head_coach`  
+**Betroffene Feature-IDs:** `FC-INVITE-008`
+
+**Auslöser:** Ein Einladungscode wurde zu breit geteilt, ist kompromittiert oder wird nicht mehr benötigt.
+
+**Grobe Schritte:**
+
+1. `team_owner` oder `head_coach` öffnet den Einladungsbereich.
+2. Der aktuelle Code wird deaktiviert oder erneuert.
+3. Alte Links oder Codes funktionieren nicht mehr.
+4. Ein neuer Code kann geteilt werden.
+
+**Ergebnis:** Das Trainerteam kann den Zugang zur Mannschaft kontrollieren.
+
+**Offene UX-/Produktfragen:**
+
+- Soll Erneuern automatisch Deaktivieren des alten Codes bedeuten?
+- Wie wird verhindert, dass bestehende offene Beitrittsanfragen unnötig verloren gehen?
+
+---
+
+### UF-0B-07 — Beitrittsanfrage ablehnen
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `teilweise`  
+**Hauptrollen:** `head_coach`  
+**Weitere Rollen:** `player`, `guardian`  
+**Betroffene Feature-IDs:** `FC-INVITE-007`
+
+**Auslöser:** Eine Beitrittsanfrage ist falsch, unberechtigt oder soll nicht angenommen werden.
+
+**Grobe Schritte:**
+
+1. `head_coach` öffnet die offenen Beitrittsanfragen.
+2. `head_coach` wählt eine Anfrage aus.
+3. `head_coach` lehnt die Anfrage ab.
+4. Der anfragende Nutzer sieht einen passenden Statushinweis.
+5. Nicht benötigte Anfragedaten werden nicht als reguläre Teamdaten übernommen.
+
+**Ergebnis:** Falsche oder unpassende Anfragen können kontrolliert beendet werden.
+
+**Offene UX-/Produktfragen:**
+
+- Ist eine kurze optionale Begründung sinnvoll oder erzeugt sie unnötige Konfliktfläche?
+- Wie lange bleiben abgelehnte Anfragen sichtbar?
+
+---
+
+### UF-0B-08 — Spieler aus Team entfernen
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `bestehend`  
+**Hauptrollen:** `team_owner`, `head_coach`  
+**Weitere Rollen:** `player`, `guardian`  
+**Betroffene Feature-IDs:** `FC-PLAYER-002`, `FC-PLAYER-001`, `FC-TEAM-004`
+
+**Auslöser:** Ein Spieler gehört nicht mehr zur Mannschaft oder wurde falsch zugeordnet.
+
+**Grobe Schritte:**
+
+1. `team_owner` oder `head_coach` öffnet die Team- oder Spielerliste.
+2. Eine berechtigte Rolle wählt den betroffenen Spieler aus.
+3. Vereon zeigt eine klare Bestätigung, dass der Spieler aus dieser Mannschaft entfernt wird.
+4. Nach Bestätigung ist der Spieler nicht mehr aktives Teammitglied.
+5. Historie und personenbezogene Daten werden nicht unkontrolliert vollständig gelöscht.
+
+**Ergebnis:** Ein Spieler kann aus der Mannschaft entfernt werden, ohne dass daraus ein allgemeiner Lösch- oder DSGVO-Self-Service-Flow wird.
+
+**Offene UX-/Produktfragen:**
+
+- Muss der Unterschied zwischen „aus Team entfernen“, „archivieren“ und „vollständig löschen“ im UI deutlicher erklärt werden?
+- Welche Information sieht ein betroffener `player` oder `guardian` nach der Entfernung?
+
+---
+
+### UF-0B-09 — Join-Hinweise und minimale Guardian-Berechtigungsbestätigung
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `guardian`, `player`  
+**Betroffene Feature-IDs:** `FC-LEGAL-003`, `FC-LEGAL-004`, `FC-GUARDIAN-002`, `FC-INVITE-004`
+
+**Auslöser:** Ein `guardian` meldet ein Kind an oder ein `player` nutzt den Join-Flow.
+
+**Grobe Schritte:**
+
+1. `guardian` startet den Kind-Join-Flow oder `player` startet den Self-Player-Join-Flow.
+2. Vereon zeigt knappe Hinweise zur Anmeldung und Datenverarbeitung.
+3. Bei Kind-Anmeldung bestätigt `guardian` minimal, zur Anmeldung des Kindes berechtigt zu sein.
+4. Erst danach kann die Beitrittsanfrage abgeschickt werden.
+
+**Ergebnis:** Der Join-Flow enthält verständliche Hinweise; der Guardian-Join-Flow enthält zusätzlich eine Mindest-Berechtigungsbestätigung vor externer Nutzung mit Minderjährigen.
+
+**Offene UX-/Produktfragen:**
+
+- Die genaue rechtliche Formulierung gehört nicht in dieses Dokument und muss in DSGVO-/Legal-Dokumentation geprüft werden.
+- Keine Uploadpflicht, digitale Signatur oder vollständige Consent-Versionierung in MVP-0B.
+
+---
+
+### UF-0B-10 — Legal-Seiten anzeigen
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `teilweise`  
+**Hauptrollen:** `authenticated_user`  
+**Betroffene Feature-IDs:** `FC-LEGAL-001`, `FC-LEGAL-002`
+
+**Auslöser:** Ein Nutzer möchte Impressum oder Datenschutzhinweise einsehen.
+
+**Grobe Schritte:**
+
+1. Nutzer öffnet Impressum oder Datenschutzerklärung.
+2. Vereon zeigt die jeweilige Seite an.
+3. Vor externer Nutzung dürfen diese Seiten keine bloßen Platzhalter mehr sein.
+
+**Ergebnis:** Nutzer finden grundlegende rechtliche Informationen an erwartbarer Stelle.
+
+**Offene UX-/Produktfragen:**
+
+- Inhaltliche Prüfung ist kein Produktflow und muss außerhalb dieses Dokuments erfolgen.
+
+---
+
+### UF-0B-11 — Training bearbeiten
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `team_owner`, `head_coach`, `assistant_coach`  
+**Betroffene Feature-IDs:** `FC-TRAINING-003`
+
+**Auslöser:** Ein Training wurde mit falschen oder geänderten Angaben erstellt.
+
+**Grobe Schritte:**
+
+1. Berechtigte Trainerrolle öffnet das Training.
+2. Die Bearbeitungsfunktion wird gewählt.
+3. Erlaubte Felder werden geändert.
+4. Änderungen werden gespeichert.
+5. Relevante Rollen sehen die aktualisierten Trainingsdaten.
+
+**Ergebnis:** Fehlerhafte Trainingsdaten können vor dem Training korrigiert werden.
+
+**Offene UX-/Produktfragen:**
+
+- Welche Kernfelder dürfen ab welchem Zeitpunkt nicht mehr geändert werden?
+- Wie werden bereits abgegebene RSVP bei Änderungen behandelt?
+
+---
+
+### UF-0B-12 — Training löschen
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `team_owner`, `head_coach`  
+**Betroffene Feature-IDs:** `FC-TRAINING-004`
+
+**Auslöser:** Ein Training wurde irrtümlich angelegt.
+
+**Grobe Schritte:**
+
+1. `team_owner` oder `head_coach` öffnet das Training.
+2. Löschfunktion wird gewählt.
+3. Vereon verlangt eine klare Bestätigung.
+4. Das Training wird gelöscht, sofern der Zeitpunkt und die Regeln dies erlauben.
+
+**Ergebnis:** Fehleingaben können entfernt werden, ohne dass falsche Termine im Teamkalender bleiben.
+
+**Offene UX-/Produktfragen:**
+
+- Löschen darf nicht als Ersatz für Absagen verwendet werden.
+- `assistant_coach` ist hier bewusst nicht als Hauptrolle geführt und muss gegen Rollenmatrix geprüft werden.
+
+---
+
+### UF-0B-13 — Training absagen
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `team_owner`, `head_coach`, `assistant_coach`  
+**Betroffene Feature-IDs:** `FC-TRAINING-005`
+
+**Auslöser:** Ein geplantes Training findet nicht statt.
+
+**Grobe Schritte:**
+
+1. Berechtigte Trainerrolle öffnet das Training.
+2. Absagefunktion wird gewählt.
+3. Optional kann eine kurze Begründung erfasst werden, falls diese Produktentscheidung bestätigt wird.
+4. Das Training bleibt sichtbar, erhält aber den Status `abgesagt`.
+5. Spieler und Guardians sehen, dass der Termin nicht stattfindet.
+
+**Ergebnis:** Ein nicht stattfindendes Training bleibt nachvollziehbar dokumentiert, wird aber nicht mit einem normalen Training verwechselt.
+
+**Offene UX-/Produktfragen:**
+
+- Soll die Absagebegründung für Spieler/Guardians sichtbar sein?
+- Wie prominent muss ein abgesagtes Training ohne Push-/E-Mail-Benachrichtigung angezeigt werden?
+
+---
+
+### UF-0B-14 — Trainer-RSVP abgeben
+
+**Phase:** `MVP-0B`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `team_owner`, `head_coach`, `assistant_coach`  
+**Betroffene Feature-IDs:** `FC-RSVP-003`, `FC-RSVP-004`, `FC-RSVP-005`
+
+**Auslöser:** Das Trainerteam muss intern wissen, welche Trainer bei einem Termin anwesend sind.
+
+**Grobe Schritte:**
+
+1. Trainerrolle öffnet einen Termin.
+2. Trainerrolle gibt die eigene RSVP ab.
+3. Der Trainer-RSVP-Status wird gespeichert.
+4. Trainerteam sieht Spieler-/Guardian-RSVP und Trainer-RSVP nachvollziehbar getrennt.
+
+**Ergebnis:** Traineranwesenheit wird planbar, ohne dass Trainer als Spieler behandelt werden.
+
+**Offene UX-/Produktfragen:**
+
+- Wird Trainer-RSVP in derselben Übersicht wie Spieler-RSVP angezeigt oder getrennt?
+- Dürfen andere Trainer die Trainer-RSVP sehen?
+
+---
+
+## 7. MVP-1 — Erste real nutzbare Testversion
+
+### 7.1 Ziel
+
+MVP-1 erweitert den stabilisierten Einzelteam-Kern um bessere Alltagstauglichkeit.
+
+MVP-1 wird hier bewusst als Flow-Gruppen beschrieben. Größere Blöcke wie Match, Reports, Anwesenheit und wiederkehrende Trainings brauchen vor Umsetzung eigene Teilentscheidungen.
+
+---
+
+### UF-1-01 — Profil-Grunddaten bearbeiten
+
+**Phase:** `MVP-1`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `authenticated_user`  
+**Betroffene Feature-IDs:** `FC-AUTH-007`
+
+**Auslöser:** Ein Nutzer möchte eigene Profilgrunddaten korrigieren.
+
+**Grobe Schritte:**
+
+1. Nutzer öffnet das eigene Profil.
+2. Nutzer bearbeitet erlaubte Grunddaten.
+3. Vereon speichert die Änderungen.
+4. Relevante Anzeigen verwenden die aktualisierten Daten.
+
+**Ergebnis:** Nutzer können einfache Profilfehler selbst korrigieren.
+
+**Offene UX-/Produktfragen:**
+
+- Profilbearbeitung darf keine Rollen-, Team- oder Guardian-Kind-Beziehungen verändern.
+
+---
+
+### UF-1-02 — Dashboard, Schnellzugriffe und mobile Nutzung verbessern
+
+**Phase:** `MVP-1`  
+**Flow-Status:** `teilweise`  
+**Hauptrollen:** `authenticated_user`, `head_coach`, `assistant_coach`, `player`, `guardian`  
+**Betroffene Feature-IDs:** `FC-DASHBOARD-001`, `FC-DASHBOARD-003`, `FC-DASHBOARD-004`, `FC-DASHBOARD-005`, `FC-DASHBOARD-006`, `FC-MOBILE-001`, `FC-MOBILE-002`, `FC-MOBILE-003`, `FC-NOTIFY-001`, `FC-NOTIFY-003`, `FC-NOTIFY-005`
+
+**Auslöser:** Nutzer verwenden Vereon im Alltag regelmäßig, insbesondere mobil.
+
+**Grobe Schritte:**
+
+1. Nutzer öffnet Vereon auf Desktop oder Smartphone.
+2. Dashboard zeigt rollenabhängig relevante Informationen und offene Aufgaben.
+3. Schnellzugriffe führen zu den wichtigsten nächsten Aktionen.
+4. Die mobile Nutzung ist nicht nur technisch responsive, sondern praktisch bedienbar.
+5. PWA-Installierbarkeit wird als App-Icon-Nutzung geprüft.
+
+**Ergebnis:** Vereon wird im Alltag schneller nutzbar, ohne frei konfigurierbare Widgets oder Notification-Center.
+
+**Offene UX-/Produktfragen:**
+
+- Welche Dashboard-Kacheln sind pro Rolle wirklich notwendig?
+- Wo liegt die Qualitätsgrenze zwischen brauchbarer Mobile-UX und späterer App-Shell?
+
+---
+
+### UF-1-03 — Team-, Rollen- und Spieleransichten alltagstauglich machen
+
+**Phase:** `MVP-1`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `team_owner`, `head_coach`, `assistant_coach`, `player`, `guardian`  
+**Betroffene Feature-IDs:** `FC-ROLE-001`, `FC-TEAM-005`, `FC-TEAM-006`, `FC-TEAM-007`, `FC-PLAYER-004`, `FC-PLAYER-005`, `FC-PLAYER-006`
+
+**Auslöser:** Die Mannschaft wird über längere Zeit real genutzt und braucht bessere Pflege- und Ansichtslogik.
+
+**Grobe Schritte:**
+
+1. Berechtigte Rollen öffnen Team-, Rollen- oder Spielerbereiche.
+2. Vereon zeigt rollenabhängig passende Informationen.
+3. Spieler-/Teamdaten können im erlaubten Umfang gepflegt werden.
+4. Status- oder Archivierungslogik wird kontrolliert sichtbar gemacht.
+5. Primäre Teamorte können als Alltagserleichterung genutzt werden.
+
+**Ergebnis:** Teamverwaltung wird belastbarer, ohne vollständige Vereinsverwaltung zu werden.
+
+**Offene UX-/Produktfragen:**
+
+- Welche Spielerdaten dürfen Spieler/Guardians selbst ändern?
+- Welche sportlichen Stammdaten darf nur das Trainerteam pflegen?
+- Ab wann ist Archivieren besser als Entfernen?
+
+---
+
+### UF-1-04 — Guardian verwaltet mehrere Kinder und Kontaktpersonen
+
+**Phase:** `MVP-1`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `guardian`, `head_coach`, `assistant_coach`  
+**Betroffene Feature-IDs:** `FC-GUARDIAN-004`, `FC-GUARDIAN-006`, `FC-GUARDIAN-007`, `FC-GUARDIAN-008`, `FC-LEGAL-007`
+
+**Auslöser:** Ein Guardian hat mehrere Kinder oder relevante Kontaktpersonen müssen dokumentiert werden.
+
+**Grobe Schritte:**
+
+1. `guardian` öffnet den Guardian-/Kind-Bereich.
+2. `guardian` verwaltet mehrere Kinder im eigenen Kontext.
+3. `guardian` ergänzt begrenzte Kontaktpersonen.
+4. Trainerteam sieht nur relevante Kontaktinformationen.
+5. Erweiterte Consent-/Berechtigungslogik wird separat abgestimmt.
+
+**Ergebnis:** Jugendmannschaften werden alltagstauglicher unterstützt, ohne mehrere eigenständige Guardian-Accounts pro Kind zu erlauben.
+
+**Offene UX-/Produktfragen:**
+
+- Welche Kontaktpersonen sind sichtbar für `head_coach` und `assistant_coach`?
+- Wie wird verhindert, dass private Familieninformationen gesammelt werden?
+
+---
+
+### UF-1-05 — Termine, Kalender und wiederkehrende Trainings verbessern
+
+**Phase:** `MVP-1`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `team_owner`, `head_coach`, `assistant_coach`, `player`, `guardian`, `system`  
+**Betroffene Feature-IDs:** `FC-EVENT-002`, `FC-EVENT-003`, `FC-EVENT-004`, `FC-EVENT-005`, `FC-TRAINING-006`, `FC-TRAINING-007`, `FC-TRAINING-008`, `FC-TRAINING-009`, `FC-TRAINING-010`, `FC-TRAINING-011`, `FC-TRAINING-012`, `FC-TRAINING-014`
+
+**Auslöser:** Einzeltermine reichen im Alltag nicht mehr aus.
+
+**Grobe Schritte:**
+
+1. Nutzer können vergangene und kommende Termine besser unterscheiden.
+2. Einfache Filter und Kalenderansicht unterstützen den Überblick.
+3. Trainerteam kann Trainingsdetails und Orte besser pflegen.
+4. Trainerteam kann einfache wiederkehrende Trainings erstellen.
+5. Vor Erstellung von Serien wird eine klare Vorschau angezeigt.
+6. Einzeltermine bleiben auch bei Serienbezug individuell nutzbar.
+
+**Ergebnis:** Trainingsplanung wird effizienter, ohne komplexe Serienverwaltung vorwegzunehmen.
+
+**Offene UX-/Produktfragen:**
+
+- Wie simpel muss die erste Serienlogik bleiben?
+- Welche Fehlerfälle müssen vor Massenanlage verhindert werden?
+
+---
+
+### UF-1-06 — RSVP-Deadline und späte Änderungen nutzen
+
+**Phase:** `MVP-1`  
+**Flow-Status:** `offen`  
+**Hauptrollen:** `player`, `guardian`, `head_coach`, `assistant_coach`, `system`  
+**Betroffene Feature-IDs:** `FC-RSVP-006`, `FC-RSVP-007`, `FC-RSVP-008`, `FC-RSVP-009`
+
+**Auslöser:** Das Trainerteam braucht planbarere Rückmeldungen.
+
+**Grobe Schritte:**
+
+1. Trainerteam legt optional eine RSVP-Deadline fest.
+2. Spieler oder Guardian geben RSVP ab.
+3. Nach Deadline sind Änderungen nur noch mit Begründung möglich.
+4. Ab Terminbeginn wird RSVP gesperrt und die Anwesenheitslogik übernimmt.
+
+**Ergebnis:** RSVP wird planbarer und sauber von Anwesenheit getrennt.
+
+**Offene UX-/Produktfragen:**
+
+- Wie streng soll die Deadline wirken, ohne Eltern/Spieler unnötig zu blockieren?
+- Welche Begründungstexte sind erlaubt, ohne Gesundheitsdaten zu provozieren?
+
+---
+
+### UF-1-07 — Anwesenheit erfassen, abschließen und wieder öffnen
+
+**Phase:** `MVP-1`  
+**Flow-Status:** `prüfen`  
+**Hauptrollen:** `head_coach`, `assistant_coach`  
+**Weitere Rollen:** `system`  
+**Betroffene Feature-IDs:** `FC-ATTEND-001`, `FC-ATTEND-002`, `FC-ATTEND-003`, `FC-ATTEND-004`, `FC-ATTEND-005`, `FC-ATTEND-006`, `FC-ATTEND-007`, `FC-ATTEND-008`
+
+**Auslöser:** Ein Termin hat stattgefunden und tatsächliche Anwesenheit soll dokumentiert werden.
+
+**Grobe Schritte:**
+
+1. Trainerteam öffnet die Anwesenheitsliste eines Termins.
+2. Trainerteam erfasst Anwesenheitsstatus je Spieler.
+3. Bei Verspätung kann eine einfache Minutenangabe ergänzt werden.
+4. Anwesenheit kann bis zum Abschluss korrigiert werden.
+5. Nach Abschluss ist normale Bearbeitung gesperrt.
+6. Wiederöffnung ist nur kontrolliert möglich.
+
+**Ergebnis:** Tatsächliche Teilnahme wird getrennt von RSVP dokumentiert.
+
+**Offene UX-/Produktfragen:**
+
+- Abschluss und Wiederöffnung brauchen vor Umsetzung eine eigene Entscheidung.
+- Keine Gesundheitsstatus wie `injured` als MVP-Status führen.
+
+---
+
+### UF-1-08 — Match-MVP planen und nutzen
+
+**Phase:** `MVP-1`  
+**Flow-Status:** `prüfen`  
+**Hauptrollen:** `head_coach`, `assistant_coach`, `player`, `guardian`  
+**Betroffene Feature-IDs:** `FC-MATCH-001`, `FC-MATCH-002`, `FC-MATCH-003`, `FC-MATCH-004`, `FC-MATCH-005`, `FC-MATCH-006`, `FC-MATCH-007`, `FC-MATCH-008`, `FC-MATCH-009`
+
+**Auslöser:** Vereon soll neben Trainings auch Spiele abbilden.
+
+**Grobe Schritte:**
+
+1. Trainerteam erstellt ein Match mit den notwendigen Matchday-Angaben.
+2. Spieler und Guardians sehen relevante Matchinformationen.
+3. RSVP wird für Matches analog zum Training genutzt.
+4. Match kann vor relevanten Zeitpunkten bearbeitet, gelöscht oder abgesagt werden.
+5. Ergebnisanzeige hängt am Report-Modul.
+
+**Ergebnis:** Matchday-Grundlagen werden abgebildet, ohne Kader-Nominierung, Aufstellung oder Verbandsintegration.
+
+**Offene UX-/Produktfragen:**
+
+- Match-MVP braucht vor Umsetzung eine eigene Produktentscheidung.
+- Treffpunkt, Spielort und Spielbeginn müssen fachlich sauber getrennt werden.
+
+---
+
+### UF-1-09 — Spielbericht erstellen und freigeben
+
+**Phase:** `MVP-1`  
+**Flow-Status:** `prüfen`  
+**Hauptrollen:** `head_coach`, `assistant_coach`, `player`, `guardian`  
+**Betroffene Feature-IDs:** `FC-REPORT-001`, `FC-REPORT-002`, `FC-REPORT-003`, `FC-REPORT-004`, `FC-REPORT-005`, `FC-REPORT-006`, `FC-REPORT-007`
+
+**Auslöser:** Nach einem Match soll ein einfacher Bericht entstehen.
+
+**Grobe Schritte:**
+
+1. Trainerteam erstellt oder bearbeitet einen Spielbericht.
+2. Ergebnis und sachlicher Trainerkommentar werden erfasst.
+3. Bericht kann als Entwurf gespeichert werden.
+4. `head_coach` schließt den Bericht ab.
+5. Nach Abschluss sehen Spieler und Guardians freigegebene Inhalte.
+
+**Ergebnis:** Ein einfacher Matchbericht wird dokumentiert und kontrolliert sichtbar gemacht.
+
+**Offene UX-/Produktfragen:**
+
+- Reports dürfen nicht vor Match-MVP entschieden werden.
+- Keine Spielerbewertungen, Einzelkritik oder detaillierte Statistikplattform im MVP.
+
+---
+
+## 8. Post-MVP — kurze Flow-Kandidaten
+
+Post-MVP-Flows werden hier bewusst nicht detailliert ausgearbeitet. Sie sind sinnvoll nach erstem echten Einsatz, dürfen aber MVP-0A, MVP-0B und MVP-1 nicht verdrängen.
+
+| Flow-Kandidat | Phase | Betroffene Feature-IDs | Kurzbeschreibung | Grenze |
+|---|---|---|---|---|
+| Mehrteam-/Club-Verwaltung sichtbar machen | `Post-MVP` | `FC-ORG-005`, `FC-TEAM-008`, `FC-ROLE-005` | Mehrere Teams und operative Clubrollen werden sichtbar nutzbar. | Nicht vor stabiler Einzelteam-Nutzung. |
+| Team-Affiliation beantragen/annehmen | `Post-MVP` | `FC-TEAM-009` | Eigenständiges Team kann später bewusst einem Verein zugeordnet werden. | Nie automatisch; Zustimmung durch `team_owner` erforderlich. |
+| E-Mail-Adresse ändern | `Post-MVP` | `FC-AUTH-008` | Nutzer kann eigene E-Mail-Adresse ändern und neu verifizieren. | Sicherheitslogik nötig. |
+| Alte Beitrittsanfragen und Codes bereinigen | `Post-MVP` | `FC-INVITE-009`, `FC-INVITE-010` | Anfragen und Codes können später automatisiert bereinigt oder zeitlich begrenzt werden. | Nicht als frühe Technikaufgabe vorziehen. |
+| Allgemeine Termine mit RSVP und Kalenderexport | `Post-MVP` | `FC-EVENT-006`, `FC-EVENT-007` | Erweiterte Kalender-/Exportfunktionen. | Kein externer Kalender-Sync im MVP. |
+| Echte Serienverwaltung | `Post-MVP` | `FC-TRAINING-013` | Komplexere Serienbearbeitung mit Ausnahmen. | Nicht mit MVP-1-Serienstart verwechseln. |
+| Kader nominieren | `Post-MVP` | `FC-MATCH-010` | Match-Kader kann später geplant werden. | Keine Aufstellungs-/Statistikplattform im MVP. |
+| Taktikboard-Grundlagen | `Post-MVP` | `FC-TACTIC-001`, `FC-TACTIC-002` | Taktikboard und einfache Formation. | Darf Training/RSVP/Anwesenheit nicht verdrängen. |
+| Detaillierte Spielerstatistiken | `Post-MVP` | `FC-REPORT-008` | Erweiterte Match-Statistiken. | Hohes Scope-Creep-Risiko. |
+| Notification-Center, Push, E-Mail | `Post-MVP` | `FC-NOTIFY-007`, `FC-NOTIFY-008`, `FC-NOTIFY-009`, `FC-NOTIFY-010`, `FC-MOBILE-004` | Spätere zentrale und externe Benachrichtigung. | Erst nach In-App-Hinweiskonzept und Mobile-Basis. |
+| DSGVO-Self-Service | `Post-MVP` | `FC-LEGAL-006` | Späterer automatisierter Export-/Löschprozess. | Rechtlich und technisch separat klären. |
+
+---
+
+## 9. Later — nicht ausarbeiten
+
+Later-Themen werden in `USER_FLOWS.md` nicht als konkrete Flows ausgearbeitet.
+
+Dazu zählen insbesondere:
+
+- personalisierbare Dashboard-Widgets,
+- `super_admin`-Plattformrolle,
+- strukturierte Gegner-/Vereinsdatenbank,
+- gespeicherte und teilbare Taktiken,
+- Offlinefähigkeit,
+- native iOS-/Android-App,
+- internes Admin-Panel,
+- Future Platform Domains wie `FINANCE`, `EQUIPMENT`, `SPONSOR`, `SHOP`, `FEDERATION`.
+
+Diese Themen dürfen erst nach separater Produktentscheidung in konkrete Features, Rollen, Datenmodelle oder Flows übersetzt werden.
+
+---
+
+## 10. Zentrale offene UX-/Produktfragen
+
+Diese Fragen sind nicht alle vor der Pflege dieses Dokuments zu klären, aber sie dürfen vor Umsetzung nicht ignoriert werden.
+
+| Bereich | Offene Frage | Relevanz |
+|---|---|---|
+| E-Mail-Verifizierung | Welche Aktionen werden unverifiziert blockiert? | MVP-0B / Auth-Sicherheit |
+| Guardian-Join | Exakter Wortlaut der minimalen Berechtigungsbestätigung | MVP-0B / Minderjährige / Legal |
+| Co-Trainer | Aufnahme per Link, E-Mail oder bestehendem Nutzer? | MVP-0B / Rollen-UX |
+| Spieler entfernen | Unterschied zwischen Entfernen, Archivieren und vollständigem Löschen klar genug? | MVP-0B / Teamverwaltung / DSGVO-Abgrenzung |
+| Training löschen vs. absagen | Klare Abgrenzung und sichtbare Konsequenzen | MVP-0B / Alltagstauglichkeit |
+| Trainer-RSVP | Gemeinsame oder getrennte Darstellung zu Spieler-RSVP? | MVP-0B / UX |
+| Mobile MVP-Qualität | Wann gilt mobile Nutzung als ausreichend pilotfähig? | MVP-0B / MVP-1 |
+| Match-MVP | Welche Match-Felder sind wirklich minimal? | MVP-1 / eigene Entscheidung |
+| Anwesenheit | Abschluss und Wiederöffnung vor Umsetzung klären | MVP-1 / Rollen / Audit |
+| Reports | Sachlicher Bericht ohne Spielerbewertung | MVP-1 / Datenschutz / UX |
+| MVP-1 Hinweise / Legal-Kontaktweg | Prüfen, ob Absagehinweise, Deadline-Hinweise, geänderte Stammdaten und Datenschutz-Kontaktweg später als eigene Flow-Ergänzung nötig sind. | MVP-1 / `FC-NOTIFY-002`, `FC-NOTIFY-004`, `FC-NOTIFY-006`, `FC-LEGAL-005` |
+| Club-Struktur | Wann wird sichtbare Vereinsverwaltung wirklich benötigt? | Post-MVP / Scope-Creep |
+
+---
+
+## 11. Pflege-Regeln
+
+1. Neue Produktfunktionen werden zuerst in `docs/FEATURE_CATALOG.md` gepflegt.
+2. Phasen- und Scope-Entscheidungen werden danach in `docs/MVP_SCOPE.md` geprüft.
+3. Erst danach werden User-Flows in `docs/USER_FLOWS.md` ergänzt oder geändert.
+4. Jeder Flow muss auf Feature-Catalog-IDs verweisen.
+5. `USER_FLOWS.md` darf keine technischen Implementierungsdetails aufnehmen.
+6. MVP-0A und MVP-0B müssen strikt von sichtbarer Vereins-/Mehrteam-Verwaltung getrennt bleiben.
+7. MVP-1-Flow-Gruppen dürfen keine Umsetzung vorwegnehmen, wenn `MVP_SCOPE.md` eine eigene Teilentscheidung fordert.
+8. Post-MVP- und Later-Themen bleiben kurz, bis sie bewusst vorgezogen werden.
+9. Änderungen an `USER_FLOWS.md` können Folgeprüfungen in `ROLES_AND_PERMISSIONS.md`, `DATABASE_MODEL.md`, `SECURITY.md`, `DSGVO_PRIVACY_MODEL.md` und `MVP_TEST_CHECKLIST.md` auslösen.
+10. Nach einer finalen Änderung an `docs/USER_FLOWS.md` muss geprüft werden, ob `docs/CHATGPT_CONTEXT.md` aktualisiert werden soll.
