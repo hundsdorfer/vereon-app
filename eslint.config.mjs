@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Abweichender Build-Ordner des zweiten, dedizierten Dev-Servers für den
+    // internen Zugangsschutz-Test (siehe playwright.config.ts, NEXT_DIST_DIR).
+    ".next-internal-access-test/**",
   ]),
 ]);
 

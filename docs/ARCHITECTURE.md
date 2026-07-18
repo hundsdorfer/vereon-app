@@ -76,6 +76,45 @@ Die Anwendung verwendet keinen eigenen klassischen API-Layer. Server Components 
 
 Supabase Auth verwaltet Nutzer und Sessions. `src/proxy.ts` behandelt `/`, `/login`, `/register`, `/auth/callback`, `/join/*` und `/legal/*` als öffentlich. Andere Routen führen ohne Session zu `/login`.
 
+Vor dieser bestehenden Logik prüft `src/proxy.ts` seit dieser Änderung
+zusätzlich einen **temporären internen Zugangsschutz** (`src/lib/internal-access.ts`,
+HTTP Basic Auth). Der Schutz ist nur aktiv, wenn die Server-Umgebungsvariable
+`INTERNAL_ACCESS_ENABLED` exakt `"true"` ist; ohne diese Variable ist das
+Verhalten unverändert. Aktiviert, aber unvollständig konfiguriert (Username/
+Passwort fehlt), antwortet die Anwendung fail-closed mit `401` für jede
+Anfrage. Der Ablauf ist `Besucher → interner Zugangsschutz → Supabase-Login
+→ Anwendung`; Grund ist die auf dem aktuellen Vercel-Tarif fehlende
+Deployment-Protection-Abdeckung für Custom-Production-Domains (siehe
+`docs/DECISION_LOG.md` DEC-011). Der Schutz ist ausdrücklich temporär und
+lokal implementiert; ein Deployment und externe Prüfung stehen aus (siehe
+`docs/CURRENT_TASK.md`). Nach erfolgreicher interner Prüfung wird der
+Authorization-Header vor Weitergabe an Server Components/Route Handler aus
+den weitergereichten Request-Headern entfernt
+(`NextResponse.next({ request: { headers } })`). `src/lib/supabase/middleware.ts`
+`updateSession()` erhält dafür ein `stripAuthorization`-Flag statt einer vorab
+erzeugten Header-Kopie und baut die weiterzureichenden Header bei jedem
+`NextResponse.next()`-Aufruf frisch aus dem dann aktuellen `request.headers` —
+notwendig, weil Supabase in `setAll()` `request.cookies` in-place mutiert und
+eine vorab eingefrorene Header-Kopie einen aktualisierten Session-Cookie sonst
+verdeckt hätte (per Regressionstest in `tests/e2e/internal-access.spec.ts`
+nachgewiesen). Seit `@supabase/ssr` `0.10.0` liefert `setAll()` zusätzlich
+Cache-Schutz-Header für Antworten mit aktualisierten Auth-Cookies. Die
+Anwendung übernimmt diese gelieferten Werte unverändert auf die Response.
+Ersetzt `src/proxy.ts` die Session-Response durch einen Login- oder
+Dashboard-Redirect, werden ausschließlich die aktualisierten Session-Cookies
+und diese Cache-Schutz-Header auf den Redirect übertragen; interne
+`x-middleware-*`-Weiterleitungsheader werden nicht kopiert.
+
+Der bestehende Matcher in `src/proxy.ts` schließt weiterhin
+`_next/static`, `_next/image`, `favicon.ico` sowie einzelne Bilddateiendungen
+aus. Diese bleiben — wie schon vor dieser Änderung — auch unter aktiviertem
+internem Zugangsschutz direkt abrufbare, reine statische Dateien ohne HTML,
+Anwendungsdaten oder ausführbare Routen; insbesondere JavaScript-Bundles
+unter `_next/static` sind dadurch nicht vertraulich. Der interne
+Zugangsschutz verhindert die Nutzung der Anwendung (HTML, RSC-/Daten-
+anfragen, Route Handler, Server Actions), ist aber keine vollständige
+Vertraulichkeit sämtlicher Deployment-Artefakte.
+
 Belegte Einschränkungen:
 
 - Der Proxy prüft nur, ob eine gültige Session existiert; eine produktweit erzwungene E-Mail-Verifizierung ist nicht implementiert.

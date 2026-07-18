@@ -28,7 +28,18 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    // Deklariert dauerhaft, damit Next.js diese Datei nicht automatisch
+    // umschreibt, wenn der zweite, dedizierte Dev-Server für den internen
+    // Zugangsschutz-Test (playwright.config.ts, NEXT_DIST_DIR=
+    // ".next-internal-access-test") startet. Ohne diese Einträge erkennt
+    // next dev die fehlenden Type-Pfade für diesen distDir und schreibt
+    // tsconfig.json bei jedem Testlauf neu — inklusive Neuformatierung.
+    // Unkritisch, da Glob-Muster auf ein nicht dauerhaft vorhandenes,
+    // git-ignoriertes Verzeichnis ohne Wirkung auf normale Builds/den
+    // Hauptserver bleiben, solange das Verzeichnis nicht existiert.
+    ".next-internal-access-test/types/**/*.ts",
+    ".next-internal-access-test/dev/types/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

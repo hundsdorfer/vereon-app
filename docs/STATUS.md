@@ -48,7 +48,7 @@ Die Vector-Störung ist ein lokales Betriebsrisiko; ein Fehler des fachlichen Ke
 
 | Abweichung/Risiko | Beleg oder Verifikationsstand | Erforderliches Ergebnis |
 |---|---|---|
-| Deployment noch öffentlich erreichbar | `www.vereon.app` antwortet; Nutzer möchte bis zum Pilot vollständigen Schutz | Vercel-Deployment-Schutz aktivieren und prüfen |
+| Deployment noch öffentlich erreichbar | `www.vereon.app` antwortet; Vercel Deployment Protection deckt Custom-Production-Domains auf dem aktuellen Tarif nicht ab (`ssoProtection.deploymentType` lässt sich nicht auf `all` setzen, HTTP 428); temporärer interner Zugangsschutz (HTTP Basic Auth, `src/lib/internal-access.ts`) lokal implementiert und automatisiert getestet, aber nicht deployed/extern nicht geprüft | Deployment mit gesetzten `INTERNAL_ACCESS_*`-Variablen (langes, zufällig erzeugtes Passwort aus einem Passwortmanager) durchführen und extern verifizieren |
 | Legal-Seiten enthalten Platzhalter | `src/app/legal/{imprint,privacy,terms}/page.tsx` | rechtlich geprüfte Texte und Betreiberangaben |
 | E-Mail-Verifizierung nicht als Aktionsvoraussetzung erzwungen | `supabase/config.toml`: lokal aus; kein zentraler App-/RPC-Check | Team, Join und RSVP nur für verifizierte E-Mail |
 | Produktionsfähiger E-Mail-Versand fehlt | Nutzerangabe: nur Supabase-Test-/Standardversand | SMTP/Provider, Zustellung und Absender verifizieren |

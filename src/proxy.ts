@@ -1,5 +1,13 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
+import {
+  applySupabaseSessionState,
+  updateSession,
+} from '@/lib/supabase/middleware'
+import {
+  evaluateInternalAccess,
+  internalAccessUnauthorizedResponse,
+  stripAuthorizationHeader,
+} from '@/lib/internal-access'
 
 // Routen, die ohne Login zugänglich sind
 const PUBLIC_ROUTES = new Set(['/', '/login', '/register', '/auth/callback'])
@@ -16,14 +24,33 @@ function isPublic(pathname: string): boolean {
 }
 
 export async function proxy(request: NextRequest) {
+  // Temporärer interner Zugangsschutz — muss vor jedem weiteren Verhalten
+  // greifen, auch vor dem Rücksprung bei fehlender Supabase-Konfiguration,
+  // damit eine unvollständige Supabase-Konfiguration den aktivierten Schutz
+  // nicht umgehen kann. Siehe docs/DECISION_LOG.md DEC-011.
+  const internalAccess = evaluateInternalAccess(request.headers)
+  if (internalAccess.type === 'unauthorized') {
+    return internalAccessUnauthorizedResponse()
+  }
+  // Nach erfolgreicher interner Prüfung wird der Basic-Auth-Header nicht an
+  // Server Components/Route Handler/Server Actions weitergereicht. Als
+  // Flag statt vorab erzeugter Header-Kopie durchgereicht, damit
+  // updateSession() die Header bei jedem Response-Aufbau frisch aus dem
+  // dann aktuellen request.headers bauen kann (siehe dortiger Kommentar).
+  const stripAuthorization = internalAccess.type === 'authorized'
+
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ) {
-    return NextResponse.next()
+    const headers = stripAuthorization ? stripAuthorizationHeader(request.headers) : request.headers
+    return NextResponse.next({ request: { headers } })
   }
 
-  const { supabaseResponse, user } = await updateSession(request)
+  const { supabaseResponse, responseHeaders, user } = await updateSession(
+    request,
+    stripAuthorization
+  )
   const pathname = request.nextUrl.pathname
 
   // Nicht eingeloggt → geschützte Route → /login mit redirect-Param
@@ -31,7 +58,11 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(url)
+    return applySupabaseSessionState(
+      NextResponse.redirect(url),
+      supabaseResponse,
+      responseHeaders
+    )
   }
 
   // Eingeloggt → Auth-Seiten → /dashboard
@@ -39,7 +70,11 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     url.search = ''
-    return NextResponse.redirect(url)
+    return applySupabaseSessionState(
+      NextResponse.redirect(url),
+      supabaseResponse,
+      responseHeaders
+    )
   }
 
   return supabaseResponse

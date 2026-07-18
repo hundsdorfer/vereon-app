@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
     '10.*.*.*',    // RFC 1918 Class A
     '172.*.*.*',   // RFC 1918 Class B (172.16–31)
   ],
+  // Erlaubt einen abweichenden Build-Ordner für einen zweiten, parallel
+  // laufenden Dev-Server (siehe tests/e2e/internal-access-enabled.spec.ts).
+  // Zwei "next dev"-Instanzen auf demselben distDir kollidieren an dessen
+  // Lockfile, unabhängig vom Port. Ohne die Variable unverändertes
+  // Standardverhalten (".next").
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
 };
 
 export default nextConfig;
