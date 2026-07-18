@@ -1,202 +1,110 @@
-# Project Brief — Vereon
+# Vereon — Project Brief
 
-> **Dokumentationshinweis — Stand 2026-07-06:**
-> Diese Datei enthält laut `docs/DOCS_INVENTORY.md` veraltete oder zu prüfende Aussagen. Für den tatsächlichen Code-Zustand haben aktuell `docs/ARCHITECTURE.md` und `docs/STATUS.md` Vorrang. Diese Datei darf bis zur Überarbeitung nicht allein als Umsetzungsgrundlage verwendet werden.
-> Besonders kritisch: Der Abschnitt zum nächsten technischen Schritt ist laut Inventar veraltet.
+**Stand:** 2026-07-18
 
----
+Kompakter Einstieg für neue Entwicklungs- und Review-Sitzungen. Details nicht aus dieser Datei ableiten, sondern in den jeweils genannten Quellen prüfen.
 
-**Kompaktzusammenfassung für Claude Code.** Details in den verlinkten Docs.
+## Produkt
 
----
+Vereon ist eine deutschsprachige, mobile Webanwendung für Fußballteams. Der aktuelle Schwerpunkt ist ein stabiler Einzelteam-Flow für Trainer, Spieler und Guardians. Sichtbare Club-/Mehrteam-Verwaltung ist Post-MVP.
 
-## Aktuelle Vorrangregel
+## Technischer Kern
 
-- Für den tatsächlichen Code-Zustand: `docs/ARCHITECTURE.md`
-- Für aktuellen Arbeits-/Risikostand: `docs/STATUS.md`
-- Für kurzfristige nächste Aufgaben: `docs/CURRENT_TASK.md`, sofern nicht durch `docs/STATUS.md` überholt
-- Dieses Dokument (`PROJECT_BRIEF.md`) ist ein Kurzkompass, keine vollständige technische Spezifikation
+- Next.js `16.2.9`, React `19.2.4`, TypeScript strict, Tailwind CSS `4.3.1`
+- App Router mit Server Components und Server Actions
+- Supabase Auth und PostgreSQL
+- RLS auf allen öffentlichen Tabellen
+- kritische Mutationen über `SECURITY DEFINER`-RPCs mit leerem `search_path`
+- lokale Entwicklung gegen Supabase in Docker
+- interne gehostete Entwicklung auf Vercel mit Supabase Cloud
 
----
+Technische Details: `docs/ARCHITECTURE.md`, `docs/TECH_STACK.md`, `docs/SUPABASE_STRATEGY.md`.
 
-## 1. Produktvision
+## Implementierter Flow
 
-SaaS-Plattform für Amateurfußball-Vereinsmanagement. Zielgruppe: Trainer, Vereinsfunktionäre, Eltern/Guardians.
+- Registrierung, Login, Logout
+- eigenständiges Team erstellen
+- automatischer Einladungscode
+- Self-Player- und Guardian/Kind-Beitrittsanfrage
+- Anfrage annehmen oder ablehnen
+- Spieler per Soft-Delete aus Team entfernen
+- Training erstellen und anzeigen
+- Spieler-/Guardian-RSVP
+- Trainerübersicht über Spieler-RSVP
 
-**Kernversprechen:**
-- Trainer kann sofort loslegen — ohne Verein, ohne Genehmigung (eigenständige Teams)
-- Vereine können mehrere Teams und Mitglieder verwalten
-- Eltern nutzen Kernfunktionen immer kostenlos (RSVP, Kalender)
-- DSGVO-konform von Anfang an, besonders bei Minderjährigen
+Nicht vollständig implementiert sind unter anderem E-Mail-Verifizierung, Passwort-Reset, Rollenverwaltung, Owner-Transfer, Einladungscode-Erneuerung, Training bearbeiten/löschen, App-Flow für Absage, RSVP-Deadline, Trainer-RSVP, Anwesenheitsabschluss und Teamarchivierung.
 
----
+## Zielrollen
 
-## 2. Wichtigste Architekturentscheidungen
-
-| Entscheidung | Begründung |
+| Rolle | Kurzfunktion |
 |---|---|
-| Next.js 16 App Router, TypeScript strict, Tailwind v4 | Moderner Stack, keine Legacy-Patterns |
-| Supabase — kein NextAuth, kein Prisma | Weniger Schichten, RLS als echte Sicherheitsebene |
-| `src/proxy.ts` statt `middleware.ts` | Next.js 16 Breaking Change — Exportname `proxy` |
-| 4 Supabase-Clients (server / route-handler / client / middleware) | Jeder Kontext braucht eigenen Cookie-Zugriff |
-| `teams.club_id` nullable | Eigenständige Teams ohne Verein — Trainer-First |
-| Multi-Tenant via `club_id` (optional) | Nachträglich fast unmöglich einzubauen |
-| Mehrfachrollen via separate Tabellen | Obmann = Trainer = Kassier ist Realität |
-| SECURITY DEFINER Funktionen für atomare Operationen | Privilege Escalation beim ersten club_admin/team_owner verhindert |
-| `roles.key` (maschinenlesbar) in RLS-Funktionen | Nicht `roles.name_de` — key ist unveränderlich |
-| Kein Hard-Delete im MVP | Soft-Delete via `status`-Felder |
-| `getUser()` nicht `getSession()` in Proxy/Middleware | Serverseitige JWT-Prüfung, keine Session-Fälschung |
+| `team_owner` | genau eine administrative Eigentümerrolle pro Team |
+| `head_coach` | operative Team- und Trainingsleitung |
+| `assistant_coach` | operative Trainingshilfe mit begrenzten Strukturrechten |
+| `player` | eigener Spieleraccount und eigene RSVP |
+| `guardian` | kindbezogener Zugriff und RSVP für eigenes Kind |
+| `club_admin` | erst Post-MVP operativ |
 
-Vollständige Details: `docs/SUPABASE_STRATEGY.md`, `docs/DATABASE_MODEL.md`
+Wesentliche Zielregeln:
 
----
+- Rollenverwaltung nur durch `team_owner`.
+- Join-Anfragen entscheiden `team_owner` und `head_coach`.
+- Spieler entfernen `team_owner` und `head_coach`, immer als Soft-Delete.
+- Trainings erstellen, bearbeiten und absagen dürfen alle drei Trainerrollen.
+- Training hart löschen dürfen nur `team_owner` und `head_coach`, nur vor Beginn und ohne abgegebene RSVP, mit zusätzlicher Texteingabe.
+- Einladungscode anzeigen, erneuern und deaktivieren dürfen alle drei Trainerrollen.
+- `team_manager` ist keine Zielrolle, existiert aber noch als technische Altlast.
 
-## 3. MVP-Reihenfolge
+Vollständige Zielmatrix: `docs/ROLES_AND_PERMISSIONS.md`; technische Abweichungen: `docs/STATUS.md`.
 
-```
-MVP 0A  → Eigenständiges Team, team_invitation_links, team_join_requests,
-           players (minimal), events, RSVP
-           Warum team_join_requests in 0A: Self-Service-Eltern/Kind-Flow
-           ist das differenzierende Kernfeature, kein Add-on
+## Datenschutzentscheidungen
 
-MVP 0B  → Verein anlegen (pending_verification), invitations, club_managed Teams
+- Für Accounts und Spieler ist das Geburtsjahr verpflichtend.
+- Vollständiges Geburtsdatum ist freiwillig.
+- Das freiwillige vollständige Spielergeburtsdatum sehen der Spieler selbst, der Guardian nur für das eigene Kind sowie aktive `team_owner`, `head_coach` und `assistant_coach` für aktive Teamspieler; andere nicht.
+- Guardian bestätigt eine versionierte Berechtigungserklärung; die Erklärung ist keine Identitätsprüfung.
+- Im frühen MVP höchstens ein Guardian-Account pro Kind.
+- Weitere Bezugspersonen sind Kontaktangaben ohne Login oder RSVP-Recht.
+- Abgelehnte und zurückgezogene Join-Anfragen werden nach 90 Tagen automatisch bereinigt; die Automatisierung fehlt noch.
 
-MVP 1   → player_guardians, player_team_assignments, matches, match_reports,
-           audit_logs — vollständige Spieler/Guardian-Verwaltung
+Zielmodell: `docs/DATABASE_MODEL.md`; Datenschutz: `docs/DSGVO_PRIVACY_MODEL.md`.
 
-MVP 2   → team_affiliation_requests — eigenständige Teams treten Verein bei
+## Aktueller Betriebsstatus
 
-Phase 3+→ Billing, official_club_registry, player_transfer_requests
-```
+- Branch, Commit und lokale Änderungen werden zu Sitzungsbeginn direkt mit Git
+  geprüft und nicht dauerhaft in dieser Übergabedatei festgeschrieben.
+- Lint, TypeScript-Check und Build waren am 2026-07-18 erfolgreich.
+- E2E wurde im Dokumentationsaudit nicht ausgeführt.
+- Die gehostete Instanz ist interne Entwicklung, keine freigegebene Produktion.
+- Das gesamte Deployment soll bis zum Pilot geschützt werden.
+- Legal-Texte, produktionsfähiger E-Mail-Versand, Backup/Restore, Monitoring, Supabase-Region und AV-Themen sind vor Pilot zu verifizieren.
+- `/manifest.webmanifest` wird derzeit für unangemeldete Nutzer zum Login umgeleitet.
 
-Migrationen: `001_init_mvp0_core` → `002_mvp0a_team_flows` → `003_mvp0b_invitations` → `004_mvp1_players_full` → `005_mvp2_affiliation`
+Prioritäten und Belege: `docs/STATUS.md`.
 
-*Dies ist die fachliche Phasenlogik (Reihenfolge/Umfang), keine echten Dateinamen. Die tatsächlichen Migrationsdateien tragen timestamp-basierte Namen (z. B. `20260625190923_init_mvp0_core.sql`) und umfassen inzwischen weitere, hier nicht aufgeführte Migrationen. Für den realen Migrationsstand gilt `docs/ARCHITECTURE.md`.*
+## Quellenordnung
 
-Details: `docs/MVP_SCOPE.md`, `docs/USER_FLOWS.md`
+| Bedarf | Quelle |
+|---|---|
+| Produktfunktionen | `docs/FEATURE_CATALOG.md` |
+| Phasen und Scope | `docs/MVP_SCOPE.md` |
+| Nutzerabläufe | `docs/USER_FLOWS.md` |
+| Rollen und Rechte | `docs/ROLES_AND_PERMISSIONS.md` |
+| Datenzielmodell | `docs/DATABASE_MODEL.md` |
+| technischer Ist-Zustand | `docs/ARCHITECTURE.md` |
+| Risiken und Abweichungen | `docs/STATUS.md` |
+| aktuelle Arbeitsaufgabe | `docs/CURRENT_TASK.md` |
+| Entscheidungen | `docs/DECISION_LOG.md` |
 
----
+Bei technischen Widersprüchen haben Code, Konfiguration und Migrationen Vorrang. Unbekanntes wird nicht geraten.
 
-## 4. Rollen-Grundsätze
+## Arbeitsregeln
 
-- Rollen sind scope-getrennt: `system` / `club` / `team`
-- Vereinsrollen: `club_member_roles` (n pro Mitglied)
-- Teamrollen: `team_member_roles` (n pro Mitglied)
-- **MVP 0A:** `team_owner` (Eigentümer eigenständiges Team), `head_coach`
-- **MVP 0B:** `club_admin` (technischer Vereinsadmin)
-- **MVP 1:** `player`, `guardian`, `team_manager`, `assistant_coach`, `president`, `sporting_director`
-- `team_owner` ≠ `head_coach`: owner = administrativ, head_coach = fachlich
-- Guardian-Rechte kommen aus `player_guardians`, nicht aus `team_member_roles`
-- `player_guardians.verified_at` muss gesetzt sein — einziger Weg: Einladungsflow
-
-21 Rollen total, Seed-Insert in Migration 001. Details: `docs/ROLES_AND_PERMISSIONS.md`
-
----
-
-## 5. Datenmodell-Grundsätze
-
-**Kernstruktur:**
-```
-auth.users → profiles (1:1, Trigger)
-auth.users → club_memberships → clubs
-auth.users → team_memberships → teams (club_id nullable)
-club_memberships → club_member_roles → roles (scope='club')
-team_memberships → team_member_roles → roles (scope='team')
-auth.users → player_guardians → players (MVP 1)
-teams → team_invitation_links → team_join_requests (MVP 0A)
-teams → events → event_attendance (via player_id)
-```
-
-**Wichtige Felder:**
-- `teams.ownership_type`: `independent` | `club_managed`
-- `teams.status`: `active` | `pending_affiliation` | `club_affiliated` | `archived`
-- `clubs.verification_status`: `draft` | `pending_verification` | `verified` | `rejected` | `suspended`
-- `players.birth_year` (nicht `date_of_birth`) — Datensparsamkeit
-
-**SECURITY DEFINER Funktionen:**
-- `create_club()` — atomar: club + club_membership + club_admin
-- `create_independent_team()` — atomar: team + team_membership + team_owner + head_coach
-
-Alle SECURITY DEFINER Funktionen: `SET search_path = ''` + vollständige Schema-Prefixe (`public.*`)
-
-Details: `docs/DATABASE_MODEL.md`
-
----
-
-## 6. DSGVO-Grundsätze
-
-- Spieler sind häufig Minderjährige — besonderer Schutz nach Art. 8 DSGVO
-- `birth_year` statt `date_of_birth` — reicht für Altersklassen, weniger sensibel
-- Keine Fotos von Minderjährigen im MVP, keine Gesundheitsdaten, keine freien Trainernotizen über Kinder
-- Kindsdaten in `team_join_requests` erst nach Trainer-Akzeptanz für Team sichtbar
-- Abgelehnte `team_join_requests`: Löschfrist 90 Tage (pg_cron)
-- `tactics_notes` in `match_reports`: nur für Trainer (Column-Level Security oder RLS)
-- Guardian-Verknüpfung nur via Einladungsflow — `verified_at` ist Einwilligungsnachweis
-- `SUPABASE_SERVICE_ROLE_KEY` niemals in App-Code, niemals committed
-
-Details: `docs/DSGVO_PRIVACY_MODEL.md`
-
----
-
-## 7. Monetarisierungs-Grundsätze
-
-- **Eltern zahlen nie** für Pflichtfunktionen (RSVP, Kalender) — Trainer/Verein zahlt
-- Pläne: Free Team → Team Plus → Club Basic → Club Pro
-- Billing-Infrastruktur kommt erst in Phase 3 (Stripe, `plans`/`subscriptions`/`feature_flags`)
-- Keine personalisierte Werbung auf Basis von Kinder- oder Vereinsdaten
-- Free Tier muss wirklich nutzbar sein — sonst kein virales Wachstum im Amateursport
-
-Details: `docs/MONETIZATION_STRATEGY.md`
-
----
-
-## 8. Verbote und Sicherheitsregeln
-
-### Hard Constraints (jede Session)
-- **NEVER** Migration SQL befüllen ohne explizite Bestätigung in dieser Session
-- **NEVER** `npx supabase db reset` ohne separate explizite Bestätigung
-- **NEVER** `npx supabase db push` ausführen
-- **NEVER** Remote-Datenbank verbinden oder modifizieren
-- **NEVER** `.env.local` oder Secrets/Keys anzeigen
-- **NEVER** Anwendungscode ändern ohne vorherige Bestätigung
-- **NEVER** Packages installieren ohne Bestätigung
-- **NEVER** `SUPABASE_SERVICE_ROLE_KEY` committen
-- **Immer** geplante Dateiänderungen auflisten und Bestätigung abwarten
-
-### Technische Verbote
-- `getSession()` in Proxy/Middleware — immer `getUser()` (serverseitige JWT-Prüfung)
-- Direkte INSERTs auf `club_memberships`/`team_member_roles` für ersten Admin/Owner — nur via SECURITY DEFINER
-- Client Components mit Datenbankzugriff oder API-Keys
-- SECURITY DEFINER ohne `SET search_path = ''`
-- `roles.name_de` als Vergleichswert in Policies — immer `roles.key`
-
----
-
-## 9. Aktueller Arbeitsstand und nächste Entscheidung
-
-Stand laut `docs/ARCHITECTURE.md` und `docs/STATUS.md`: 2026-07-06.
-
-**MVP-0A-Kernflow ist implementiert:**
-- Auth (Registrierung, Login, Callback, Logout)
-- Eigenständiges Team erstellen
-- Einladungscode / Join-Link
-- Self-Player-Join-Flow und Guardian/Kind-Join-Flow
-- Beitrittsanfragen annehmen/ablehnen
-- Trainings erstellen
-- RSVP für Self-Player und Guardian
-- Trainer-RSVP-Übersicht
-- Dashboard-/Team-Grundlogik
-
-Lint, Build und CI sind laut Status sauber. Playwright-E2E existiert, ist aber nicht automatisch als CI-Gate auf jeden Push/PR aktiv (nur manuell auslösbar).
-
-**Remove-Player-Feature:**
-Das „Remove player from team"-Feature wurde lokal getestet (`npx supabase db reset`, `npm run lint`, `npm run build` erfolgreich) und ist committed (`6b4e93b`). Der Arbeitsbaum ist clean.
-
-**Nächste Entscheidungen:**
-- P.2B — Einladungscode-Format vereinfachen
-- Legal-/DSGVO-Pilot-Blocker
-- Cleanup-Job für Join-Requests
-- Consent-Nachweis Minderjährige
-- Match-MVP-Planung
-
-Details: `docs/STATUS.md`, `docs/CURRENT_TASK.md`, `docs/LEGAL_TODO.md`
+- Vor Codeänderungen passende lokale Next.js-Dokumentation unter `node_modules/next/dist/docs/` lesen.
+- Erst geplante Dateien und Vorgehen nennen; Anwendungscode nur nach Freigabe ändern.
+- Keine Packages ohne Freigabe.
+- Keine Secrets oder `.env`-Inhalte ausgeben.
+- Keine Remote-Datenbank und kein `db push` ohne separate ausdrückliche Freigabe.
+- Kein `db reset` ohne ausdrückliche Freigabe in der aktuellen Sitzung.
+- Migrationen additiv; bestehende Migrationen nicht umschreiben.
+- Staging und Commits nur mit expliziten Dateien.

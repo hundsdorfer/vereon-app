@@ -34,7 +34,8 @@ Nicht in dieses Dokument gehören:
 * einzelne Prompt-Anweisungen
 * Tagesstatus oder kurzfristige Arbeitsnotizen
 
-Dafür sind primär `CURRENT_TASK.md`, `STATUS.md`, `CHATGPT_CONTEXT.md` und aktuelle Chat-/Claude-Handoffs zuständig.
+Dafür sind primär `CURRENT_TASK.md`, `STATUS.md`, `PROJECT_BRIEF.md` und aktuelle
+Auftrags-/Review-Handoffs zuständig.
 
 ---
 
@@ -155,10 +156,13 @@ Dieses Dokument hält nur den Grundsatz fest:
 
 > Sicherheitskritische Repo-Operationen müssen kontrolliert, gezielt und mit expliziter Freigabe erfolgen.
 
-Konkrete Arbeitsregeln wie kein `git add .`, kein `git add -A`, kein Push ohne Freigabe, kein `supabase db push`, kein `npx supabase db reset` ohne separate Freigabe und keine Secrets-Anzeige gehören in:
+Konkrete Arbeitsregeln wie kein `git add .`, kein `git add -A`, kein Push ohne
+Freigabe, kein `supabase db push`, kein `npx supabase db reset` ohne separate
+Freigabe und keine Secrets-Anzeige gehören in:
 
 ```text
-docs/CHATGPT_CONTEXT.md
+AGENTS.md
+CLAUDE.md
 docs/CURRENT_TASK.md
 ```
 
@@ -239,13 +243,17 @@ Bei kleineren Entscheidungen dürfen einzelne Abschnitte kompakter sein oder ent
 | ID      |      Datum | Titel                                                    | Status                 | Typ                                 |
 | ------- | ---------: | -------------------------------------------------------- | ---------------------- | ----------------------------------- |
 | DEC-001 | 2026-07-06 | Dokumentationsstruktur und kanonische Quellen            | accepted               | Documentation                       |
-| DEC-002 | 2026-07-06 | ChatGPT-Kontextdatei als primäre ChatGPT-Projektquelle   | accepted-retrospective | Documentation                       |
+| DEC-012 | 2026-07-18 | Projekt-Handoff über Project Brief und Current Task      | accepted               | Documentation                       |
+| DEC-011 | 2026-07-18 | Geschütztes Entwicklungs-Deployment und Pilot-Gates      | accepted               | Technical / Security / Privacy      |
+| DEC-010 | 2026-07-18 | Geburtsdaten und Guardian-Nachweis im Jugend-MVP          | accepted               | Privacy / Product / Security        |
+| DEC-009 | 2026-07-18 | Eigentum, Trainerrechte und Termin-Lebenszyklus           | accepted               | Product / Security / Architecture   |
+| DEC-008 | 2026-07-08 | Feature-Catalog-ID-Format `FC-[MODUL]-[NUMMER]`          | accepted               | Documentation                       |
+| DEC-002 | 2026-07-06 | ChatGPT-Kontextdatei als primäre ChatGPT-Projektquelle   | superseded             | Documentation                       |
 | DEC-003 | 2026-07-06 | Einzelteam-MVP vor Vereinsplattform                      | accepted-retrospective | Product / Architecture              |
 | DEC-004 | 2026-06-29 | Datenbasierte Ansichtslogik statt fester Rollenidentität | accepted               | Product / Architecture / UX         |
 | DEC-005 | 2026-07-06 | Web/PWA zuerst, native App später                        | accepted-retrospective | Product / UX / Technical            |
 | DEC-006 | 2026-07-06 | Server Actions + Supabase RPC/RLS als Sicherheitsmuster  | accepted-retrospective | Architecture / Security / Technical |
-| DEC-007 | 2026-07-06 | Datenminimierung bei Kinder-/Guardian-Daten              | accepted-retrospective | Privacy / Product / Security        |
-| DEC-008 | 2026-07-08 | Feature-Catalog-ID-Format `FC-[MODUL]-[NUMMER]`          | accepted               | Documentation                       |
+| DEC-007 | 2026-07-06 | Datenminimierung bei Kinder-/Guardian-Daten              | superseded             | Privacy / Product / Security        |
 
 Hinweis: `FEATURE_CATALOG.md` wurde inzwischen erstellt und von Claude Code im Review-only-Modus geprüft (siehe `DEC-008`).
 
@@ -257,7 +265,8 @@ Hinweis: `FEATURE_CATALOG.md` wurde inzwischen erstellt und von Claude Code im R
 **Typ:** Documentation
 **Entscheidungszeitpunkt:** Am 2026-07-06 im Rahmen des Dokumentations-Cleanups beschlossen.
 **Ersetzt:** —
-**Ersetzt durch:** —
+**Ersetzt durch:** DEC-008 präzisiert das Feature-ID-Format; DEC-012 ersetzt den
+operativen Handoff-/Copy-Prozess.
 
 ### Kontext
 
@@ -471,12 +480,270 @@ docs/ROADMAP.md
 
 ---
 
+## DEC-012 — 2026-07-18 — Projekt-Handoff über Project Brief und Current Task
+
+**Status:** accepted
+**Typ:** Documentation
+**Entscheidungszeitpunkt:** Nach Abschluss des gemeinsamen
+Dokumentationsreviews am 2026-07-18.
+**Ersetzt:** DEC-002 sowie den operativen Handoff-/Copy-Prozess aus DEC-001
+**Ersetzt durch:** —
+
+### Kontext
+
+`CHATGPT_CONTEXT.md`, `PROJECT_BRIEF.md` und `CURRENT_TASK.md` enthielten große
+inhaltliche Überschneidungen. Der zusätzliche ChatGPT-Handoff musste nach
+Meilensteinen separat gepflegt werden und war nach dem abgeschlossenen
+Claude-Review bereits wieder veraltet.
+
+ChatGPT/Codex arbeitet inzwischen mit direktem Repository-Kontext. Für externe
+Planungssitzungen reichen ein stabiler Projektüberblick und der aktuelle
+Arbeitsauftrag.
+
+### Entscheidung
+
+- `PROJECT_BRIEF.md` ist der kompakte, relativ stabile Einstieg in Produkt,
+  Architektur, Rollen und Sicherheitsgrenzen.
+- `CURRENT_TASK.md` enthält ausschließlich die aktuelle Arbeitsphase, den
+  freigegebenen Auftrag, Nicht-Ziele und den nächsten Übergabeschritt.
+- Fachdetails werden aus den über `DOCS_INVENTORY.md` zugeordneten kanonischen
+  Dokumenten gelesen.
+- `CHATGPT_CONTEXT.md` wird entfernt und nicht als dritte Handoff-Kopie
+  fortgeführt.
+- Ein externer ChatGPT-Handoff verwendet bei Bedarf `PROJECT_BRIEF.md`,
+  `CURRENT_TASK.md` und nur die für die konkrete Aufgabe relevanten
+  Fachdokumente.
+- Autorisierte Agenten dürfen Dokumente direkt im Repository bearbeiten. Ein
+  manueller Copy-/Replace-Schritt ist nicht mehr vorgeschrieben; unabhängiger
+  Review und gezielter Commit bleiben erforderlich.
+
+### Begründung
+
+Zwei klar abgegrenzte Handoff-Dateien reduzieren Redundanz und
+Aktualisierungsfehler. Gleichzeitig bleibt die Quellenhierarchie erhalten und
+externe Planung ist weiterhin ohne Upload aller Projektdokumente möglich.
+
+### Gilt für
+
+- ChatGPT-/Codex-/Claude-Handoffs,
+- neue Entwicklungs- und Review-Sitzungen,
+- Pflege von `PROJECT_BRIEF.md`, `CURRENT_TASK.md` und `DOCS_INVENTORY.md`.
+
+### Gilt nicht für / Nicht entschieden
+
+- Die kanonischen Fach- und Technikdokumente werden nicht ersetzt.
+- Diese Entscheidung ändert keine Rollen, Features, Phasen oder
+  Implementierungsregeln.
+
+### Auswirkungen
+
+- `CHATGPT_CONTEXT.md` wird entfernt.
+- Verweise auf den alten Handoff werden auf `PROJECT_BRIEF.md`,
+  `CURRENT_TASK.md` oder `DOCS_INVENTORY.md` umgestellt.
+- DEC-002 bleibt als historische, ersetzte Entscheidung im Log erhalten.
+
+---
+
+## DEC-011 — 2026-07-18 — Geschütztes Entwicklungs-Deployment und Pilot-Gates
+
+**Status:** accepted
+
+**Typ:** Technical / Security / Privacy
+
+**Entscheidungszeitpunkt:** Im gemeinsamen Dokumentationsreview am 2026-07-18.
+
+**Ersetzt:** —
+
+**Ersetzt durch:** —
+
+### Kontext
+
+`www.vereon.app` ist über Vercel erreichbar und verwendet Supabase Cloud, obwohl
+derzeit nur der Projekteigentümer testet. Rechtstexte, produktiver E-Mail-Versand,
+Monitoring und Wiederherstellungsverfahren sind noch nicht pilotreif.
+
+### Entscheidung
+
+* Das vollständige Vercel-Deployment wird während der internen Entwicklung durch
+  Deployment Protection geschützt.
+* Die gehostete Umgebung heißt „internes Entwicklungs-Deployment“, nicht
+  Produktion.
+* `www.vereon.app` ist kanonisch; `vereon.app` leitet dauerhaft dorthin um.
+* Lokal verwendet die App lokale Supabase-Container; die gehostete Umgebung
+  verwendet Supabase Cloud.
+* Remote-Migrationen erfolgen ausschließlich nach separater ausdrücklicher
+  Freigabe und anschließender Verifikation.
+* Vor einem Pilot sind mindestens echte Rechtstexte, produktiver E-Mail-Versand,
+  E-Mail-Verifikation für produktive Aktionen, automatisierter Join-Cleanup,
+  geklärte Verträge/Datenregion, Monitoring sowie getestetes Backup/Restore/
+  Rollback erforderlich.
+* Nicht verifizierte Plattformfunktionen werden nicht als vorhanden behauptet.
+
+### Begründung
+
+Eine öffentlich erreichbare URL macht eine unfertige Anwendung nicht automatisch
+zu Produktion. Der Schutz verhindert unbeabsichtigte Registrierung und
+Verarbeitung realer Minderjährigendaten, während technische und rechtliche
+Voraussetzungen fehlen.
+
+### Gilt für
+
+* Vercel- und Supabase-Umgebungen
+* Release- und Migrationsprozess
+* Pilotfreigabe
+* `STATUS.md`, `SECURITY.md`, `LEGAL_TODO.md`, `MVP_TEST_CHECKLIST.md`
+
+### Gilt nicht für / Nicht entschieden
+
+Nicht entschieden sind das spätere öffentliche Registrierungsmodell, konkrete
+Vercel-Schutzkonfiguration, Monitoringanbieter, E-Mail-Anbieter und
+Backuptechnologie.
+
+---
+
+## DEC-010 — 2026-07-18 — Geburtsdaten und Guardian-Nachweis im Jugend-MVP
+
+**Status:** accepted
+
+**Typ:** Privacy / Product / Security
+
+**Entscheidungszeitpunkt:** Im gemeinsamen Dokumentationsreview am 2026-07-18.
+
+**Ersetzt:** DEC-007
+
+**Ersetzt durch:** —
+
+### Kontext
+
+DEC-007 ließ konkrete optionale Kinderdaten und den finalen Guardian-Nachweis
+offen. Für das MVP wurden diese Punkte nun präzisiert.
+
+### Entscheidung
+
+* Geburtsjahr ist für registrierte Nutzer und Spieler Pflicht.
+* Das vollständige Geburtsdatum ist freiwillig.
+* Bei Spielern dient es ausschließlich Geburtstagsübersicht und altersbezogener
+  Teamorganisation.
+* Teamseitig sehen nur aktive `team_owner`, `head_coach` und `assistant_coach`
+  des betroffenen Teams das vollständige Spielergeburtsdatum.
+* Spieler dürfen das eigene freiwillige Datum sehen und korrigieren; Guardians
+  nur das Datum des eigenen verknüpften Kindes. Andere Spieler und Guardians
+  erhalten keinen Zugriff.
+* Vor der freiwilligen Eingabe werden Zweck und Trainer-Sichtbarkeit verständlich
+  erklärt und bestätigt.
+* Ohne vollständiges Datum zeigt die UI nur das Geburtsjahr und übt keinen
+  zusätzlichen Eingabedruck aus.
+* Endet die aktive Teamzuordnung, bleibt in notwendiger Historie nur das
+  Geburtsjahr sichtbar. Der eigene Spieler-/Kind-Profilzugriff bleibt davon
+  getrennt.
+* Im frühen MVP existiert ein Guardian-Account pro Kind; weitere Bezugspersonen
+  sind Kontaktangaben ohne Login- oder RSVP-Rechte.
+* Der Guardian erklärt ausdrücklich, zur Anmeldung berechtigt zu sein. Gespeichert
+  werden Nutzer, Zeitpunkt und Textversion. Dies ist eine Selbsterklärung, keine
+  Identitäts- oder Obsorgeprüfung.
+* Annahmen von Nutzungsbedingungen und Datenschutzerklärung speichern Nutzer,
+  Textversion und Zeitpunkt.
+* Abgelehnte und zurückgezogene Join-Anfragen werden nach 90 Tagen automatisch
+  bereinigt; unnötige Kinderdaten früher.
+
+### Begründung
+
+Das Modell ermöglicht die für Trainer gewünschte Geburtstags- und
+Altersorganisation, begrenzt aber Pflichtdaten, Zweck, Sichtbarkeit und
+Aufbewahrung. Ein versionierter Nachweis ist belastbarer als ein bloßer
+Beziehungszeitstempel.
+
+### Gilt für
+
+* Profile und Spieler
+* Guardian-/Kind-Join
+* RLS, Queries und UI-Sichtbarkeit
+* Lösch-/Cleanup-Prozesse
+* `DATABASE_MODEL.md`, `DSGVO_PRIVACY_MODEL.md`, `SECURITY.md`,
+  `MVP_TEST_CHECKLIST.md`
+
+### Gilt nicht für / Nicht entschieden
+
+Rechtsgrundlage, Altersgrenzen, rechtliche Wirksamkeit der Selbsterklärung,
+Verantwortlichkeiten und eine mögliche Datenschutz-Folgenabschätzung bleiben
+fachanwaltlich zu prüfen. Gesundheitsdaten, Fotos, Adressen, Leistungsprofile und
+freie Trainernotizen werden durch diese Entscheidung nicht freigegeben.
+
+
+---
+
+## DEC-009 — 2026-07-18 — Eigentum, Trainerrechte und Termin-Lebenszyklus
+
+**Status:** accepted
+
+**Typ:** Product / Security / Architecture
+
+**Entscheidungszeitpunkt:** Im gemeinsamen Dokumentationsreview am 2026-07-18.
+
+**Ersetzt:** —
+
+**Ersetzt durch:** —
+
+### Kontext
+
+Für die Einzelteam-Stabilisierung mussten Owner-Sonderrechte, Assistant-Coach-
+Grenzen sowie der Unterschied zwischen Bearbeiten, Absagen, Löschen und
+Archivieren eindeutig werden.
+
+### Entscheidung
+
+* Es gibt genau einen `team_owner`.
+* Nur der Owner verwaltet vordefinierte Teamrollen; granulare Einzelrechte sind
+  vorerst ausgeschlossen.
+* Eigentumsübertragung erfordert einen registrierten, volljährigen, aktiven Nutzer
+  desselben Teams und dessen ausdrückliche Bestätigung.
+* Die Übertragung ändert nur die Owner-Rolle; weitere Rollen beider Nutzer bleiben
+  unverändert.
+* Mehrfachrollen addieren Rechte. Owner + Head Coach kann die eigene
+  Head-Coach-Rolle entfernen, ohne Owner zu verlieren.
+* Join-Anfragen entscheiden Owner und Head Coach.
+* Einladungscode anzeigen, erneuern und deaktivieren dürfen Owner, Head Coach und
+  Assistant Coach.
+* Spieler entfernen dürfen Owner und Head Coach; die Zuordnung endet als
+  Soft-Delete und Historie bleibt erhalten.
+* Alle drei Trainerrollen dürfen Training erstellen, bearbeiten und absagen.
+* Nur Owner und Head Coach dürfen ein Training hart löschen: vor Beginn, ohne
+  jegliche RSVP und nach zusätzlicher Texteingabe wie `LÖSCHEN`.
+* Nach Beginn oder sobald RSVP vorhanden ist, bleibt nur Absage/Historie.
+* Abgesagte Trainings bleiben sichtbar und akzeptieren keine neuen/geänderten
+  RSVP.
+* Spieler, Guardians und Trainer dürfen RSVP bis Terminbeginn ändern.
+  Trainer-RSVP wird getrennt von Spieler-RSVP gespeichert.
+* Teams mit Mitgliedern, Terminen oder Historie werden durch den Owner archiviert,
+  nicht über einen normalen App-Button hart gelöscht.
+
+### Begründung
+
+Die Regeln schützen Historie und Teamkontinuität, verhindern versehentliche
+Löschung und halten operative Assistant-Coach-Rechte von Eigentums- und
+destruktiven Rechten getrennt.
+
+### Gilt für
+
+* Rollen- und Berechtigungskonzept
+* Eigentumsübertragung
+* Einladung, Spielerentfernung, Training und RSVP
+* Datenmodell, Security und Tests
+
+### Gilt nicht für / Nicht entschieden
+
+Granulare Einzelrechte, mehrere Owner, Club-Admin-Flows und ein allgemeines
+Hard-Delete-Modell werden nicht eingeführt. Konkrete UI-Texte außer der
+zusätzlichen Löschbestätigung bleiben im Design-/Flow-Review festzulegen.
+
+---
+
 ## DEC-008 — 2026-07-08 — Feature-Catalog-ID-Format
 
 **Status:** accepted
 **Typ:** Documentation
 **Entscheidungszeitpunkt:** Am 2026-07-08 im Rahmen des ersten Claude-Code-Reviews von `docs/FEATURE_CATALOG.md` festgestellt und entschieden.
-**Ersetzt:** —
+**Ersetzt:** DEC-001, ausschließlich den Abschnitt zum Feature-ID-Format
 **Ersetzt durch:** —
 
 ### Kontext
@@ -533,11 +800,11 @@ docs/FEATURE_CATALOG.md
 
 ## DEC-007 — 2026-07-06 — Datenminimierung bei Kinder-/Guardian-Daten
 
-**Status:** accepted-retrospective
+**Status:** superseded
 **Typ:** Privacy / Product / Security
 **Entscheidungszeitpunkt:** Früher im Projektverlauf getroffen, am 2026-07-06 nachträglich dokumentiert.
 **Ersetzt:** —
-**Ersetzt durch:** —
+**Ersetzt durch:** DEC-010
 
 ### Kontext
 
@@ -545,7 +812,7 @@ Vereon verarbeitet Daten von Spielern, darunter im Jugendbereich auch Minderjäh
 
 Dadurch entstehen erhöhte Anforderungen an Datenminimierung, Zweckbindung, Einwilligung, Nachweisbarkeit und Zugriffsschutz.
 
-### Entscheidung
+### Historische Entscheidung
 
 Für Kinder-/Guardian-Funktionen gilt:
 
@@ -553,7 +820,8 @@ Für Kinder-/Guardian-Funktionen gilt:
 * Optionale Zusatzdaten durch Eltern/Guardians sind grundsätzlich möglich.
 * Konkrete optionale Felder werden durch diese Entscheidung nicht freigegeben.
 * Sensible oder detaillierte Felder müssen später einzeln in `DSGVO_PRIVACY_MODEL.md`, `FEATURE_CATALOG.md` und ggf. `LEGAL_TODO.md` geprüft werden.
-* Der finale Consent-/Einwilligungsnachweis für Minderjährige bleibt eine offene Pre-Pilot-Anforderung.
+* Der finale Consent-/Einwilligungsnachweis für Minderjährige blieb zunächst
+  offen und wurde mit DEC-010 konkretisiert.
 
 ### Begründung
 
@@ -912,11 +1180,11 @@ docs/ROLES_AND_PERMISSIONS.md
 
 ## DEC-002 — 2026-07-06 — ChatGPT-Kontextdatei als primäre ChatGPT-Projektquelle
 
-**Status:** accepted-retrospective
+**Status:** superseded
 **Typ:** Documentation
 **Entscheidungszeitpunkt:** Früher im Projektverlauf getroffen, am 2026-07-06 nachträglich dokumentiert.
 **Ersetzt:** —
-**Ersetzt durch:** —
+**Ersetzt durch:** DEC-012
 
 ### Kontext
 
@@ -1027,7 +1295,7 @@ Die sichtbaren Ansichten werden langfristig nicht aus `profiles.onboarding_role`
 
 | Ansicht                 | Voraussetzung                                                                                                           |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Traineransicht          | aktive `team_membership` mit Trainer-/Managerrolle, z. B. `team_owner`, `head_coach`, `assistant_coach`, `team_manager` |
+| Traineransicht          | aktive `team_membership` mit einer Zielmodell-Trainerrolle: `team_owner`, `head_coach`, `assistant_coach` |
 | Spieleransicht          | eigener `players.user_id`-Eintrag                                                                                       |
 | Eltern-/Guardianansicht | verifizierte `player_guardians`-Beziehung, z. B. `verified_at IS NOT NULL`                                              |
 | Vereinsansicht          | aktive `club_membership` mit Vereinsrolle, später Phase 2+                                                              |
@@ -1159,9 +1427,7 @@ Diese Sektion ist keine Todo-Liste. Sie enthält nur Grundsatzentscheidungen, di
 
 Aktuell bewusst nicht final entschieden:
 
-* finales Einladungscode-Format
 * Match-MVP-Umfang
 * finale Club-/Vereinsrollen
 * finales Monetarisierungsmodell
 * finale Native-App-Strategie nach PWA
-* finaler Consent-/Einwilligungsnachweis für Minderjährige

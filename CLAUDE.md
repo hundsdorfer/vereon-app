@@ -2,15 +2,8 @@
 
 # Vereon — Projektregeln für Claude
 
-## Pflichtlektüre zu Sessionbeginn
-
-1. `docs/PROJECT_BRIEF.md` — Kompaktzusammenfassung: Architektur, MVP, Rollen, Verbote
-2. `docs/CURRENT_TASK.md` — Aktueller Arbeitsstand und nächste Schritte (falls vorhanden)
-
-Bei Datenbankaufgaben zusätzlich: `docs/DATABASE_MODEL.md`, `docs/SECURITY.md`
-Bei Rollenaufgaben zusätzlich: `docs/ROLES_AND_PERMISSIONS.md`
-Bei Supabase-Aufgaben zusätzlich: `docs/SUPABASE_STRATEGY.md`
-Bei MVP/Feature-Planung zusätzlich: `docs/MVP_SCOPE.md`
+Alle gemeinsamen Arbeits-, Sicherheits-, Datenbank-, Git- und Qualitätsregeln
+stehen in `AGENTS.md` und gelten auch für Claude Code.
 
 ---
 
@@ -26,26 +19,19 @@ Bei MVP/Feature-Planung zusätzlich: `docs/MVP_SCOPE.md`
 
 ## Arbeitsregeln
 
-- **Kein großer Schritt ohne Plan** — erst Dateiliste + Vorhaben nennen, dann auf Bestätigung warten
-- **Immer auflisten** welche Dateien geändert werden, bevor geändert wird
-- Antworten kurz halten — keine Wiederholungen aus Docs, keine Zusammenfassungen am Ende
-- Standard: Server Component. `'use client'` nur für State, Event Handler, Browser APIs
-- Deutsch für Dokumentation und Kommentare; keine unnötigen Kommentare im Code
-
----
-
-## Hard Constraints
-
-- **Keine Remote-Datenbank** anfassen (kein `db push`, kein direkter Zugriff)
-- **Kein `db reset`** ohne ausdrückliche Bestätigung in dieser Session
-- **Migration nie befüllen** ohne ausdrückliche Bestätigung in dieser Session
-- **Keine Secrets anzeigen** — kein `.env.local`, kein Service Role Key
-- **`SUPABASE_SERVICE_ROLE_KEY` nie committen** — er umgeht RLS vollständig
-- **Kein Anwendungscode ändern** ohne vorherige Bestätigung
-- **Keine Packages installieren** ohne Bestätigung
+- Claude Code übernimmt die Implementierung ausdrücklich freigegebener
+  Entwicklungsaufträge.
+- Vor einer Änderung Dateiliste, Vorgehen und vorgesehene Prüfungen nennen.
+- Nach der Umsetzung erhält Codex den Diff und die Prüfergebnisse für einen
+  unabhängigen Review.
+- Bestätigte Reviewkorrekturen werden gezielt umgesetzt; Commit und Push bleiben
+  eigene, ausdrücklich freizugebende Schritte.
+- Antworten kurz halten. Der Abschluss nennt nur geänderte Dateien,
+  ausgeführte beziehungsweise ausgelassene Prüfungen und verbleibende Risiken.
 
 ---
 
 ## Dokumentation
 
-Alle Architektur- und Produktentscheidungen landen in `docs/`. Vollständige Docs-Liste in `docs/PROJECT_BRIEF.md`.
+Alle Architektur- und Produktentscheidungen landen in `docs/`. Zuständigkeiten
+und die vollständige Dokumentliste stehen in `docs/DOCS_INVENTORY.md`.

@@ -1,164 +1,176 @@
-# Architecture — Vereon
+# Architektur — Vereon
 
-**Stand:** 2026-07-06 — beschreibt den tatsächlichen Code-Zustand (nicht die Planung). Für Entscheidungsbegründungen siehe `TECH_STACK.md`, `SUPABASE_STRATEGY.md`, `DATABASE_MODEL.md`, `ROLES_AND_PERMISSIONS.md`.
+**Stand:** 2026-07-18
+**Dokumenttyp:** code-verifizierte technische Ist-Dokumentation
+**Geprüfter Stand:** `main` / `bf2158c`, einschließlich lokaler Dokumentationsänderungen
 
----
+Dieses Dokument beschreibt ausschließlich den im Repository belegbaren Ist-Zustand. Fachliche Zielentscheidungen stehen in `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`. Abweichungen zwischen Ist und Ziel werden in `docs/STATUS.md` geführt.
 
-## 1. Tech-Stack
+## 1. Zweck und Systemgrenze
 
-| Bereich | Technologie | Version |
-|---|---|---|
-| Framework | Next.js (App Router) | 16.2.9 |
-| UI | React / react-dom | 19.2.4 |
-| Sprache | TypeScript (strict) | ^5 |
-| Styling | Tailwind CSS (kein `tailwind.config.js`, Konfiguration via `@theme` in `globals.css`) | ^4 |
-| Backend/DB | Supabase (`@supabase/ssr`, `@supabase/supabase-js`) | ^0.12 / ^2.108 |
-| QR-Code | `react-qr-code` | ^2.2 |
-| E2E-Tests | `@playwright/test` | ^1.61 |
-| Lint | ESLint + `eslint-config-next` | ^9 / 16.2.9 |
+Vereon ist eine deutschsprachige Webanwendung für die Organisation einzelner Fußballteams. Der implementierte Kern umfasst:
 
-Bewusst **nicht** vorhanden: Prisma, NextAuth, Redux/Zustand, globales Toast-System. **Zod ist trotz Empfehlung in `SECURITY.md` nicht installiert** — serverseitige Validierung erfolgt manuell in den Server Actions (String-Checks, Regex, Enum-Vergleiche).
+- Registrierung, Login und Logout,
+- Erstellen eines eigenständigen Teams,
+- Einladungscode und Beitrittsanfragen für Self-Player und Guardian/Kind,
+- Annahme oder Ablehnung von Beitrittsanfragen,
+- Anzeige und Soft-Entfernung von Spielern,
+- Erstellen und Anzeigen von Trainings,
+- Spieler- und Guardian-RSVP,
+- RSVP-Übersicht für Trainerrollen.
 
-Scripts (`package.json`): `dev`, `build`, `start`, `lint`, `test:e2e` (+ `:ui`, `:headed`). Kein Unit-Test-Script.
+Club-/Mehrteam-Verwaltung ist im Schema vorbereitet, besitzt aber keinen vollständigen App-Flow. Match, Trainer-RSVP, Anwesenheitsabschluss, Rollenverwaltung, Training bearbeiten und Training hart löschen sind nicht implementiert.
 
----
+## 2. Laufzeitarchitektur
 
-## 2. Konfiguration
-
-- **`next.config.ts`** — minimal, setzt nur `allowedDevOrigins` (private IP-Ranges für Geräte-Tests im lokalen Netz während der Entwicklung).
-- **`tsconfig.json`** — `strict: true`, `moduleResolution: bundler`, Pfad-Alias `@/*` → `./src/*`.
-- **`src/proxy.ts`** — Next.js-16-Ersatz für `middleware.ts` (Export-Name `proxy` statt `middleware`). Ruft `updateSession()` aus `src/lib/supabase/middleware.ts` auf, die immer `supabase.auth.getUser()` verwendet (nie `getSession()`, da nur `getUser()` das JWT serverseitig verifiziert). Definiert `PUBLIC_ROUTES` (`/`, `/login`, `/register`, `/auth/callback`) und `PUBLIC_PREFIXES` (`/join/`, `/legal/`, sowie `/dev/` nur in `development`). Leitet nicht eingeloggte Nutzer zu `/login?redirect=` um, eingeloggte Nutzer weg von `/login`/`/register` zu `/dashboard`.
-- **`src/app/globals.css`** — Tailwind-v4-Theme über `@theme inline`. Farb-Umschaltung über `data-theme`-Attribut (per `@custom-variant dark`), nicht über reine `prefers-color-scheme`-Media-Query — letztere dient nur als Fallback beim allerersten Laden (Inline-Script in `layout.tsx`, vor Hydration), danach übernimmt `localStorage('vereon-theme')`. Definiert ein vollständiges Light/Dark-Farbtoken-System plus eine eigene, immer dunkle Navigations-Palette (`--nav-*`).
-
----
-
-## 3. Ordnerstruktur (`src/`)
-
-```
-src/
-  actions/            Server Actions ('use server'), je Feature eine Datei
-    auth.ts             signIn / signUp / signOut
-    team.ts             createTeamAction
-    join.ts             submitJoinRequestSelf/GuardianAction
-    joinRequests.ts     approve/rejectJoinRequestAction
-    events.ts           createEventAction, respondToEventAction
-    players.ts          removePlayerFromTeamAction (uncommitted, s. STATUS.md)
-
-  app/                App Router
-    (app)/              Route-Gruppe: authentifizierter Bereich (Sidebar/Shell)
-      dashboard/
-      teams/            Liste, Detail, Invite, Requests, Events (+ new/[eventId])
-    (auth)/             Route-Gruppe: Login/Register (zentrierte Card-Shell)
-    auth/callback/      Route Handler — PKCE Code-Exchange nach E-Mail-Bestätigung
-    join/[code]/        Öffentliche Beitritts-Landingpage (außerhalb der Route-Gruppen)
-    legal/{imprint,privacy,terms}/  Platzhalter-Seiten (s. STATUS.md)
-    dev/ui-preview/     Nur in development erreichbar (proxy blockt in production)
-    layout.tsx          Root-Layout: Fonts, Theme-Init-Script, PWA-Metadaten
-    manifest.ts         PWA-Manifest
-
-  components/
-    ui/                 Generische Design-System-Primitives: Button, Card, Input,
-                        Label, Badge, EmptyState, FormError, PageHeader,
-                        RsvpStatusBadge, ConfirmButton
-    layout/             App-Chrome: AppShell, NavLinks, ThemeProvider, ThemeToggle
-
-  features/             Client Components, pro Feature-Slice, ohne eigene
-                        actions/hooks/types-Unterordner (Actions liegen zentral)
-    auth/  teams/  join/  joinRequests/  events/  players/
-
-  hooks/                leer (.gitkeep)
-  lib/
-    supabase/           client.ts, server.ts, route-handler.ts, middleware.ts
-                        (kein admin.ts — Service-Role-Key wird nie im App-Code verwendet)
-    format.ts, utils.ts
-  styles/               leer (.gitkeep)
-  types/
-    database.types.ts   aktuell nur 7-Zeilen-`Json`-Stub, keine generierten
-                        Supabase-Typen (s. STATUS.md)
-  proxy.ts
+```text
+Browser
+  │
+  ├─ Next.js App Router
+  │    ├─ Server Components
+  │    ├─ Client Components für Formzustand/Interaktion
+  │    ├─ Server Actions für Mutationen
+  │    └─ src/proxy.ts für Session-Aktualisierung und Routenschutz
+  │
+  └─ Supabase
+       ├─ Auth
+       ├─ PostgreSQL
+       ├─ PostgREST / supabase-js
+       ├─ Row Level Security
+       └─ SECURITY-DEFINER-RPCs für kritische Mutationen
 ```
 
-### Routen-Übersicht
+Die Anwendung verwendet keinen eigenen klassischen API-Layer. Server Components lesen über den Supabase-Server-Client; Server Actions rufen überwiegend RPCs auf. Kritische Autorisierung liegt in den Datenbankfunktionen und RLS-Policies, nicht nur in der Oberfläche.
 
-| Pfad | Datei | Zweck |
-|---|---|---|
-| `/` | `app/page.tsx` | Reiner Redirect: eingeloggt → `/dashboard`, sonst → `/login` |
-| `/login`, `/register` | `app/(auth)/*/page.tsx` | Auth-Formulare |
-| `/auth/callback` | `app/auth/callback/route.ts` | PKCE-Code-Exchange |
-| `/dashboard` | `app/(app)/dashboard/page.tsx` | Rollenabhängige Übersicht (Trainer vs. Spieler/Guardian) |
-| `/teams` | `app/(app)/teams/page.tsx` | Teamliste |
-| `/teams/new` | `.../teams/new/page.tsx` | Team-Erstellung |
-| `/teams/[teamId]` | `.../teams/[teamId]/page.tsx` | Team-Detail: Roster, nächste Trainings, Invite-/Requests-CTAs |
-| `/teams/[teamId]/invite` | `.../invite/page.tsx` | Einladungscode + QR-Code |
-| `/teams/[teamId]/requests` | `.../requests/page.tsx` | Beitrittsanfragen prüfen |
-| `/teams/[teamId]/events` | `.../events/page.tsx` | Trainingsliste (upcoming/past) |
-| `/teams/[teamId]/events/new` | `.../events/new/page.tsx` | Training erstellen |
-| `/teams/[teamId]/events/[eventId]` | `.../events/[eventId]/page.tsx` | Trainingsdetail + RSVP |
-| `/join/[code]` | `app/join/[code]/page.tsx` | Öffentliche Beitrittsseite (Self/Guardian) |
-| `/legal/{imprint,privacy,terms}` | `app/legal/*/page.tsx` | Platzhalter-Rechtstexte |
-| `/dev/ui-preview` | `app/dev/ui-preview/page.tsx` | Komponenten-Showcase, nur Dev |
+## 3. Einstiegspunkte und Verzeichnisse
 
----
-
-## 4. Datenfluss-Pattern
-
-Durchgängiges Muster für jede Mutation, nachvollzogen am Beispiel **Team erstellen**:
-
-1. **Page** (`app/(app)/teams/new/page.tsx`) — Server Component, rendert nur `<CreateTeamForm />`.
-2. **Client Component** (`features/teams/CreateTeamForm.tsx`) — `'use client'`, bindet die Server Action per React-19-`useActionState(createTeamAction, null)` an `<form action={action}>`.
-3. **Server Action** (`actions/team.ts` → `createTeamAction`) — validiert Minimalfelder, holt den Server-Client aus `lib/supabase/server.ts`, ruft `supabase.rpc('create_independent_team', {...})` auf.
-4. **DB-Funktion** `create_independent_team()` (SECURITY DEFINER) — legt atomar `teams`-Zeile, `team_memberships` und `team_member_roles` (Owner + optional Head Coach) an, gibt `team_id` zurück.
-5. Action ruft `revalidatePath('/teams')` + `revalidatePath('/dashboard')` und `redirect('/teams/[teamId]')`.
-6. **Detailseite** liest danach direkt per Supabase-Query-Builder (Server-Client) sowie über `supabase.rpc('has_team_role', ...)` für Rollen-Gating.
-
-Dieses Muster (Server Component → `useActionState`-Formular → Server Action → `supabase.rpc()` auf SECURITY-DEFINER-Funktion → `revalidatePath`/`redirect`) wiederholt sich identisch in `events.ts`, `join.ts`, `joinRequests.ts`, `players.ts`. **Privilegierte Mutationen laufen praktisch nie über rohe `.insert()`/`.update()`** — Autorisierungslogik liegt in Postgres (RLS + SECURITY DEFINER), nicht verdoppelt in TypeScript. Lesezugriffe (z. B. Team-Detailseite) nutzen dagegen direkt den Supabase-Query-Builder, da hier RLS allein ausreicht.
-
----
-
-## 5. Auth & Autorisierung
-
-- **4 Supabase-Client-Varianten** unter `src/lib/supabase/`:
-  - `server.ts` — Server Components/Actions, Cookie-Zugriff via `next/headers`, `import 'server-only'`.
-  - `route-handler.ts` — für `NextRequest`-Kontexte (genutzt in `auth/callback/route.ts`).
-  - `client.ts` — `'use client'`, Browser-Client.
-  - `middleware.ts` — `updateSession()`, aufgerufen aus `src/proxy.ts`.
-  - Kein Admin-/Service-Role-Client existiert im App-Code.
-- **Session-Prüfung**: immer `getUser()`, nie `getSession()` (verifiziert das JWT tatsächlich server-seitig statt nur den Cookie zu lesen).
-- **Routenschutz**: zentral über `src/proxy.ts` (Public-Routes/-Prefixes-Listen), zusätzlich pro Seite ein eigener `if (!user) redirect('/login')`-Check (Doppelung, aber konsistent).
-- **Rollenprüfung zur Laufzeit**: über RPCs `has_team_role(p_team_id, p_role_keys[])` / `has_club_role(...)`, direkt aus Server Components aufgerufen (z. B. `isTrainer`, `canManageMembers` in der Team-Detailseite). Diese App-seitige Prüfung ist reine UI-Convenience — die SECURITY-DEFINER-Funktionen prüfen die Berechtigung beim Schreiben erneut (Defense in Depth).
-- **Tatsächlich verdrahtete Rollen**: `team_owner`, `head_coach` (Management-UI), `player`, `guardian` (Self-Service). Weitere in `ROLES_AND_PERMISSIONS.md` dokumentierte Rollen (Club-Rollen, `assistant_coach`, `team_manager`, `goalkeeper_coach` etc.) sind architektonisch vorgesehen, aber ohne aktiven UI-/RLS-Pfad.
-
----
-
-## 6. Datenbank & Migrationen
-
-13 Migrationsdateien unter `supabase/migrations/` (Dateinamen tragen volle Timestamps, nicht das idealisierte `001_/002_`-Schema aus `PROJECT_BRIEF.md`):
-
-| Migration | Inhalt |
+| Pfad | Aufgabe |
 |---|---|
-| `20260625190923_init_mvp0_core` | Kern-Tabellen (roles, profiles, clubs, teams, memberships), RLS, Helper-Funktionen, `create_club()`, `create_independent_team()` |
-| `20260625221615_mvp0a_team_flows` | `team_invitation_links`, `team_join_requests`, `players` (minimal) |
-| `20260627000001_fix_authenticated_table_grants` | Hotfix: fehlende SELECT-Grants für `authenticated` |
-| `20260627100000_add_team_public_code` | `public_code`, `generate_team_code()` |
-| `20260627200000_add_join_request_type` | `request_type`/`requester_user_id`, 3 neue RPCs |
-| `20260628000000_add_profile_registration_fields` | Profilfelder, `handle_new_user`-Trigger erweitert |
-| `20260629000000_add_join_flow_improvements` | `players.date_of_birth`, Join-RPCs ohne Name-Spoofing |
-| `20260629100000_fix_players_trainer_rls` | Hotfix: SECURITY-DEFINER-Funktionen für Trainer-Sichtbarkeit auf Spieler |
-| `20260629200000_add_events` | `events`, `event_attendance`, RLS, RPCs, Attendance-Trigger |
-| `20260629300000_fix_player_event_rls` | Hotfix: `is_player_in_team()`, `is_guardian_in_team()` |
-| `20260629400000_add_pta_player_policy` | Hotfix: Self-Player liest eigene aktive Assignment |
-| `20260702000000_players_birth_year_only` | `submit_join_request_guardian` auf `birth_year` umgestellt |
-| `20260704120000_remove_player_from_team.sql` | Remove-Player-RPC + RSVP-Autorisierungsfix (uncommitted, s. STATUS.md) |
+| `src/app/layout.tsx` | Root-Layout und globale Metadaten |
+| `src/app/page.tsx` | öffentliche Startseite |
+| `src/app/(auth)/*` | Login und Registrierung |
+| `src/app/(app)/*` | geschützter App-Bereich |
+| `src/app/join/[code]/page.tsx` | öffentlicher Einladungseinstieg |
+| `src/actions/*` | Server Actions für Auth, Teams, Join, Events und Spieler |
+| `src/features/*` | fachliche Formular- und UI-Komponenten |
+| `src/components/*` | wiederverwendbare Layout- und UI-Bausteine |
+| `src/lib/supabase/*` | Browser-, Server-, Proxy- und Route-Handler-Clients |
+| `src/proxy.ts` | Session-Refresh und Login-Redirects |
+| `supabase/migrations/*` | versionierte, additive Datenbankentwicklung |
+| `supabase/seed.sql` | lokale Seed-Daten |
+| `tests/e2e/*` | Playwright-End-to-End-Tests |
+| `.github/workflows/*` | CI und manuell gestartete E2E-Pipeline |
 
-**Konventionen**: jede Tabelle mit `CREATE TABLE IF NOT EXISTS`, UUID-PK via `gen_random_uuid()`, Enum-artige Spalten über `CHECK`-Constraints, kein Hard-Delete (Soft-Delete via `status`/`is_active`/`left_at`). Jede SECURITY-DEFINER-Funktion setzt `SET search_path = ''` und referenziert Tabellen explizit mit `public.`-Präfix (verhindert Schema-Injection).
+## 4. Rendering und Datenzugriff
 
----
+- Seiten sind standardmäßig Server Components.
+- Interaktive Formulare verwenden Client Components und `useActionState`.
+- Mutationen laufen über Server Actions in `src/actions/`.
+- Der Browser-Client in `src/lib/supabase/client.ts` ist vorhanden, im aktuellen Kern aber nicht die primäre Mutationsschicht.
+- `src/lib/supabase/server.ts` liest und aktualisiert Auth-Cookies serverseitig.
+- `src/lib/supabase/middleware.ts` validiert die Session mit `auth.getUser()`.
+- `src/lib/supabase/route-handler.ts` stellt einen separaten Client für Route Handlers bereit; derzeit gibt es außer dem Auth-Callback keinen eigenen fachlichen Route-Handler.
+- Seiten mit nutzerabhängigen Daten sind überwiegend `force-dynamic`.
 
-## 7. UI-/Formular-Pattern
+## 5. Authentifizierung und Routing
 
-- Jedes mutierende Formular nutzt React 19 `useActionState(actionFn, null)` → `[state, action, isPending]`, gebunden an `<form action={action}>`.
-- Einheitliche Fehleranzeige über `<FormError message={state?.error} />` (rendert `null` wenn kein Fehler).
-- `Button` trägt einen `loading`-Prop mit eingebautem Spinner — keine separate Spinner-Komponente nötig.
-- **Kein globales Toast-System** — Erfolg wird inline im jeweiligen Formular angezeigt (z. B. „Entfernt“-Text nach Abschluss), nicht per Redirect/Notification.
-- `ConfirmButton` (`components/ui/ConfirmButton.tsx`) ist das erste wiederverwendbare Zwei-Schritt-Bestätigungsmuster für destruktive Aktionen (Klick → Inline-Warnung → Bestätigen/Abbrechen), aktuell genutzt von `RemovePlayerButton`.
-- Rollenbasierte UI-Verzweigung (`isTrainer`, `canManageMembers`) wird pro Seite serverseitig berechnet, nicht über einen gemeinsamen Hook — dieselbe Formel ist unabhängig in `dashboard/page.tsx` und `teams/page.tsx` dupliziert.
+Supabase Auth verwaltet Nutzer und Sessions. `src/proxy.ts` behandelt `/`, `/login`, `/register`, `/auth/callback`, `/join/*` und `/legal/*` als öffentlich. Andere Routen führen ohne Session zu `/login`.
+
+Belegte Einschränkungen:
+
+- Der Proxy prüft nur, ob eine gültige Session existiert; eine produktweit erzwungene E-Mail-Verifizierung ist nicht implementiert.
+- Die lokale Supabase-Konfiguration hat `enable_confirmations = false`.
+- Registrierung verlangt aktuell ein vollständiges Geburtsdatum und speichert Annahmezeitpunkte für AGB und Datenschutz, aber keine Dokumentversionen.
+- Passwort-Reset ist nicht implementiert.
+- `src/app/manifest.ts` erzeugt `/manifest.webmanifest`, doch der Pfad ist im Proxy weder öffentlich noch vom Matcher ausgenommen. Unangemeldete Abrufe werden daher zum Login umgeleitet.
+
+## 6. Autorisierung
+
+Die technische Autorisierung besteht aus drei Schichten:
+
+1. rollenabhängige UI-Anzeige,
+2. Server Actions und RPCs,
+3. RLS und Datenbank-Helper wie `has_team_role()`.
+
+Die Rollen werden über `roles`, `team_memberships` und `team_member_roles` modelliert. Mehrfachrollen sind möglich. Die Team-Erstellung vergibt atomar `team_owner` und standardmäßig `head_coach`.
+
+Der Ist-Code führt die fachlich nicht mehr aktive Rolle `team_manager` weiterhin in mehreren Lese- und Trainerprüfungen. Das ist technische Altlast und keine Zielrolle.
+
+## 7. Implementierte fachliche Datenflüsse
+
+### Team und Einladung
+
+`createTeamAction()` ruft `create_independent_team()` auf. Die RPC erstellt Team, Mitgliedschaft, Rollen und einen `public_code` im Format `VRN-XXXX-XXXX-XXXX`.
+
+Das Schema enthält parallel:
+
+- `public_code` als aktuellen nutzerseitigen Einladungscode,
+- `token_hash` als älteren technischen Linkpfad,
+- `max_uses`, `use_count`, `expires_at` und `revoked_at`.
+
+Die App zeigt nur den aktiven `public_code`. Erneuern oder Deaktivieren ist nicht als App-Flow umgesetzt.
+
+### Beitritt
+
+`submit_join_request_self()` legt einen Spieler mit Bezug zum angemeldeten Nutzer an. `submit_join_request_guardian()` legt ein Spielerprofil ohne Login, eine Guardian-Beziehung und eine Join-Anfrage an. Der aktuelle Join-Flow verlangt für Spieler ein Geburtsjahr; `players.date_of_birth` bleibt als nullable Bestandsspalte vorhanden, wird aber nicht befüllt.
+
+Der Self-Player-Flow wird derzeit nicht serverseitig auf Volljährigkeit begrenzt.
+
+`approve_join_request()` erzeugt eine aktive `player_team_assignments`-Zuordnung und RSVP-Zeilen für zukünftige Termine. `reject_join_request()` entfernt verwaiste Spielerdaten. Die 90-Tage-Bereinigung existiert als Funktion, wird aber nicht automatisch geplant ausgeführt.
+
+### Trainings und RSVP
+
+`create_event()` erlaubt `team_owner`, `head_coach` und `assistant_coach` das Erstellen. `cancel_event()` existiert in der Datenbank, ist aber nicht in der Oberfläche verdrahtet. Eine Bearbeiten- oder Hard-Delete-Funktion existiert nicht.
+
+Beim Erstellen eines Termins erzeugt ein Trigger `event_attendance`-Zeilen für aktive Spieler. Self-Player oder verifizierte Guardians setzen RSVP über `respond_to_event()`. Entfernte Spieler werden durch `is_active_player_assignment()` blockiert. Eine RSVP-Deadline am Terminbeginn wird derzeit nicht geprüft.
+
+Trainer-RSVP ist nicht implementiert; `event_attendance` ist ausschließlich spielerbezogen.
+
+### Spieler entfernen
+
+`remove_player_from_team()` setzt die Zuordnung auf `status = 'left'` und `left_at = now()`. Spielerprofil und historische RSVP-Zeilen bleiben erhalten. Nur `team_owner` und `head_coach` dürfen die RPC ausführen.
+
+## 8. Datenbank und Sicherheit
+
+Das Repository enthält 13 Migrationen. Sie erzeugen 18 öffentliche Tabellen:
+
+- Rollen/Organisation: `roles`, `permissions`, `role_permissions`, `profiles`, `clubs`, `seasons`,
+- Mitgliedschaften: `club_memberships`, `club_member_roles`, `teams`, `team_memberships`, `team_member_roles`,
+- Spieler/Join: `players`, `player_guardians`, `team_invitation_links`, `team_join_requests`, `player_team_assignments`,
+- Termine: `events`, `event_attendance`.
+
+RLS ist für alle öffentlichen Tabellen aktiviert. Kritische RPCs verwenden `SECURITY DEFINER` und `SET search_path = ''`. `src/types/database.types.ts` ist nur ein `Json`-Stub; generierte Schematypen fehlen.
+
+## 9. Umgebungen und Deployment
+
+| Umgebung | App | Datenbank | Verifizierter Stand |
+|---|---|---|---|
+| lokal | `npm run dev` | lokaler Supabase-Docker-Stack | `.env.local` verweist auf `127.0.0.1:54321`; Kerncontainer laufen, `supabase_vector_vereon-app` startet wiederholt neu |
+| gehostete interne Entwicklung | Vercel, `www.vereon.app` | Supabase Cloud | Nutzerangabe und öffentlich sichtbare Vercel-Antworten; Cloud-Konfiguration nicht aus dem Repo auslesbar |
+
+`main` wird laut Nutzerangabe automatisch über Vercel bereitgestellt. Laut
+öffentlich sichtbarer Vercel-Antwort leitet `vereon.app` permanent auf
+`www.vereon.app` um. Die gehostete Instanz ist noch keine freigegebene
+Produktion: Deployment-Schutz, Legal-Texte, E-Mail, Backup/Restore und Monitoring
+sind vor einem Pilotbetrieb zu klären.
+
+Remote-Migrationen wurden bisher durch Claude Code ausgeführt. Künftig ist dafür immer eine separate ausdrückliche Freigabe erforderlich.
+
+## 10. Qualitätssicherung
+
+- `npm run lint` führt ESLint aus.
+- `npm run build` erstellt den Next.js-Produktionsbuild und beinhaltet den TypeScript-Check.
+- Ein separates `typecheck`- oder Unit-Test-Script existiert nicht.
+- Playwright enthält drei E2E-Specs.
+- `.github/workflows/ci.yml` führt bei Push/PR auf `main` Lint und Build aus.
+- `.github/workflows/e2e.yml` läuft nur manuell über `workflow_dispatch`.
+
+## 11. Quellen- und Pflegeordnung
+
+Bei Abweichungen gilt:
+
+1. Code, Konfiguration und Migrationen bestimmen den technischen Ist-Zustand.
+2. `docs/STATUS.md` dokumentiert belegte Abweichungen und Risiken.
+3. `docs/DATABASE_MODEL.md` beschreibt das fachliche Zielmodell mit Statusmarkierungen.
+4. Produktentscheidungen werden in den fachlichen Dokumenten gepflegt.
+5. Unverifizierte Betriebsangaben werden ausdrücklich als solche gekennzeichnet.

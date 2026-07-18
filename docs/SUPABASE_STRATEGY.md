@@ -1,481 +1,163 @@
-# Supabase Strategie — Vereon
+# Supabase-Strategie — Vereon
 
-**Stand:** 2026-06-25 (überarbeitet: Route-Handler-Client getrennt, Middleware weniger aggressiv; Packages + Clients implementiert)
+**Stand:** 2026-07-18
 
----
+Dieses Dokument beschreibt den verifizierten Einsatz von Supabase und die Regeln für weitere Arbeiten. Details des Schemas stehen in `docs/DATABASE_MODEL.md`, Sicherheitsrisiken in `docs/SECURITY.md`.
 
-## Überblick
+## 1. Aufgaben von Supabase
 
-Vereon verwendet Supabase als Backend-as-a-Service für:
-- **Postgres-Datenbank** mit Row Level Security
-- **Supabase Auth** für Authentifizierung und Session-Management
-- **Supabase Storage** (Phase 2 — Profilbilder, Vereinslogo)
-- **Supabase Realtime** (Phase 3 — Live-Updates)
+Supabase stellt bereit:
 
-Supabase wird **nicht als abstrahiertes ORM** genutzt — wir arbeiten direkt mit dem Query Builder.
+- E-Mail-/Passwort-Authentifizierung,
+- PostgreSQL als Datenbank,
+- PostgREST und RPC-Aufrufe über `supabase-js`,
+- Row Level Security,
+- lokale Entwicklungsdienste über die Supabase CLI und Docker.
 
----
+Realtime und Storage laufen lokal mit, werden vom aktuellen App-Kern aber nicht fachlich genutzt.
 
-## Packages
+## 2. Verwendete Pakete
 
-```bash
-npm install @supabase/supabase-js @supabase/ssr server-only
-npm install supabase --save-dev   # Supabase CLI
-```
+| Paket | deklarierte Version | installiert | Zweck |
+|---|---:|---:|---|
+| `@supabase/supabase-js` | `^2.108.2` | `2.108.2` | Query Builder, Auth und RPC |
+| `@supabase/ssr` | `^0.12.0` | `0.12.0` | Cookie-basierte Browser-/Server-Clients |
+| `supabase` | `^2.108.0` | `2.108.0` | lokale Services, Migrationen und Typgenerierung |
 
-**Status: installiert** (`package.json` enthält alle vier Packages.)
+Quelle: `package.json`, `package-lock.json` und lokales `npm ls --depth=0`.
 
-**Kein NextAuth. Kein Prisma.**
+## 3. Client-Kontexte
 
----
-
-## Client-Strategie — Vier Kontexte
-
-Next.js 16 mit App Router hat vier verschiedene Ausführungskontexte mit unterschiedlichem Cookie-Zugriff. Jeder braucht eine eigene Client-Instanz:
-
-```
-src/lib/supabase/
-  server.ts          → Server Components, Server Actions
-  route-handler.ts   → Route Handlers (API-Endpunkte unter app/api/)
-  client.ts          → Client Components ('use client')
-  middleware.ts      → proxy.ts im Root (Cookies lesen + schreiben)
-```
-
-**Status: implementiert** (alle vier Dateien existieren in `src/lib/supabase/`)
-
-> **Next.js 16:** Die Konvention `middleware.ts` wurde zu `proxy.ts` umbenannt.
-> Die Hilfsdatei `src/lib/supabase/middleware.ts` ist eine normale Library-Datei und behält ihren Namen.
-> Der Root-Einstiegspunkt heißt `src/proxy.ts` mit `export function proxy(...)`.
-
-
----
-
-### `src/lib/supabase/server.ts`
-Für **Server Components** und **Server Actions**.
-
-Liest Cookies aus dem Request-Store von Next.js. Schreibt keine Cookies — das ist in Server Components technisch nicht möglich.
-
-```ts
-import 'server-only'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-
-export async function createClient() {
-  const cookieStore = await cookies()
-
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          // Server Components können keine Response-Cookies setzen.
-          // Token-Refresh passiert ausschließlich in der Middleware.
-          // Dieser Client ist bewusst read-only für Cookies.
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
-          } catch {
-            // Ignoriert — in Server Components erwartet und kein Problem,
-            // weil die Middleware den Refresh bereits erledigt hat.
-          }
-        },
-      },
-    }
-  )
-}
-```
-
----
-
-### `src/lib/supabase/route-handler.ts`
-Für **Route Handlers** (`app/api/.../route.ts`).
-
-Route Handlers haben Zugriff auf `NextRequest` und `NextResponse` — deshalb können hier Cookies korrekt geschrieben werden. Token-Refresh funktioniert in Route Handlers vollständig.
-
-```ts
-import 'server-only'
-import { createServerClient } from '@supabase/ssr'
-import { NextRequest, NextResponse } from 'next/server'
-
-export function createClient(request: NextRequest) {
-  const response = NextResponse.next({ request })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value)
-            response.cookies.set(name, value, options)
-          })
-        },
-      },
-    }
-  )
-
-  return { supabase, response }
-}
-```
-
-**Verwendung in einem Route Handler:**
-```ts
-// app/api/example/route.ts
-import { createClient } from '@/lib/supabase/route-handler'
-
-export async function GET(request: NextRequest) {
-  const { supabase, response } = createClient(request)
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  // ... Query
-  return NextResponse.json({ data }, { headers: response.headers })
-}
-```
-
----
-
-### `src/lib/supabase/client.ts`
-Für **Client Components** (`'use client'`).
-
-```ts
-import { createBrowserClient } from '@supabase/ssr'
-
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
-```
-
-**Wann verwenden:** Nur wenn clientseitiger State, Event Handler oder Browser-APIs benötigt werden. Für reine Datenanzeige immer den Server-Client bevorzugen.
-
----
-
-### `src/lib/supabase/middleware.ts`
-Für **`middleware.ts`** im Root. Liest und schreibt Cookies für Token-Refresh.
-
-```ts
-import { createServerClient } from '@supabase/ssr'
-import { NextRequest, NextResponse } from 'next/server'
-
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
-  // KRITISCH: Immer getUser() aufrufen — das ist der Token-Refresh-Mechanismus.
-  // Niemals durch getSession() ersetzen — getSession() prüft den JWT nicht serverseitig.
-  const { data: { user } } = await supabase.auth.getUser()
-
-  return { supabase, supabaseResponse, user }
-}
-```
-
----
-
-## Proxy — Route-Schutz
-
-> **Next.js 16:** Der Root-Einstiegspunkt heißt `src/proxy.ts` (früher `middleware.ts`). Die exportierte Funktion heißt `proxy` statt `middleware`.
-
-**Status: minimale Version implementiert** (`src/proxy.ts` — nur Session-Refresh, noch keine Redirects.)
-
-Die vollständige Version (mit Route-Schutz) wird in Schritt 4 (Auth-Flow) ausgebaut:
-
-```ts
-// src/proxy.ts (vollständige Version — Schritt 4)
-import { type NextRequest, NextResponse } from 'next/server'
-import { updateSession } from '@/lib/supabase/middleware'
-
-const PUBLIC_ROUTES = ['/', '/login', '/register', '/auth/callback']
-const PUBLIC_PREFIXES = ['/invite/', '/about', '/impressum', '/datenschutz']
-
-export async function proxy(request: NextRequest) {
-  const { supabaseResponse, user } = await updateSession(request)
-  const pathname = request.nextUrl.pathname
-
-  const isPublicRoute =
-    PUBLIC_ROUTES.includes(pathname) ||
-    PUBLIC_PREFIXES.some(prefix => pathname.startsWith(prefix))
-
-  if (!user && !isPublicRoute) {
-    const loginUrl = request.nextUrl.clone()
-    loginUrl.pathname = '/login'
-    loginUrl.searchParams.set('redirect', pathname)
-    return Response.redirect(loginUrl)
-  }
-
-  if (user && (pathname === '/login' || pathname === '/register')) {
-    const dashboardUrl = request.nextUrl.clone()
-    dashboardUrl.pathname = '/dashboard'
-    return Response.redirect(dashboardUrl)
-  }
-
-  return supabaseResponse
-}
-
-export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
-}
-```
-
-**Wichtig:** Die Landing Page `/` und statische Inhalte sind öffentlich. Der Redirect fügt `?redirect=` hinzu, damit nach dem Login zurücknavigiert werden kann.
-
----
-
-## Auth-Flow
-
-### Registrierung
-1. User füllt Formular aus (E-Mail, Passwort)
-2. Server Action ruft `supabase.auth.signUp()` auf
-3. Supabase sendet Bestätigungs-E-Mail (Double-Opt-In)
-4. Nach E-Mail-Bestätigung: Redirect zu `/auth/callback`
-5. `/auth/callback` Route Handler tauscht Code gegen Session (PKCE-Flow)
-6. DB-Trigger legt `profiles`-Eintrag an
-7. Redirect zu `/dashboard`
-
-### Login
-1. Server Action ruft `supabase.auth.signInWithPassword()` auf
-2. Session-Cookie wird gesetzt (HTTPOnly, Secure)
-3. Redirect zu `/dashboard` oder gespeichertem `?redirect=`
-
-### Logout
-1. Server Action ruft `supabase.auth.signOut()` auf
-2. Cookies werden gelöscht
-3. Redirect zu `/login`
-
-### Auth-Callback Route Handler
-```ts
-// app/auth/callback/route.ts
-import { createClient } from '@/lib/supabase/route-handler'
-import { NextRequest, NextResponse } from 'next/server'
-
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const code = searchParams.get('code')
-
-  if (code) {
-    const { supabase, response } = createClient(request)
-    await supabase.auth.exchangeCodeForSession(code)
-    return NextResponse.redirect(new URL('/dashboard', request.url), {
-      headers: response.headers,
-    })
-  }
-
-  return NextResponse.redirect(new URL('/login', request.url))
-}
-```
-
----
-
-## Sichere Club-Erstellung
-
-Der erste `club_admin` darf **nie** via direktem Client-INSERT entstehen. Stattdessen:
-
-```ts
-// Server Action
-'use server'
-import { createClient } from '@/lib/supabase/server'
-
-export async function createClubAction(name: string, slug: string) {
-  const supabase = await createClient()
-  const { data, error } = await supabase.rpc('create_club', { p_name: name, p_slug: slug })
-  if (error) throw error
-  return data
-}
-```
-
-Die `create_club()`-Funktion in der Datenbank (SECURITY DEFINER) legt Verein, Mitgliedschaft und Rolle atomar an. Siehe `DATABASE_MODEL.md`.
-
----
-
-## Row Level Security (RLS)
-
-### Grundsatz
-- Alle Tabellen: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`
-- Ohne explizite Policy: kein Zugriff (deny by default)
-- Policies basieren auf `auth.uid()` + `club_member_roles` / `team_member_roles`
-
-### SECURITY DEFINER Hilfsfunktionen
-
-RLS-Policies sollen Hilfsfunktionen nutzen, nicht inline komplexe JOINs. Die Funktionen sind `STABLE` — innerhalb einer Query gecacht.
-
-```sql
--- Beispiel-Policy mit Hilfsfunktion
-CREATE POLICY "coaches_can_create_events"
-ON events FOR INSERT
-WITH CHECK (
-  has_team_role(team_id, 'head_coach', 'assistant_coach')
-);
-```
-
-**Sicherheitshinweis zu SECURITY DEFINER:**
-- Alle SECURITY DEFINER-Funktionen dürfen **keine** User-kontrollierten Parameter direkt in SQL interpolieren
-- Parameter müssen immer als `$1`, `$2` etc. übergeben werden (Parameterized Queries)
-- Jede SECURITY DEFINER-Funktion muss `search_path = ''` setzen:
-  ```sql
-  SET search_path = '';
-  ```
-  Verhindert Schema-Injection via `search_path`-Manipulation.
-
-### Beispiel-Policies
-
-```sql
--- Events: Teammitglieder lesen
-CREATE POLICY "team_members_read_events"
-ON events FOR SELECT
-USING (has_team_role(team_id, 'head_coach', 'assistant_coach', 'team_manager', 'player', 'guardian'));
-
--- Events: Coaches erstellen
-CREATE POLICY "coaches_insert_events"
-ON events FOR INSERT
-WITH CHECK (has_team_role(team_id, 'head_coach', 'assistant_coach'));
-
--- event_attendance: Spieler setzt eigene RSVP
-CREATE POLICY "player_sets_own_rsvp"
-ON event_attendance FOR UPDATE
-USING (user_id = auth.uid())
-WITH CHECK (user_id = auth.uid());
-
--- event_attendance: Guardian setzt RSVP für Kind
-CREATE POLICY "guardian_sets_child_rsvp"
-ON event_attendance FOR UPDATE
-USING (is_guardian_of(player_id))
-WITH CHECK (is_guardian_of(player_id));
-```
-
----
-
-## Umgebungsvariablen
-
-### `.env.local` (niemals committen)
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-```
-
-**Niemals im Frontend-Code:**
-```env
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-```
-
-Der Service-Role-Key umgeht RLS vollständig. Er gehört **ausschließlich** in:
-- Supabase CLI für Migrationen
-- Serverless Admin-Scripts
-- Niemals in Next.js-Anwendungscode, auch nicht in Server Actions
-
-### Variablen-Regeln
-
-| Präfix | Sichtbarkeit | Verwendung |
+| Datei | Kontext | Besonderheit |
 |---|---|---|
-| `NEXT_PUBLIC_` | Client + Server | Supabase URL, Anon Key |
-| *(kein Präfix)* | Nur Server | Service Role Key (nur CLI/Scripts) |
+| `src/lib/supabase/server.ts` | Server Components und Server Actions | asynchroner Cookie-Zugriff; `server-only` |
+| `src/lib/supabase/client.ts` | Client Components | `createBrowserClient()` |
+| `src/lib/supabase/middleware.ts` | `src/proxy.ts` | validiert Nutzer mit `auth.getUser()` und aktualisiert Cookies |
+| `src/lib/supabase/route-handler.ts` | Route Handlers | schreibt aktualisierte Cookies in die Response; `server-only` |
 
----
+Server Components sind der Standard. Ein Browser-Client wird nur benötigt, wenn echter Browserzustand, Events oder Browser-APIs beteiligt sind.
 
-## Dev / Prod Trennung
+## 4. Auth-Strategie
 
-### Entwicklung (lokal)
-- Supabase Cloud Projekt: **Vereon Dev**
-- `.env.local` mit Dev-Keys
-- Supabase Dashboard für manuelle Inspektion
+- Supabase Auth verwaltet Nutzer und Sessions.
+- `src/proxy.ts` schützt App-Routen und bewahrt den ursprünglichen Zielpfad im `redirect`-Parameter.
+- Die Auth-Callback-Route tauscht den Code serverseitig gegen eine Session.
+- Registrierung speichert Profildaten in Auth-Metadaten; `handle_new_user()` erzeugt `profiles`.
+- Autorisierung für Fachdaten erfolgt nicht über die Auth-Rolle allein, sondern über RLS, Mitgliedschaften und RPCs.
 
-### Produktion
-- Supabase Cloud Projekt: **Vereon Prod**
-- Keys ausschließlich in Vercel Environment Variables (nicht in `.env.production`)
-- Separate Migrations-History — Prod wird nie manuell geändert
+Aktuelle Lücke: E-Mail-Verifizierung wird lokal nicht verlangt und im App-Code nicht als Voraussetzung produktiver Aktionen geprüft. Das fachliche Ziel steht in `docs/DATABASE_MODEL.md`.
 
-### Lokale Supabase-Instanz (aktive Entwicklungsstrategie)
+## 5. RLS- und RPC-Regeln
 
-Vorteile: Offline-fähig, Migrations lokal testbar, keine Dev-Daten in der Cloud.
+1. Jede öffentliche Fachtabelle hat RLS.
+2. Ohne explizite Policy gilt deny by default.
+3. UI-Sichtbarkeit ist kein Sicherheitsmechanismus.
+4. Kritische Mehrschritt-Mutationen laufen atomar über RPCs.
+5. `SECURITY DEFINER` wird nur gezielt verwendet.
+6. Jede `SECURITY DEFINER`-Funktion setzt `SET search_path = ''`.
+7. Tabellen und Funktionen werden in SQL vollständig mit Schema qualifiziert.
+8. Nutzer- und Rollenbezüge werden aus `auth.uid()` beziehungsweise serverseitig ermittelten Daten abgeleitet, nicht aus vertrauenswürdig angenommenen Formularwerten.
+9. Neue Tabellen benötigen passende Grants, Policies, Indizes und Tests.
 
-**Status:** `supabase init` abgeschlossen. `supabase start` läuft — lokale Instanz aktiv, `.env.local` befüllt.
+Implementierte Beispiele:
 
-```
-supabase/
-  config.toml   ← Hauptkonfiguration (project_id = "vereon-app")
-  .gitignore    ← Schützt .branches, .temp, .env.local
-  seed.sql      ← Seed-Daten (vorerst leer)
-  migrations/   ← Wird beim ersten Migration-File angelegt
-```
+- `create_independent_team()` erzeugt Team, Mitgliedschaft, Rollen und Einladungscode atomar.
+- `submit_join_request_self()` und `submit_join_request_guardian()` legen Beitrittsdaten an.
+- `approve_join_request()` und `reject_join_request()` entscheiden Anfragen.
+- `create_event()` und `respond_to_event()` verwalten Training und RSVP.
+- `remove_player_from_team()` beendet die Spielerzuordnung per Soft-Delete.
 
-**Lokale Ports nach `supabase start`:**
+## 6. Umgebungsvariablen
 
-| Dienst | Port | URL |
+Die Anwendung benötigt:
+
+| Variable | Sichtbarkeit | Verwendung |
 |---|---|---|
-| API (PostgREST) | 54321 | `http://127.0.0.1:54321` |
-| Postgres DB | 54322 | `postgresql://postgres:postgres@127.0.0.1:54322/postgres` |
-| Studio | 54323 | `http://127.0.0.1:54323` |
-| E-Mail-Testing (Inbucket) | 54324 | `http://127.0.0.1:54324` |
+| `NEXT_PUBLIC_SUPABASE_URL` | öffentlich | Browser und Server |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | öffentlich | Browser und Server; RLS schützt Daten |
 
-**`supabase start` starten:**
+Regeln:
+
+- `.env.local` wird nicht committed oder ausgegeben.
+- Der Service-Role-Key gehört nicht in Browser- oder normalen Anwendungscode.
+- Secrets erhalten nie ein `NEXT_PUBLIC_`-Präfix.
+- CI verwendet ausschließlich Platzhalterwerte für Lint/Build.
+- Vercel-Umgebungswerte werden außerhalb des Repositories verwaltet.
+
+## 7. Lokale Entwicklung
+
+Der verifizierte lokale Aufbau ist:
+
+```text
+npm run dev
+  └─ .env.local
+       └─ http://127.0.0.1:54321
+            └─ lokaler Supabase-Docker-Stack
+```
+
+Die Kerncontainer waren am 2026-07-18 aktiv. `supabase_vector_vereon-app` startete fortlaufend neu; die fachlichen Kerncontainer liefen. Das ist ein lokales Übergaberisiko, nicht automatisch ein Fehler in Auth oder Datenbank.
+
+Sichere Standardbefehle:
+
 ```bash
 npx supabase start
+npx supabase stop
+npx supabase migration list --local
 ```
-Gibt nach dem Start URL + anon key + service_role key aus. Nur `NEXT_PUBLIC_SUPABASE_URL` und `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local` eintragen — service_role key **nicht**.
 
-**Sicherheitshinweis `config.toml`:**
-- `auto_expose_new_tables` ist auskommentiert — neue Tabellen werden **nicht** automatisch per API exponiert. Kein Handlungsbedarf. Entspricht unserer Deny-by-default-Strategie.
-- `minimum_password_length = 8` (angehoben von 6)
-- `enable_confirmations = false` — nur für lokale Dev. In Produktion muss das auf `true`.
+`npx supabase db reset` baut die lokale Datenbank aus allen Migrationen und Seeds neu auf und ist destruktiv für lokale Daten. Es darf nur nach ausdrücklicher Freigabe in der aktuellen Sitzung ausgeführt werden.
 
----
+## 8. Gehostete interne Entwicklung
 
-## Supabase-Typen generieren
+Die gehostete App läuft laut Nutzerangabe auf Vercel und verwendet Supabase Cloud. `main` wird automatisch bereitgestellt.
 
-Sobald das Datenbankschema stabil ist:
+Nicht aus dem Repository verifizierbar:
+
+- Supabase-Projektregion,
+- Plan und Point-in-Time-Recovery,
+- getestetes Backup-/Restore-Verfahren,
+- Vercel-/Supabase-Zugriffsschutz,
+- Cloud-Auth- und SMTP-Konfiguration im Detail,
+- dediziertes Monitoring und Alerting.
+
+Diese Punkte werden nicht als vorhanden oder fehlend behauptet. Sie müssen vor Pilotbetrieb verifiziert werden. Das gesamte Deployment soll bis dahin geschützt bleiben.
+
+## 9. Migrationen
+
+Verbindlicher Ablauf:
+
+1. fachliche Entscheidung und Zielmodell abgleichen,
+2. neue, additive Migration erstellen,
+3. SQL, RLS, Grants und RPC-Berechtigungen prüfen,
+4. vollständige lokale Migrationskette testen,
+5. App-Code, Typen und relevante Tests prüfen,
+6. Remote-Anwendung separat ankündigen und ausdrücklich freigeben lassen,
+7. Ergebnis und Rücksetzweg dokumentieren.
+
+Harte Regeln:
+
+- keine bereits angewendete Migration umschreiben,
+- kein automatisches `db push`,
+- keine Remote-Datenbank ohne ausdrückliche Freigabe,
+- kein Remote-Reset,
+- keine Secrets in Ausgaben oder Dokumentation.
+
+Die bestehenden Cloud-Migrationen wurden laut Nutzerangabe durch Claude Code ausgeführt. Der tatsächliche Remote-Migrationsstand wurde in diesem Audit nicht abgefragt.
+
+## 10. Datenbanktypen
+
+Zielbefehl:
 
 ```bash
-npx supabase gen types typescript --local > src/types/database.types.ts
+npx supabase gen types typescript --local
 ```
 
-Diese Datei:
-- Wird nicht manuell bearbeitet
-- Ermöglicht vollständige TypeScript-Typen für alle Queries
-- Wird nach jeder Schemamigration neu generiert
-- Liegt in `src/types/database.types.ts`, nicht in `src/types/supabase.ts` (klarerer Name)
+Derzeit ist `src/types/database.types.ts` nur ein kleiner `Json`-Typ und kein generiertes Abbild des Schemas. Nach jeder Schemaänderung sollen Typen neu generiert und anschließend Typecheck, Lint und Build ausgeführt werden.
 
----
+## 11. Nicht Teil der Strategie
 
-## Was Supabase nicht macht (in Vereon)
-
-- **Kein Supabase Edge Functions** — Logik lebt in Next.js Route Handlers und Server Actions
-- **Kein Supabase Auth UI** — eigene Login/Register-Seiten
-- **Kein Supabase Realtime im MVP** — Phase 3
-- **Kein Supabase Storage im MVP** — Phase 2
-- **Kein Service Role Key in der App** — nur CLI und Admin-Scripts
+- kein Prisma oder Drizzle,
+- kein NextAuth/Auth.js,
+- kein Service-Role-Key im normalen App-Prozess,
+- keine direkte Datenbankänderung über die Cloud-Oberfläche als regulärer Entwicklungsweg,
+- keine vorzeitige Club-, Realtime- oder Storage-Architektur ohne Produktbedarf.

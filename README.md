@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vereon
 
-## Getting Started
+Vereon ist eine rollenbasierte Webanwendung für die Organisation von Fußballmannschaften. Der aktuelle Einzelteam-MVP umfasst Authentifizierung, Mannschaftserstellung, Beitritt per Einladungscode, Trainingsplanung und RSVP für Spieler beziehungsweise Guardians.
 
-First, run the development server:
+Die Anwendung basiert auf Next.js 16, React 19, TypeScript, Tailwind CSS 4 und Supabase. Der tatsächliche technische Stand ist in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) dokumentiert; offene Abweichungen und Pilotrisiken stehen in [`docs/STATUS.md`](docs/STATUS.md).
+
+## Lokale Entwicklung
+
+Voraussetzungen:
+
+- Node.js und npm; CI verwendet derzeit Node.js 20
+- Docker
+
+Einmalige Einrichtung:
+
+```text
+npm ci
+Kopie von .env.example als .env.local anlegen
+npx supabase start
+```
+
+Die Vorlage beschreibt die für die lokale Anwendung erwarteten
+Umgebungsvariablen. Werte und Secrets aus `.env.local` werden weder committed
+noch ausgegeben.
+
+Entwicklung starten:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Die Webanwendung ist anschließend standardmäßig unter `http://localhost:3000` erreichbar. Die lokale Supabase-Instanz läuft über die in `supabase/config.toml` hinterlegten Ports.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`supabase/seed.sql` enthält derzeit keine wiederverwendbaren Testkonten. Die
+vorhandenen E2E-Kernflows registrieren eigene isolierte Testnutzer.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Verfügbare Befehle
 
-## Learn More
+```bash
+npm run dev
+npm run build
+npm run start
+npm run lint
+npx tsc --noEmit
+npm run test:e2e
+npm run test:e2e:ui
+npm run test:e2e:headed
+npx supabase stop
+```
 
-To learn more about Next.js, take a look at the following resources:
+Es gibt derzeit keinen eigenen npm-Befehl für den Typecheck sowie keine Unit- oder Integrationstests. Details zur Testabdeckung stehen in [`docs/MVP_TEST_CHECKLIST.md`](docs/MVP_TEST_CHECKLIST.md).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Dokumentation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- [`docs/FEATURE_CATALOG.md`](docs/FEATURE_CATALOG.md) — fachliche Funktionsquelle
+- [`docs/MVP_SCOPE.md`](docs/MVP_SCOPE.md) — Phasen und Scope
+- [`docs/USER_FLOWS.md`](docs/USER_FLOWS.md) — Nutzerabläufe
+- [`docs/ROLES_AND_PERMISSIONS.md`](docs/ROLES_AND_PERMISSIONS.md) — Rollen und Berechtigungen
+- [`docs/DATABASE_MODEL.md`](docs/DATABASE_MODEL.md) — fachliches Ziel-Datenmodell
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — implementierter technischer Ist-Zustand
+- [`docs/STATUS.md`](docs/STATUS.md) — aktuelles technisches Audit und Risiken
+- [`docs/DECISION_LOG.md`](docs/DECISION_LOG.md) — dauerhafte Entscheidungen
 
-## Deploy on Vercel
+Vor Änderungen sind außerdem [`AGENTS.md`](AGENTS.md) und [`CLAUDE.md`](CLAUDE.md) zu beachten.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Das interne Entwicklungs-Deployment wird über Vercel bereitgestellt und verwendet Supabase Cloud. Remote-Migrationen, Deployments, Commits und Pushes erfolgen ausschließlich nach ausdrücklicher Freigabe.

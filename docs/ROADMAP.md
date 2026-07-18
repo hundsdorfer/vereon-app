@@ -1,64 +1,83 @@
-# Roadmap
+# Roadmap — Vereon
 
-> **Dokumentationshinweis — Stand 2026-07-06:**
-> Diese Datei enthält laut `docs/DOCS_INVENTORY.md` veraltete oder zu prüfende Aussagen. Für den tatsächlichen Code-Zustand haben aktuell `docs/ARCHITECTURE.md` und `docs/STATUS.md` Vorrang. Diese Datei darf bis zur Überarbeitung nicht allein als Umsetzungsgrundlage verwendet werden.
-> Diese Roadmap ist vorläufig als Archiv-Kandidat markiert.
+**Stand:** 2026-07-18
+**Status:** Strategische Reihenfolge; kein technischer Ist-Nachweis und kein Implementierungsauftrag
 
----
+## Zweck
 
-## Phase 0 — Grundgerüst (aktuell)
-Ziel: Technische Basis, keine echten Features.
+Diese Roadmap ordnet die nächsten Produktblöcke. Feature-Status und Phasen liegen verbindlich in `FEATURE_CATALOG.md` und `MVP_SCOPE.md`. Der technische Ist-Stand und priorisierte Abweichungen liegen in `ARCHITECTURE.md` und `STATUS.md`.
 
-- [x] Next.js 16 Projekt mit `src/`-Struktur
-- [x] Projektdokumentation
-- [ ] Supabase-Integration (Clients, Env-Variablen)
-- [ ] Auth-Flow (Login, Register, Logout, Session)
-- [ ] Middleware (Route-Schutz)
-- [ ] Datenbankschema v1 (clubs, teams, profiles, memberships, roles)
+Checkboxen werden hier bewusst nicht geführt: Erledigungsstände würden die kanonischen Statusdokumente duplizieren und schnell veralten.
 
-## Phase 1 — Auth & Vereinsgrundstruktur
-Ziel: Ein User kann sich anmelden, einen Verein anlegen und Mitglieder einladen.
+## Aktueller Fokus — interne Entwicklung
 
-- [ ] Login / Register / Passwort-Reset
-- [ ] Vereinsprofil anlegen
-- [ ] Mitglieder einladen (per E-Mail)
-- [ ] Rollen vergeben (Admin, Trainer, Spieler, Elternteil)
-- [ ] Dashboard-Shell (Sidebar, Navigation)
+Vereon wird derzeit intern entwickelt. Das gehostete System unter `www.vereon.app` ist ein internes Entwicklungs-Deployment und noch kein freigegebenes Produktionssystem. Der MVP-0A-Einzelteam-Kern ist weitgehend vorhanden; Ziel ist nun ein kontrollierter, abgesicherter Übergang zu MVP-0B und später zu einem Pilot mit einer Mannschaft.
 
-## Phase 2 — Teams & Spielerverwaltung
-Ziel: Teams und Spieler verwalten.
+Bis es externe Tester gibt, soll das gesamte Deployment geschützt bleiben.
 
-- [ ] Teams anlegen und verwalten
-- [ ] Spieler einem Team zuweisen
-- [ ] Spielerprofil (Name, Position, Trikotnummer)
-- [ ] Jugend: Eltern-Verknüpfung
+## 1. Pilot-Gates parallel absichern
 
-## Phase 3 — Kalender & Zu-/Absagen
-Ziel: Training und Spiele planen, Zu-/Absagen erfassen.
+Diese Punkte müssen vor einem externen Pilot geschlossen sein. Sie laufen
+parallel zur internen MVP-0B-Produktentwicklung und blockieren nicht jede
+interne Featurearbeit. Deployment-Schutz und andere unmittelbar wirksame
+Sicherheitsgrenzen haben dennoch sofort Vorrang.
 
-- [ ] Kalenderansicht (Woche/Monat)
-- [ ] Training anlegen
-- [ ] Spiele anlegen
-- [ ] Zu-/Absage-System
-- [ ] E-Mail-Benachrichtigungen
+- Legal-Seiten durch geprüfte Inhalte ersetzen.
+- Produktive Aktionen an verifizierte E-Mail-Adressen binden (`FC-AUTH-005`).
+- Passwort-Reset und produktionsfähigen E-Mail-Versand klären (`FC-AUTH-006`).
+- Guardian-Berechtigung mit Nutzer, Zeitpunkt und Textversion nachweisen (`FC-LEGAL-004`).
+- Annahme von Nutzungsbedingungen und Datenschutzhinweisen versioniert speichern (`FC-LEGAL-008`).
+- Abgelehnte und zurückgezogene Join-Requests nach 90 Tagen automatisiert bereinigen (`FC-INVITE-009`).
+- Backup- und Wiederherstellungsverfahren für Supabase Cloud prüfen und dokumentieren.
+- PWA-Manifest im App-Routing öffentlich korrekt ausliefern. Die vollständige
+  PWA-Installierbarkeit auf iOS und Android bleibt ein MVP-1-Ziel
+  (`FC-MOBILE-003`).
 
-## Phase 4 — Anwesenheit & Spielberichte
-- [ ] Anwesenheit erfassen (Training)
-- [ ] Aufstellungen erstellen
-- [ ] Spielberichte schreiben
-- [ ] Statistiken (Anwesenheitsquote, Tore)
+## 2. MVP-0B — Produktkern parallel alltagstauglich machen
 
-## Phase 5 — Kommunikation & Finanzen
-- [ ] Mitteilungen / Ankündigungen
-- [ ] Finanzverwaltung (Beiträge, Ausgaben)
-- [ ] Sponsoringverwaltung
+Parallel zu den Pilot-Gates werden die beschlossenen fachlichen Kernlücken
+geschlossen:
 
-## Phase 6 — PWA & Mobile
-- [ ] PWA-Manifest und Service Worker
-- [ ] Push-Benachrichtigungen
-- [ ] iOS/Android App (Capacitor oder React Native)
+- Training bearbeiten, bedingt hart löschen und absagen (`FC-TRAINING-003` bis `FC-TRAINING-005`).
+- Trainer-RSVP getrennt von Spieler-RSVP ermöglichen (`FC-RSVP-003`).
+- Co-Trainer-Rolle ausschließlich durch `team_owner` vergeben und entziehen (`FC-ROLE-002`, `FC-ROLE-003`).
+- Einladungscode für alle drei Trainerrollen anzeigen, erneuern und deaktivieren (`FC-INVITE-001`, `FC-INVITE-008`).
+- Join-Requests durch `team_owner` oder `head_coach` entscheiden (`FC-INVITE-006`, `FC-INVITE-007`).
+- Mannschaftsgrunddaten durch `team_owner` korrigierbar machen (`FC-TEAM-003`).
+- Verpflichtendes Spieler-Geburtsjahr beibehalten und das vollständige Datum freiwillig, zweckgebunden und zugriffsbeschränkt ergänzen (`FC-PLAYER-003`).
 
-## Nicht geplant (vorerst)
-- Livestream-Integration
-- Video-Analyse
-- Öffentliche Vereinswebsite
+MVP-0B bleibt eine Einzelteam-Stabilisierung. Sichtbare Club-, Mehrteam- und `club_admin`-Flows gehören nicht hierher.
+
+## 3. MVP-1 — Nutzung über mehrere Wochen
+
+MVP-1 wird erst nach einem stabilen MVP-0B in getrennten Blöcken geplant:
+
+- bessere Team-, Spieler- und Dashboard-Ansichten,
+- Mannschaft archivieren und Team-Eigentümerschaft bestätigt übertragen,
+- mobile/PWA-Alltagstauglichkeit,
+- RSVP-Deadline und klare Sperre ab Terminbeginn,
+- Anwesenheit,
+- einfache wiederkehrende Trainings,
+- Match-MVP und Reports erst nach eigenen Scope-Entscheidungen.
+
+Die vollständige Zuordnung steht in `MVP_SCOPE.md`. Die dort genannten Teilentscheidungen dürfen nicht durch diese Roadmap übersprungen werden.
+
+## 4. Post-MVP
+
+Erst nach erfolgreicher Einzelteam-Validierung werden geprüft:
+
+- sichtbare Club-/Mehrteam-Verwaltung,
+- operative `club_admin`-Flows,
+- Team-Affiliation und Teamwechsel,
+- Notification-Center, Push und E-Mail-Benachrichtigungen,
+- Kalenderexport,
+- Kader-, Taktik- und erweiterte Reportfunktionen,
+- DSGVO-Self-Service.
+
+## 5. Later
+
+Native Apps, Offlinefähigkeit, internes Plattform-Admin-Panel und die Future Platform Domains aus `FEATURE_CATALOG.md` bleiben langfristige Kandidaten. Sie erhalten erst nach einer eigenen Produktentscheidung konkrete Features oder Umsetzungsaufträge.
+
+## Pflege
+
+Ändert sich eine Feature-Phase, wird zuerst `FEATURE_CATALOG.md`, danach `MVP_SCOPE.md` und erst anschließend diese Reihenfolge geprüft. Technische Erledigungsstände werden nicht hier, sondern in `STATUS.md` gepflegt.

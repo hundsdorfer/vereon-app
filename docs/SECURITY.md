@@ -1,257 +1,167 @@
 # Sicherheitsarchitektur — Vereon
 
-> **Dokumentationshinweis — Stand 2026-07-06:**
-> Diese Datei enthält laut `docs/DOCS_INVENTORY.md` veraltete oder zu prüfende Aussagen. Für den tatsächlichen Code-Zustand haben aktuell `docs/ARCHITECTURE.md` und `docs/STATUS.md` Vorrang. Diese Datei darf bis zur Überarbeitung nicht allein als Umsetzungsgrundlage verwendet werden.
-> Besonders kritisch: Die Risiko-Status-Tabelle enthält laut Inventar veraltete Umsetzungsstände.
+**Stand:** 2026-07-18
+
+**Zweck:** Sicherheitsregeln, bestätigte Schutzmechanismen und offene Risiken.
+**Ist-Status:** Für den implementierten Stand sind `docs/ARCHITECTURE.md` und
+`docs/STATUS.md` maßgeblich. Diese Datei trennt **implementiert**, **beschlossen,
+nicht implementiert** und **offen**.
 
 ---
 
-**Stand:** 2026-06-25 (überarbeitet: DSGVO-Risiken ergänzt, proxy.ts-Referenz, roles.key)
+## 1. Verbindliche Grundregeln
+
+1. Authentifizierung und Autorisierung werden serverseitig geprüft. UI-Logik ist
+   kein Sicherheitsmechanismus.
+2. Personenbezogene Tabellen müssen durch RLS und möglichst enge Grants geschützt
+   sein.
+3. Kritische Schreiboperationen laufen über geprüfte Serverlogik und, wenn mehrere
+   Tabellen oder privilegierte Rechte betroffen sind, über gehärtete RPCs.
+4. `SECURITY DEFINER`-Funktionen setzen `SET search_path = ''`, qualifizieren
+   Objekte mit `public.` und leiten Nutzer- und Teamkontext aus der Datenbank ab.
+5. Der Supabase-Service-Role-Key darf weder in Client- noch Anwendungscode,
+   versionierten Dateien oder Ausgaben erscheinen.
+6. Rollen werden aus aktiven Mitgliedschaften und Rollenbeziehungen ermittelt.
+   `profiles.onboarding_role` ist keine Berechtigungsquelle.
+7. Unverifizierte E-Mail-Konten dürfen sich anmelden und Informationsseiten sehen,
+   aber keine produktiven Aktionen wie Team-Erstellung, Join-Anfrage oder RSVP
+   ausführen. **Beschlossen, noch nicht durchgängig implementiert.**
+8. Remote-Migrationen erfordern eine separate ausdrückliche Freigabe. Backup- und
+   Rollback-Verfahren müssen vor einem Pilotbetrieb verifiziert sein.
 
 ---
 
-## Grundregeln
+## 2. Schlüssel und Umgebungen
 
-1. Auth wird **immer serverseitig geprüft** — clientseitige Prüfung ist ausschließlich für UX
-2. **Row Level Security (RLS)** ist für alle Supabase-Tabellen Pflicht — kein Zugriff ohne explizite Policy
-3. Umgebungsvariablen mit Secrets (`SERVICE_ROLE_KEY`) kommen **niemals** in Client-Code oder Next.js-Anwendungscode
-4. Alle geschützten Routen werden von `src/proxy.ts` (Next.js 16 Proxy-Konvention) abgesichert
-5. SECURITY DEFINER-Funktionen setzen immer `SET search_path = ''` und verwenden vollständige Schema-Prefixe
-
----
-
-## Supabase-Schlüssel
-
-| Variable | Sichtbarkeit | Verwendung |
+| Variable | Einstufung | Verwendung |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Öffentlich (sicher) | Client + Server |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Öffentlich (RLS schützt) | Client + Server |
-| `SUPABASE_SERVICE_ROLE_KEY` | Geheim — niemals im Client oder in der App | Nur Supabase CLI, Admin-Scripts |
+| `NEXT_PUBLIC_SUPABASE_URL` | öffentlich | Browser und Server |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | öffentlich, RLS bleibt zwingend | Browser und Server |
+| `SUPABASE_SERVICE_ROLE_KEY` | geheim, umgeht RLS | ausschließlich kontrollierte Admin-/CLI-Prozesse außerhalb des App-Codes |
 
-**Der Service-Role-Key umgeht RLS vollständig.** Ein Leck dieses Keys bedeutet vollständiger Datenbankzugriff ohne Einschränkungen.
-
----
-
-## Top-Sicherheitsrisiken und Gegenmaßnahmen
+Die lokale Next.js-Entwicklung verwendet laut geprüftem URL-Muster in
+`.env.local` die lokale Supabase-Instanz. Das interne Vercel-Deployment nutzt
+Supabase Cloud. Werte und Schlüssel werden nicht dokumentiert.
 
 ---
 
-### Risiko 1 — Privilege Escalation beim ersten club_admin
+## 3. Bestätigter Schutz im Repository
 
-**Beschreibung:** Wenn ein Client direkt auf `club_memberships` und `club_member_roles` inserieren kann, könnte ein Angreifer sich selbst als `club_admin` eines fremden Vereins eintragen. Das erste Anlegen eines Vereins ist besonders kritisch, weil noch keine Mitgliedschaft existiert, gegen die eine Policy prüfen könnte.
+| Bereich | Bestätigter Stand | Beleg |
+|---|---|---|
+| Routenschutz | `src/proxy.ts` prüft die Supabase-Session und leitet nicht angemeldete Nutzer geschützter Routen zu `/login` um | `src/proxy.ts` |
+| Server-Sessions | serverseitige Clients verwenden Cookie-basierte Supabase-Sessions und `getUser()` | `src/lib/supabase/server.ts`, `src/lib/supabase/middleware.ts`, `src/lib/supabase/route-handler.ts` |
+| RLS | die vorhandenen Kerntabellen aktivieren RLS; Policies und Grants sind migrationsgeführt | `supabase/migrations/20260625190923_init_mvp0_core.sql`, `20260625221615_mvp0a_team_flows.sql`, `20260627000001_fix_authenticated_table_grants.sql`, `20260629200000_add_events.sql` |
+| Team-Erstellung | eigenständiges Team, Mitgliedschaft und Rollen werden atomar über `create_independent_team()` angelegt | `20260625190923_init_mvp0_core.sql`, ersetzt/erweitert in `20260627100000_add_team_public_code.sql` |
+| Join-Flow | Self- und Guardian-Anfragen verwenden getrennte RPCs; Annahme/Ablehnung prüft Teamrollen | `20260702000000_players_birth_year_only.sql`, `20260625221615_mvp0a_team_flows.sql` |
+| RSVP | `respond_to_event()` prüft Spieler-/Guardian-Beziehung; entfernte Spieler verlieren künftige RSVP-Berechtigung | `20260704120000_remove_player_from_team.sql` |
+| Spieler entfernen | nur `team_owner` und `head_coach`; Zuweisung wird beendet, vergangene Daten bleiben erhalten | `20260704120000_remove_player_from_team.sql` |
+| Event-Erstellung/Absage | RPCs erlauben `team_owner`, `head_coach` und `assistant_coach`; Absage ist Soft-Cancel. Eine Absage-Aktion ist in `src/actions/events.ts` noch nicht verdrahtet | `20260629200000_add_events.sql`, `src/actions/events.ts` |
+| Eingaben | Server Actions validieren bekannte Formwerte manuell; Supabase Query Builder/RPC-Parameter vermeiden zusammengesetztes SQL aus Nutzereingaben | `src/actions/*.ts` |
 
-**Maßnahme:**
-- Keine direkte INSERT-Policy auf `club_memberships` und `club_member_roles` für den Erstellungsfall
-- Ausschließlich via `create_club()` SECURITY DEFINER — Verein, Mitgliedschaft und Rolle werden atomar angelegt
-- Nachfolgende Rollenvergaben: Policy prüft bestehende `club_admin`-Mitgliedschaft
-
-```sql
--- Policy: Nur bestehende club_admins dürfen neue Rollen vergeben
-CREATE POLICY "club_admin_grants_roles"
-ON public.club_member_roles FOR INSERT
-WITH CHECK (
-  public.has_club_role((
-    SELECT club_id FROM public.club_memberships WHERE id = club_membership_id
-  ), 'club_admin')
-);
-```
+Die Tabelle bestätigt nur die genannten Schutzmechanismen. Sie ist kein
+vollständiges Penetrationstest- oder RLS-Audit.
 
 ---
 
-### Risiko 1b — Privilege Escalation beim ersten team_owner
+## 4. Rollen- und Aktionsgrenzen
 
-**Beschreibung:** Analog zu Risiko 1 — wer darf die erste team_owner-Rolle für ein eigenständiges Team vergeben? Ohne SECURITY DEFINER könnte ein User `team_member_roles` mit `team_owner` befüllen ohne legitime Berechtigung.
+Die fachliche Matrix steht in `docs/ROLES_AND_PERMISSIONS.md`. Für
+sicherheitskritische Implementierungen gelten zusätzlich:
 
-**Maßnahme:**
-- Eigenständige Teams nur via `create_independent_team()` SECURITY DEFINER anlegen
-- Funktion setzt `team_owner`-Rolle atomar für `auth.uid()` — kein direktes INSERT durch Client
-- Nachträgliche `team_owner`-Vergabe: nur bestehender `team_owner` des gleichen Teams darf diese Rolle vergeben
+| Aktion | Erlaubte Rollen | Sicherheitsgrenze |
+|---|---|---|
+| Join-Anfrage annehmen/ablehnen | `team_owner`, `head_coach` | aktive Rolle im betroffenen Team |
+| Einladungscode anzeigen/erneuern/deaktivieren | `team_owner`, `head_coach`, `assistant_coach` | Anzeigen ist für `assistant_coach` in der aktuellen RLS noch nicht freigegeben; erneuern/deaktivieren ist nicht implementiert |
+| Training erstellen/bearbeiten/absagen | `team_owner`, `head_coach`, `assistant_coach` | Bearbeiten ist noch nicht implementiert |
+| Training hart löschen | `team_owner`, `head_coach` | nur vor Beginn, ohne jegliche RSVP; zusätzliche Texteingabe `LÖSCHEN`; noch nicht implementiert |
+| Spieler aus Team entfernen | `team_owner`, `head_coach` | Soft-Delete der Zuweisung, kein Löschen der Person/Historie |
+| Rollen vergeben/entziehen | ausschließlich `team_owner` | vordefinierte Rollen, keine Einzelrechte; noch nicht implementiert |
+| Eigentum übertragen | ausschließlich aktueller `team_owner` | Ziel ist registriert, volljährig, aktiv im selben Team und bestätigt; genau ein Owner; noch nicht implementiert |
 
----
-
-### Risiko 2 — Unsichere Invitation Tokens
-
-**Beschreibung:** Kurze oder vorhersehbare Einladungs-Tokens können durch Enumeration oder Bruteforce erraten werden.
-
-**Maßnahme:**
-- Token mindestens 32 Bytes kryptografisch zufällig: `encode(gen_random_bytes(32), 'hex')` → 64 Zeichen
-- Partial Unique Index auf aktive Tokens:
-  - `CREATE UNIQUE INDEX ON public.invitations(token) WHERE used_at IS NULL AND revoked_at IS NULL`
-  - `CREATE UNIQUE INDEX ON public.team_invitation_links(token) WHERE revoked_at IS NULL`
-- Maximale Gültigkeit: 7 Tage für Vereinseinladungen, 30 Tage für Team-Links
-- Rate-Limiting auf `/join/[token]` und `/invite/[token]` (via `src/proxy.ts` oder Vercel-Firewall)
-- Expired-Cleanup: pg_cron-Job oder Supabase Edge Function
+Mehrfachrollen ergeben die Vereinigungsmenge ihrer Rechte. Ein Owner, der zugleich
+Head Coach ist, kann die Head-Coach-Rolle ablegen, bleibt aber Owner. Die
+Owner-Rolle wird nur durch eine bestätigte Eigentumsübertragung entzogen.
 
 ---
 
-### Risiko 3 — Fremde RSVP (RSVP-Fälschung)
+## 5. Datenschutzbezogene Sicherheitsgrenzen
 
-**Beschreibung:** Ein User könnte `event_attendance` mit einer fremden `player_id` manipulieren.
+- Für Spieler ist das Geburtsjahr Pflicht. Das vollständige Geburtsdatum ist
+  freiwillig und darf nur für Geburtstagsübersicht und altersbezogene
+  Teamorganisation verwendet werden.
+- Teamseitig dürfen ein vollständiges Spielergeburtsdatum nur aktive
+  `team_owner`, `head_coach` und `assistant_coach` des Teams sehen. Erfassung und
+  Sichtbarkeit setzen eine klare Information und freiwillige Bestätigung voraus.
+  Spieler dürfen das eigene Datum sehen und korrigieren; Guardians nur das Datum
+  des eigenen verknüpften Kindes. Andere Spieler und Guardians haben keinen
+  Zugriff.
+- Endet die aktive Teamzuordnung, bleibt in notwendiger Historie nur das
+  Geburtsjahr sichtbar. Der eigene Spieler-/Kind-Profilzugriff bleibt davon
+  getrennt.
+- Guardians sehen nur eigene verknüpfte Kinder; ein frühes MVP sieht nur einen
+  Guardian-Account pro Kind vor.
+- Weitere Bezugspersonen sind Kontaktangaben, keine Accounts und haben keine
+  RSVP-Rechte.
+- Der Guardian muss vor dem Kind-Beitritt ausdrücklich erklären, zur Anmeldung
+  berechtigt zu sein. Zu speichern sind Nutzer, Zeitpunkt und Textversion.
+  `player_guardians.verified_at` allein erfüllt diesen beschlossenen Nachweis
+  nicht.
+- Abgelehnte und zurückgezogene Join-Anfragen werden nach 90 Tagen automatisch
+  bereinigt; unnötige Kinderdaten sollen früher entfernt werden. Die vorhandene
+  Cleanup-Funktion ist nicht automatisiert.
 
-**Maßnahme:**
-- `responded_by_user_id` wird immer serverseitig auf `auth.uid()` gesetzt — kein Client-Input
-- Guardian-RSVP: nur erlaubt wenn `is_guardian_of(player_id) = true`
-- Trainer-RSVP für `attended`: nur wenn `has_team_role(team_id, 'team_owner', 'head_coach', 'assistant_coach', 'team_manager')`
-
-```sql
--- Guardian setzt RSVP für Kind
-CREATE POLICY "guardian_updates_child_rsvp"
-ON public.event_attendance FOR UPDATE
-USING (public.is_guardian_of(player_id))
-WITH CHECK (public.is_guardian_of(player_id) AND responded_by_user_id = auth.uid());
-```
-
----
-
-### Risiko 4 — Zugriff auf andere Vereine (Tenant-Crossing)
-
-**Beschreibung:** User manipuliert `club_id`-Parameter um auf Daten eines anderen Vereins zuzugreifen.
-
-**Maßnahme:**
-- Alle RLS-Policies prüfen `club_id` gegen Mitgliedschaft des aktuellen Users
-- `is_club_member(p_club_id)` Hilfsfunktion als Basis aller Vereins-Policies
-- `events.club_id` via Trigger aus `team_id` abgeleitet — User kann `club_id` nicht manuell setzen
-- Server Actions prüfen Vereinsmitgliedschaft zusätzlich zur RLS (Defense in Depth)
-- Bei eigenständigen Teams (club_id = NULL): `is_team_member(team_id)` Policy greift
-
----
-
-### Risiko 5 — Guardian-Rechte ohne Verknüpfung
-
-**Beschreibung:** User behauptet, Guardian eines Spielers zu sein, ohne verifizierte Verknüpfung.
-
-**Maßnahme:**
-- Guardian-Rechte ausschließlich über `player_guardians`-Tabelle
-- `player_guardians.verified_at` muss gesetzt sein, bevor Rechte aktiv werden
-- Verknüpfung entsteht nur durch Annahme einer validen Einladung, nie durch direkten INSERT des Clients
-- `is_guardian_of()` prüft `verified_at IS NOT NULL`
-- `verified_at = now()` wird serverseitig gesetzt (Server Action, nicht Client)
+Details und rechtliche Prüfgrenzen stehen in `docs/DSGVO_PRIVACY_MODEL.md` und
+`docs/LEGAL_TODO.md`.
 
 ---
 
-### Risiko 6 — Fehlende RLS-Indexes (Performance-Sicherheitsrisiko)
+## 6. Offene und priorisierte Risiken
 
-**Beschreibung:** Fehlende Indexes auf Lookup-Tabellen führen zu Sequential Scans bei jeder RLS-Policy-Prüfung. Langsame Queries öffnen die Tür für DoS-Versuche.
+Die Priorisierung des technischen Audits bleibt in `docs/STATUS.md`. Für die
+Security-Abnahme sind mindestens folgende Punkte relevant:
 
-**Maßnahme:** Alle RLS-kritischen Indexes in Migration 001 anlegen (vollständige Liste in `DATABASE_MODEL.md`):
-
-```sql
-CREATE INDEX idx_club_memberships_user_club   ON public.club_memberships(user_id, club_id);
-CREATE INDEX idx_club_member_roles_membership ON public.club_member_roles(club_membership_id, role_id);
-CREATE INDEX idx_team_memberships_user_team   ON public.team_memberships(user_id, team_id);
-CREATE INDEX idx_team_member_roles_membership ON public.team_member_roles(team_membership_id, role_id);
-CREATE INDEX idx_teams_created_by             ON public.teams(created_by);
-```
-
----
-
-### Risiko 7 — SECURITY DEFINER Missbrauch (Schema-Injection)
-
-**Beschreibung:** Ohne explizites `SET search_path = ''` kann ein Angreifer durch Manipulation des `search_path` eigene Objekte vorschalten.
-
-**Maßnahme:**
-- Jede SECURITY DEFINER-Funktion beginnt mit `SET search_path = ''`
-- Alle Tabellen mit vollem Schema-Prefix: `public.club_memberships`, nicht `club_memberships`
-
-```sql
-CREATE OR REPLACE FUNCTION public.has_club_role(p_club_id uuid, p_role_key text)
-RETURNS boolean
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = ''
-STABLE AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.club_memberships cm
-    JOIN public.club_member_roles cmr ON cmr.club_membership_id = cm.id
-    JOIN public.roles r ON r.id = cmr.role_id
-    WHERE cm.user_id = auth.uid()
-    AND cm.club_id = p_club_id
-    AND cm.status = 'active'
-    AND r.key = p_role_key   -- roles.key, nicht roles.name_de
-  );
-$$;
-```
+| Risiko | Status | Erforderliche Maßnahme |
+|---|---|---|
+| Produktive Aktionen ohne bestätigte E-Mail | offen | zentrale serverseitige Verifikationsprüfung und Negativtests |
+| Self-Player-Join ohne serverseitige Altersgrenze | offen, Pilotblocker | rechtlich maßgebliche Grenze festlegen, serverseitig prüfen und Umgehung testen |
+| Registrierung speichert Annahmezeitpunkte, aber keine Textversionen | offen | versionierte Terms-/Privacy-Annahme speichern |
+| Guardian-Erklärung nicht versioniert gespeichert | offen | expliziten, serverseitig protokollierten Nachweis ergänzen |
+| 90-Tage-Cleanup nicht geplant ausgeführt | offen, Pilotblocker | Job einrichten, Fehlerüberwachung und Testnachweis ergänzen |
+| Vollständiges Spielergeburtsdatum fachlich beschlossen, aber Sichtbarkeits-/Consent-Modell nicht implementiert | offen | Feldfluss, RLS/Query-Grenzen und UI-Information gemeinsam umsetzen |
+| Einladungscode ohne dokumentiertes Rate-Limit | offen | Bruteforce-Schutz und Monitoring festlegen |
+| `team_manager` in Teilen der Migrationen/RLS | technische Altlast | vor Rollenänderungen vollständig inventarisieren und kontrolliert entfernen |
+| Event-Bearbeitung und bedingter Hard-Delete fehlen | offen | serverseitige Zeit-, RSVP-, Rollen- und Bestätigungsprüfung |
+| Manifest wird im gehosteten Zustand hinter Login umgeleitet | offen | `/manifest.webmanifest` öffentlich ausliefern und extern testen |
+| Dediziertes Error-Tracking/Monitoring | nicht verifiziert | Konzept und Verantwortlichkeit vor Pilot festlegen |
+| Cloud-Backup/Restore/Rollback | nicht verifiziert, Pilotblocker | Verfahren und Wiederherstellungstest dokumentieren |
+| Rechtstexte enthalten Platzhalter | offen, Pilotblocker | fachanwaltlich prüfen und vor Pilot ersetzen |
 
 ---
 
-### Risiko 8 — Kindsdaten in team_join_requests (DSGVO)
+## 7. Prüfpflicht bei sicherheitskritischen Änderungen
 
-**Beschreibung:** `team_join_requests` enthält Kindsdaten (Vorname, Nachname, Geburtsjahr) im pending/rejected Status. Abgelehnte Anfragen werden nicht automatisch gelöscht. Bei Systemfehler oder unachtsamer Konfiguration könnten diese Daten zu lange erhalten bleiben oder unbefugten Trainern zugänglich werden.
+Mindestens zu prüfen sind:
 
-**Maßnahme:**
-- RLS: nur der `guardian_user_id` und der Trainer (has_team_role 'team_owner', 'head_coach') sehen Anfragen
-- Keine automatische Sichtbarkeit für andere Teammitglieder
-- Abgelehnte Anfragen: Löschfrist 90 Tage via pg_cron oder Supabase Edge Function
-- `status = 'rejected'` + `reviewed_at` gesetzt → nach 90 Tagen löschen
-- Beim Ablehnen: keine weiteren Daten aus dem Request in `players`-Tabelle speichern
+1. angemeldet vs. nicht angemeldet,
+2. E-Mail bestätigt vs. unbestätigt,
+3. jede erlaubte Rolle sowie mindestens eine verbotene Rolle,
+4. eigenes Team/Kind vs. fremdes Team/Kind,
+5. aktive vs. beendete Mitgliedschaft/Zuweisung,
+6. gültige, deaktivierte und erratene Einladungscodes,
+7. Termin vor/nach Beginn, mit/ohne RSVP und abgesagter Termin,
+8. direkter RPC-/Datenbankaufruf unabhängig von versteckten UI-Buttons,
+9. keine Geheimnisse in Logs, Fehlermeldungen, Builds oder Commits.
 
-```sql
--- Abgelehnte Anfragen nach 90 Tagen löschen (pg_cron)
-DELETE FROM public.team_join_requests
-WHERE status = 'rejected'
-AND reviewed_at < now() - interval '90 days';
-```
+Die ausführbaren Szenarien werden in `docs/MVP_TEST_CHECKLIST.md` gepflegt.
 
 ---
 
-### Risiko 9 — Datenmissbrauch durch Trainer (DSGVO Minderjährige)
+## 8. Bewusste Abgrenzung
 
-**Beschreibung:** Ein Trainer könnte Kindsdaten, die über den Guardian-Flow in das System kamen, über seinen Berechtigungsrahmen hinaus einsehen, exportieren oder weitergeben.
-
-**Maßnahme:**
-- `tactics_notes` in `match_reports`: Column-Level Security oder separate RLS-Policy — nur Trainer
-- `players`-Daten: RLS beschränkt Zugriff auf das eigene Team (teamscoped)
-- Kein direkter Export im MVP-UI — keine Daten-Dump-Funktion für Trainer
-- Audit-Logs (MVP 1) für kritische Datenzugriffe
-- Datenschutzerklärung (vor Launch): erklärt Guardian/Spieler was gespeichert wird
-
----
-
-## Proxy-Sicherheit (src/proxy.ts)
-
-`src/proxy.ts` (Next.js 16 Konvention, nicht `middleware.ts`):
-- Ruft `supabase.auth.getUser()` bei jedem Request auf (nie `getSession()` — prüft JWT serverseitig)
-- Leitet unauthentifizierte User auf `/login` um (mit `?redirect=`-Parameter)
-- Erneuert abgelaufene Sessions via Token-Refresh
-- Öffentliche Routen werden nicht blockiert: `/`, `/login`, `/register`, `/auth/callback`, `/join/*`, `/invite/*`
-- Matcher schließt statische Dateien aus
-
----
-
-## Server Components und Route Handlers
-
-- Supabase Server Client liest Session aus HTTPOnly-Cookies
-- Rollen werden zusätzlich zur RLS auf Anwendungsebene geprüft (Defense in Depth)
-- `import 'server-only'` in `server.ts` und `route-handler.ts` verhindert Import in Client-Bundle
-- Route Handlers prüfen User vor jeder Operation: `const { data: { user } } = await supabase.auth.getUser()`
-
----
-
-## Input-Validierung
-
-- Alle Formulardaten werden auf dem Server mit **Zod** validiert (Server Actions, Route Handlers)
-- Kein Vertrauen auf clientseitige Validierung als Sicherheitsmechanismus
-- Supabase Query Builder verhindert SQL-Injection durch parametrisierte Queries
-- Slug-Generierung für Vereine: nur Kleinbuchstaben, Ziffern, Bindestriche — serverseitig via `create_club()` validiert
-
----
-
-## Bekannte Risiken und Maßnahmen (Übersicht)
-
-| Risiko | Schwere | Maßnahme | Status |
-|---|---|---|---|
-| Privilege Escalation (erster club_admin) | Kritisch | `create_club()` SECURITY DEFINER | Geplant |
-| Privilege Escalation (erster team_owner) | Kritisch | `create_independent_team()` SECURITY DEFINER | Geplant |
-| Unsichere Invitation Tokens | Hoch | 32-Byte-Token, Partial Index, Rate-Limit | Geplant |
-| Unsichere Team-Link-Tokens | Hoch | 32-Byte-Token, Partial Index, Ablaufdatum | Geplant |
-| Fremde RSVP | Hoch | RLS-Policies mit `auth.uid()`-Check | Geplant |
-| Tenant-Crossing | Hoch | `club_id`-Prüfung in allen Policies | Geplant |
-| Guardian ohne Verknüpfung | Hoch | `verified_at`-Check, Einladungsflow | Geplant |
-| Kindsdaten in join_requests (DSGVO) | Hoch | RLS + 90-Tage-Löschfrist | Geplant |
-| Datenmissbrauch durch Trainer (DSGVO) | Hoch | Column-Level Security, Audit-Logs | Geplant MVP 1 |
-| Fehlende RLS-Indexes | Mittel | Index-Strategie in erster Migration | Geplant |
-| SECURITY DEFINER Schema-Injection | Mittel | `SET search_path = ''` in allen Funktionen | Geplant |
-| Session-Hijacking | Mittel | HTTPOnly Cookies, kurze JWT-Ablaufzeit | Via Supabase |
-| CSRF | Niedrig | Next.js Server Actions eingebaut | Eingebaut |
-| Environment Poisoning | Mittel | `server-only` Import, kein `NEXT_PUBLIC_` für Secrets | Geplant |
+- Club-/Mehrteam-Rollen sind technisch vorbereitet, aber nicht operativer
+  MVP-Scope.
+- `audit_logs`, Trainer-RSVP (`event_staff_rsvps`), detaillierte
+  Anwesenheitserfassung und granulare Einzelrechte sind nicht implementiert.
+- Diese Datei behauptet keine Produktionsreife. Unbekannte Vercel-, Supabase- oder
+  organisatorische Einstellungen gelten bis zur Prüfung als **nicht verifiziert**.

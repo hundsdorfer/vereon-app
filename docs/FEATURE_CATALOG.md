@@ -1,5 +1,7 @@
 # Vereon — Feature Catalog
 
+**Stand:** 2026-07-18
+
 ## 1. Zweck dieser Datei
 
 `FEATURE_CATALOG.md` ist die kanonische fachliche Funktionsquelle für Vereon.
@@ -64,6 +66,7 @@ Die Spalte `Rollen` verwendet technische bzw. code-nahe Rollenbezeichnungen:
 | Rolle | Bedeutung |
 |---|---|
 | `authenticated_user` | eingeloggter, verifizierter Nutzer |
+| `anonymous_user` | nicht eingeloggter Nutzer, insbesondere für öffentliche Legal- und Auth-Seiten |
 | `team_owner` | administrativer Eigentümer eines eigenständigen Teams; wird beim Erstellen eines unabhängigen Teams vergeben; zentrale MVP-0A-Rolle neben `head_coach` |
 | `head_coach` | Haupttrainer / operativ verantwortlicher Teamverwalter |
 | `assistant_coach` | Co-Trainer |
@@ -110,14 +113,15 @@ Vorrangig sind insbesondere:
 - Training bearbeiten
 - Training löschen
 - Training absagen
-- Match bearbeiten
-- Match löschen
-- Match absagen
 - Trainer-RSVP
 - Co-Trainer hinzufügen / entfernen
-- RSVP-Deadline
-- Anwesenheit abschließen
+- E-Mail-Verifizierung und Account-Recovery
 - Guardian-/Join-/Consent-Lücken
+- Einladungscode- und Join-Request-Rechte
+- automatisierte Bereinigung alter Join-Anfragen
+
+Match, RSVP-Deadline und Anwesenheitsabschluss bleiben nachgelagerte MVP-1-Blöcke
+und benötigen vor Umsetzung ihre jeweils dokumentierten Teilentscheidungen.
 
 Nachrangig sind insbesondere:
 
@@ -205,11 +209,11 @@ Diese Punkte sind nur für MVP-0A / MVP-0B ausgeschlossen. Sie sind nicht dauerh
 
 | ID | Feature | Status | Phase | Rollen | Kurzbeschreibung | Nicht enthalten | Abhängigkeiten / Risiko |
 |---|---|---|---|---|---|---|---|
-| `FC-AUTH-001` | Registrierung | `implemented` | `MVP-0A` | `authenticated_user` | Nutzer kann einen Account registrieren. | vollständige Account-Recovery, manuelle Passwortvergabe | Claude-Review gegen Auth-Flow und Supabase-Konfiguration erforderlich. |
+| `FC-AUTH-001` | Registrierung | `partial` | `MVP-0A` | `authenticated_user` | Nutzer kann einen Account registrieren. Zielmodell: Geburtsjahr ist Pflicht, das vollständige Geburtsdatum freiwillig. | vollständige Account-Recovery, manuelle Passwortvergabe, verpflichtendes vollständiges Geburtsdatum | Registrierung ist implementiert; die beschlossene Trennung aus Pflicht-Geburtsjahr und optionalem vollständigem Datum noch nicht. |
 | `FC-AUTH-002` | Login | `implemented` | `MVP-0A` | `authenticated_user` | Nutzer kann sich anmelden. | Social Login, SSO | Claude-Review gegen aktuellen Auth-Flow erforderlich. |
 | `FC-AUTH-003` | Logout | `implemented` | `MVP-0A` | `authenticated_user` | Nutzer kann sich abmelden. | Session-Management-UI im Detail | Claude-Review erforderlich. |
 | `FC-AUTH-004` | Geschützte App-Bereiche | `implemented` | `MVP-0A` | `authenticated_user` | App-Bereiche sind nur für eingeloggte Nutzer zugänglich. | feingranulare Rechteprüfung je Feature | Rechteprüfung gehört in `ROLES_AND_PERMISSIONS.md` und `SECURITY.md`. |
-| `FC-AUTH-005` | E-Mail-Verifizierung erzwingen | `planned_mvp` | `MVP-0B` | `authenticated_user` | Produktive App-Nutzung ist erst nach bestätigter E-Mail möglich. | Nutzung unverifizierter Accounts für Teamaktionen | Muss gegen aktuellen Supabase-Auth-Flow geprüft werden. |
+| `FC-AUTH-005` | E-Mail-Verifizierung erzwingen | `planned_mvp` | `MVP-0B` | `authenticated_user` | Produktive Aktionen wie Mannschaft erstellen, Join-Request absenden und RSVP abgeben sind erst nach bestätigter E-Mail möglich; Login und reine Informationsansichten bleiben möglich. | produktive Teamaktionen unverifizierter Accounts | Muss gegen aktuellen Supabase-Auth-Flow geprüft werden. |
 | `FC-AUTH-006` | Passwort zurücksetzen | `planned_mvp` | `MVP-0B` | `authenticated_user` | Nutzer kann Passwort per E-Mail zurücksetzen. | Passwort-Reset durch Trainer, Telefon-Support, komplexe Recovery | E-Mail-Konfiguration und UX prüfen. |
 | `FC-AUTH-007` | Eigene Profil-Grunddaten bearbeiten | `planned_mvp` | `MVP-1` | `authenticated_user` | Verifizierter Nutzer kann Vorname, Nachname und optionale Telefonnummer bearbeiten. | Rollen, Teamzuordnung, Spielerstatus, Guardian-Kind-Beziehungen | Profil darf nicht Rollen-/Teamverwaltung ersetzen. |
 | `FC-AUTH-008` | E-Mail-Adresse ändern | `planned_later` | `Post-MVP` | `authenticated_user` | Nutzer kann E-Mail ändern; neue Adresse muss erneut verifiziert werden. | ungeprüfte E-Mail-Änderung | Sicherheits- und Verifizierungslogik nötig. |
@@ -221,7 +225,7 @@ Diese Punkte sind nur für MVP-0A / MVP-0B ausgeschlossen. Sie sind nicht dauerh
 | `FC-DASHBOARD-001` | Modulares Dashboard anzeigen | `partial` | `MVP-1` | `head_coach`, `assistant_coach`, `player`, `guardian` | Gemeinsames Dashboard-System mit systemdefinierten Kacheln je Rolle. | frei konfigurierbare Widgets, Drag-and-Drop, persönliche Layouts | Muss UX-seitig einfach bleiben. |
 | `FC-DASHBOARD-002` | Nächste Termine anzeigen | `implemented` | `MVP-0A` | `head_coach`, `assistant_coach`, `player`, `guardian` | Dashboard zeigt kommende relevante Termine. | komplexe Kalenderansicht | Claude-Review gegen aktuelle Dashboard-Implementierung erforderlich. |
 | `FC-DASHBOARD-003` | Offene RSVP anzeigen | `planned_mvp` | `MVP-1` | `head_coach`, `assistant_coach`, `player`, `guardian` | Dashboard zeigt offene eigene oder teambezogene Rückmeldungen. | Notification-Center, Push, E-Mail | Abhängig von RSVP-Deadline-Logik. |
-| `FC-DASHBOARD-004` | Offene Beitrittsanfragen anzeigen | `planned_mvp` | `MVP-1` | `team_owner`, `head_coach` | Dashboard zeigt offene Beitrittsanfragen. | Genehmigung durch `assistant_coach` | Abhängig von INVITE-Modul. |
+| `FC-DASHBOARD-004` | Offene Beitrittsanfragen anzeigen | `planned_mvp` | `MVP-1` | `team_owner`, `head_coach`, `assistant_coach` | Dashboard zeigt offene Beitrittsanfragen. | Genehmigung durch `assistant_coach` | Abhängig von INVITE-Modul; `assistant_coach` darf sehen, aber nicht entscheiden. |
 | `FC-DASHBOARD-005` | Teamstatus / Anwesenheitslage anzeigen | `planned_mvp` | `MVP-1` | `head_coach`, `assistant_coach` | Einfache Zusammenfassung zu RSVP, offenen Rückmeldungen und offenen Anwesenheitsabschlüssen. | langfristige Statistik, Leistungsbewertung, Trendanalysen | Darf keine Statistikplattform werden. |
 | `FC-DASHBOARD-006` | Schnellzugriffe je Rolle anzeigen | `planned_mvp` | `MVP-1` | `head_coach`, `assistant_coach`, `player`, `guardian` | Rollenabhängige Schnellzugriffe auf wichtige Funktionen. | frei personalisierbare Shortcuts | Muss mit Navigation konsistent bleiben. |
 | `FC-DASHBOARD-007` | Warnhinweise / offene Aufgaben anzeigen | `planned_later` | `Post-MVP` | `head_coach`, `assistant_coach`, `guardian`, `player` | Späterer Hinweisbereich für offene Aufgaben. | vollwertiges Notification-Center | Nicht MVP-0A/MVP-0B. |
@@ -231,10 +235,10 @@ Diese Punkte sind nur für MVP-0A / MVP-0B ausgeschlossen. Sie sind nicht dauerh
 
 | ID | Feature | Status | Phase | Rollen | Kurzbeschreibung | Nicht enthalten | Abhängigkeiten / Risiko |
 |---|---|---|---|---|---|---|---|
-| `FC-ORG-001` | Club/Verein als Organisationseinheit führen | `partial` | `MVP-0A` | `team_owner`, `head_coach` | Organisationseinheit ist technisch/fachlich vorhanden (Tabelle `clubs`, RPC `create_club()`), aber es existiert noch keine vollständige nutzbare Club-Verwaltung (kein UI-Flow zum Anlegen/Verwalten eines Vereins). | vollständige Vereinsverwaltung | Claude-Review bestätigt: Datenmodell/RPC vorhanden, aber keine Server Action/Route für Club-Erstellung im Code (`docs/STATUS.md`). |
-| `FC-ORG-002` | Club im Hintergrund beim Team-Setup mitführen | `partial` | `MVP-0A` | `head_coach` | Nutzer arbeitet operativ primär mit einer Mannschaft; Club-Kontext läuft reduziert im Hintergrund. | komplexes Club-Onboarding | Muss mit Team-Erstellung konsistent sein. |
-| `FC-ORG-003` | Club-Grunddaten anzeigen/verwalten | `planned_mvp` | `MVP-1` | `club_admin`, `head_coach` | Später können Vereinsname, Sportart, Land/Region sowie optional Logo/Farbe gepflegt werden. | Adresse, Registernummer, Vorstandsdaten, Bankdaten, Steuernummer | Nicht zur vollständigen Vereinsverwaltung ausweiten. |
-| `FC-ORG-004` | Mehrteam-Struktur vorbereiten | `needs_review` | `MVP-0A` | `club_admin`, `head_coach` | Datenmodell soll mehrere Mannschaften pro Verein ermöglichen. | sichtbare Mehrteam-Verwaltung im frühen MVP | Gegen Datenmodell und Rollenlogik prüfen. |
+| `FC-ORG-001` | Club/Verein als Organisationseinheit führen | `partial` | `Post-MVP` | `club_admin` | Tabellen und RPC sind technisch vorbereitet; eine nutzbare Club-Verwaltung oder ein Club-Onboarding existiert nicht. | vollständige Vereinsverwaltung im frühen MVP | Technischer Ist-Stand siehe `ARCHITECTURE.md`/`STATUS.md`; sichtbare Club-Funktion erst nach eigener Post-MVP-Entscheidung. |
+| `FC-ORG-002` | Club beim Team-Setup mitführen | `planned_later` | `Post-MVP` | `team_owner`, `club_admin` | Ein eigenständiges Team bleibt im frühen MVP ohne versteckten Club-Kontext. Eine spätere Zuordnung entsteht nur über einen bewussten Affiliation-Flow. | automatische oder unsichtbare Vereinszuordnung | Abhängig von `FC-TEAM-009`; nicht implementiert. |
+| `FC-ORG-003` | Club-Grunddaten anzeigen/verwalten | `planned_later` | `Post-MVP` | `club_admin` | Nach einer eigenen Club-Produktentscheidung können Vereinsgrunddaten gepflegt werden. | Adresse, Registernummer, Vorstandsdaten, Bankdaten, Steuernummer | Sichtbare Club-UI und operative `club_admin`-Flows sind ausdrücklich Post-MVP. |
+| `FC-ORG-004` | Mehrteam-Struktur vorbereiten | `partial` | `Post-MVP` | `club_admin` | Das Datenmodell ist technisch vorbereitet; eine nutzbare Mehrteam-Verwaltung ist nicht implementiert und wird erst Post-MVP fachlich konkretisiert. | sichtbare Mehrteam-Verwaltung im frühen MVP | Technischer Ist-Stand siehe `ARCHITECTURE.md`/`STATUS.md`; keine frühe Produktfunktion. |
 | `FC-ORG-005` | Mehrere Mannschaften pro Verein sichtbar verwalten | `planned_later` | `Post-MVP` | `club_admin` | Club-/Vereinsadmin kann mehrere Teams sichtbar verwalten. | MVP-0A/MVP-0B | Benötigt Team-Switcher, Club-Dashboard und Rollenmodell. |
 
 ## TEAM — Mannschaft
@@ -246,8 +250,8 @@ Diese Punkte sind nur für MVP-0A / MVP-0B ausgeschlossen. Sie sind nicht dauerh
 | `FC-TEAM-003` | Mannschafts-Grunddaten bearbeiten | `planned_mvp` | `MVP-0B` | `team_owner` | Grunddaten wie Name, Altersklasse, Saison, Sportart und Beschreibung können bearbeitet werden. Laut `ROLES_AND_PERMISSIONS.md` ("team_owner vs. head_coach") kann ausschließlich `team_owner` Team-Einstellungen ändern, nicht `head_coach`. | vollständige Vereinsdaten | Abhängig von ORG-Abgrenzung. |
 | `FC-TEAM-004` | Teammitglieder anzeigen | `implemented` | `MVP-0A` | `team_owner`, `head_coach`, `assistant_coach`, `player`, `guardian` | Zeigt Teammitglieder rollenabhängig. | gleiche vollständige Liste für alle Rollen | Datenschutz bei Minderjährigen beachten. |
 | `FC-TEAM-005` | Rollenabhängige Teamliste anzeigen | `planned_mvp` | `MVP-1` | `team_owner`, `head_coach`, `assistant_coach`, `player`, `guardian` | Trainerteam sieht vollständige sportliche und verwaltungsrelevante Ansicht; Spieler/Guardian sehen reduzierte Ansichten. | fremde Guardian-Kontaktdaten für Spieler/Eltern | Datenschutz und Rollenmodell prüfen. |
-| `FC-TEAM-006` | Mannschaft archivieren / deaktivieren | `planned_mvp` | `MVP-1` | `team_owner`, `club_admin` | Mannschaft kann später deaktiviert oder archiviert werden. Archivieren ist eine Team-Einstellungsänderung und laut `ROLES_AND_PERMISSIONS.md` `team_owner`-Sache, nicht `head_coach`. | vollständiges hartes Löschen | Historie, Termine und Teamdaten dürfen nicht unkontrolliert verschwinden. |
-| `FC-TEAM-007` | Primären Team-Ort verwalten | `planned_mvp` | `MVP-1` | `team_owner`, `head_coach`, `assistant_coach` | In Mannschaftseinstellungen kann ein primärer Ort, z. B. Sportplatz/Stadion, hinterlegt werden. | Anlagen-/Platzverwaltung, Buchungssystem | Dient nur als schneller Ort für Trainings. |
+| `FC-TEAM-006` | Mannschaft archivieren / deaktivieren | `planned_mvp` | `MVP-1` | `team_owner` | Mannschaft kann später deaktiviert oder archiviert werden. Archivieren ist eine Team-Einstellungsänderung und laut `ROLES_AND_PERMISSIONS.md` `team_owner`-Sache, nicht `head_coach`. | vollständiges hartes Löschen | Historie, Termine und Teamdaten dürfen nicht unkontrolliert verschwinden. |
+| `FC-TEAM-007` | Primären Team-Ort verwalten | `planned_mvp` | `MVP-1` | `team_owner` | In Mannschaftseinstellungen kann ein primärer Ort, z. B. Sportplatz/Stadion, hinterlegt werden. | Anlagen-/Platzverwaltung, Buchungssystem | Team-Grunddaten verwaltet ausschließlich `team_owner`; Trainer können Orte weiterhin je Termin setzen. |
 | `FC-TEAM-008` | Zwischen Mannschaften wechseln | `planned_later` | `Post-MVP` | `club_admin`, `head_coach`, `assistant_coach`, `player`, `guardian` | Nutzer kann später zwischen mehreren berechtigten Mannschaften wechseln. | MVP-0A/MVP-0B | Abhängig von sichtbarer Mehrteam-Verwaltung. |
 | `FC-TEAM-009` | Team-Affiliation beantragen/annehmen | `planned_later` | `Post-MVP` | `team_owner`, `club_admin` | Ein eigenständiges Team kann später eine Zuordnung zu einem Verein beantragen oder eine Vereinszuordnung annehmen. Die Zuordnung darf nicht automatisch erfolgen; der `team_owner` muss aktiv zustimmen. | automatische Vereinszuordnung, frühe MVP-Funktion, vollständige Club-Suite | Benötigt sichtbare Vereins-/Mehrteam-Struktur, Rollenklärung zwischen `team_owner` und `club_admin`, Audit-/Historienlogik und klare Zustimmung durch den Team Owner. |
 
@@ -255,12 +259,13 @@ Diese Punkte sind nur für MVP-0A / MVP-0B ausgeschlossen. Sie sind nicht dauerh
 
 | ID | Feature | Status | Phase | Rollen | Kurzbeschreibung | Nicht enthalten | Abhängigkeiten / Risiko |
 |---|---|---|---|---|---|---|---|
-| `FC-ROLE-001` | Rollen eines Mitglieds anzeigen | `planned_mvp` | `MVP-1` | `head_coach`, `club_admin` | Rollen eines Team-/Clubmitglieds werden sichtbar gemacht. | vollständige Rechte-Matrix | Details gehören in `ROLES_AND_PERMISSIONS.md`. |
-| `FC-ROLE-002` | Co-Trainer hinzufügen | `planned_mvp` | `MVP-0B` | `team_owner`, `head_coach`, `club_admin` | `team_owner`/`head_coach` kann `assistant_coach` hinzufügen; `club_admin` erst nach sichtbarer Club-Struktur voll relevant. | Hinzufügen durch `assistant_coach` | Bekannte Kernlücke. |
-| `FC-ROLE-003` | Co-Trainer entfernen | `planned_mvp` | `MVP-0B` | `team_owner`, `head_coach`, `club_admin` | `team_owner`/`head_coach` kann Co-Trainer entfernen; `club_admin` später. | Entfernen durch `assistant_coach` | Rollenänderungen müssen nachvollziehbar sein. |
+| `FC-ROLE-001` | Rollen eines Mitglieds anzeigen | `planned_mvp` | `MVP-1` | `team_owner` | Rollen eines Teammitglieds werden sichtbar gemacht. | frei konfigurierbare Einzelrechte, Clubrollen im Einzelteam-MVP | Details gehören in `ROLES_AND_PERMISSIONS.md`. |
+| `FC-ROLE-002` | Co-Trainer hinzufügen | `planned_mvp` | `MVP-0B` | `team_owner` | Ausschließlich `team_owner` kann die vordefinierte Rolle `assistant_coach` vergeben. | Hinzufügen durch `head_coach` oder `assistant_coach`; granulare Einzelrechte | Bekannte Kernlücke. |
+| `FC-ROLE-003` | Co-Trainer entfernen | `planned_mvp` | `MVP-0B` | `team_owner` | Ausschließlich `team_owner` kann die Rolle `assistant_coach` wieder entziehen. | Entfernen durch `head_coach` oder `assistant_coach`; granulare Einzelrechte | Rollenänderungen müssen nachvollziehbar sein. |
 | `FC-ROLE-004` | Rollenbasierte Navigation anzeigen | `partial` | `MVP-0A` | `authenticated_user` | App zeigt Funktionen abhängig von Rolle/Berechtigung. | vollständiges Rollen-Admin-Panel | Gegen UI und RLS prüfen. |
 | `FC-ROLE-005` | `club_admin` operativ nutzen | `planned_later` | `Post-MVP` | `club_admin` | Vereinsadministrator wird mit sichtbarer Club-/Mehrteam-Struktur relevant. | frühe vollständige Vereinsverwaltung | Nicht Voraussetzung für MVP-0B-Kernlücken. |
 | `FC-ROLE-006` | `super_admin` als Plattformrolle vorbereiten | `candidate` | `Later` | `super_admin` | Spätere interne Plattformrolle für Vereon-Betreiber. | normale Vereinsrolle | Erfordert eigene Security-/Decision-Prüfung. |
+| `FC-ROLE-007` | Team-Eigentümerschaft übertragen | `planned_mvp` | `MVP-1` | `team_owner` | Der einzige `team_owner` kann die Eigentümerschaft ausdrücklich an einen bereits registrierten, volljährigen und aktiven Nutzer desselben Teams übertragen; die Zielperson muss bestätigen. | zweiter gleichzeitiger `team_owner`, stiller Entzug, automatische Änderung anderer Rollen | Nach der Übertragung bleiben alle anderen Rollen beider Personen unverändert. Vor Umsetzung ist zu klären, wie Volljährigkeit mit nur verpflichtendem Geburtsjahr verlässlich und datensparsam geprüft wird. |
 
 ## PLAYER — Spieler
 
@@ -268,8 +273,8 @@ Diese Punkte sind nur für MVP-0A / MVP-0B ausgeschlossen. Sie sind nicht dauerh
 |---|---|---|---|---|---|---|---|
 | `FC-PLAYER-001` | Spieler im Team anzeigen | `implemented` | `MVP-0A` | `team_owner`, `head_coach`, `assistant_coach`, `player`, `guardian` | Spieler werden in der Teamansicht sichtbar. | vollständige öffentliche Spielerliste für alle | Rollenabhängige Sichtbarkeit prüfen. |
 | `FC-PLAYER-002` | Spieler aus Team entfernen | `implemented` | `MVP-0B` | `team_owner`, `head_coach` | Trainerteam kann Spieler aus der Mannschaft entfernen. | vollständiges Löschen der Person/Historie | Umsetzung wurde laut Projektstand committed und im Code verifiziert (`has_team_role(['team_owner','head_coach'])` in `teams/[teamId]/page.tsx`) — `assistant_coach` hat aktuell keinen Zugriff. |
-| `FC-PLAYER-003` | Spielerstammdaten erfassen | `implemented` | `MVP-0B` | `player`, `guardian`, `team_owner`, `head_coach` | Erfasst Name, Geburtsjahr und Teamzuordnung. Im MVP wird aus Datenschutz-/Datenminimierungsgründen nur das Geburtsjahr gespeichert (kein vollständiges Geburtsdatum). | Adresse, medizinische Daten, Ausweisdaten, vollständiges Geburtsdatum | Datenminimierung bereits entschieden (`DEC-007`) und umgesetzt (Migration `20260702000000_players_birth_year_only`, `join.ts` nimmt nur `child_birth_year integer` entgegen). Eine spätere erneute Prüfung eines vollständigen Geburtsdatums wäre ein separater, künftiger Kandidat — kein aktueller MVP-Plan. |
-| `FC-PLAYER-004` | Spielerstammdaten bearbeiten | `planned_mvp` | `MVP-1` | `player`, `guardian` | Spieler/Guardian können Vorname, Nachname und Geburtsjahr bearbeiten. Änderungen sollen für Trainer nachvollziehbar sichtbar sein. | freie Änderung durch Trainerteam | Risiko: Altersklasse, Minderjährigenlogik, Änderungsverlauf. |
+| `FC-PLAYER-003` | Spielerstammdaten erfassen | `partial` | `MVP-0B` | `player`, `guardian` | Erfasst Name, verpflichtendes Geburtsjahr und Teamzuordnung. Das vollständige Geburtsdatum kann freiwillig ergänzt werden; dann wird das Geburtsjahr daraus abgeleitet oder muss dazu passen. | Adresse, medizinische Daten, Ausweisdaten, verpflichtendes vollständiges Geburtsdatum | Aktuell ist die Erfassung nur mit Geburtsjahr umgesetzt; die freiwillige Angabe des vollständigen Datums ist beschlossen, aber noch nicht durchgängig implementiert. |
+| `FC-PLAYER-004` | Spielerstammdaten bearbeiten | `planned_mvp` | `MVP-1` | `player`, `guardian` | Spieler können die eigenen, Guardians die kindbezogenen Stammdaten einschließlich des freiwilligen vollständigen Geburtsdatums sehen und korrigieren. Änderungen sollen für Trainer nachvollziehbar sichtbar sein. | Zugriff auf fremde Spieler- oder Kinddaten; freie Änderung durch Trainerteam | Das Geburtsjahr bleibt Pflicht; das vollständige Datum bleibt freiwillig und zweckgebunden. |
 | `FC-PLAYER-005` | Sportliche Stammdaten pflegen | `planned_mvp` | `MVP-1` | `team_owner`, `head_coach`, `assistant_coach` | Trainerteam kann Rückennummer und Position pflegen. | Leistungsbewertung, interne Charakter-/Bewertungsnotizen | Datenschutz und Scope beachten. |
 | `FC-PLAYER-006` | Teamzuordnung und Spielerstatus pflegen | `planned_mvp` | `MVP-1` | `team_owner`, `head_coach`, `assistant_coach` | Trainerteam kann Teamzuordnung und Status im Team pflegen. | Bearbeitung durch Spieler/Guardian | Statuslogik muss mit Entfernen/Archivieren konsistent sein. |
 | `FC-PLAYER-007` | Spieler archivieren / deaktivieren | `planned_later` | `Post-MVP` | `head_coach`, `club_admin` | Spieler kann später archiviert/deaktiviert werden. | vollständige Löschung personenbezogener Historie | Gehört eng zu DSGVO-/Archivierungsmodell. |
@@ -279,11 +284,11 @@ Diese Punkte sind nur für MVP-0A / MVP-0B ausgeschlossen. Sie sind nicht dauerh
 
 | ID | Feature | Status | Phase | Rollen | Kurzbeschreibung | Nicht enthalten | Abhängigkeiten / Risiko |
 |---|---|---|---|---|---|---|---|
-| `FC-GUARDIAN-001` | Guardian-Kind-Beziehung führen | `implemented` | `MVP-0A` | `guardian`, `head_coach` | Guardian ist verwaltende Einheit für ein oder mehrere Kinder. | mehrere eigenständige Guardian-Accounts pro Kind im MVP | Datenmodell gegen gewünschte Ein-Guardian-Regel prüfen. |
+| `FC-GUARDIAN-001` | Guardian-Kind-Beziehung führen | `partial` | `MVP-0A` | `guardian`, `head_coach` | Die Guardian-Kind-Beziehung ist implementiert. Zielregel für den frühen MVP: pro Kind genau ein Guardian-Account; weitere Bezugspersonen sind Kontaktpersonen ohne Login. | mehrere eigenständige Guardian-Accounts pro Kind im MVP | Die Ein-Guardian-Regel wird im aktuellen Datenmodell noch nicht technisch erzwungen. |
 | `FC-GUARDIAN-002` | Guardian meldet Kind an | `implemented` | `MVP-0A` | `guardian` | Guardian kann ein Kind über Join-Flow anmelden. | Uploadpflicht für Nachweise | Consent-/Berechtigungsbestätigung ergänzen. |
 | `FC-GUARDIAN-003` | Guardian gibt RSVP für Kind ab | `implemented` | `MVP-0A` | `guardian` | Guardian kann für sein Kind RSVP abgeben. | RSVP für fremde Kinder | Muss mit Guardian-Kind-Beziehung abgesichert sein. |
 | `FC-GUARDIAN-004` | Mehrere Kinder pro Guardian verwalten | `planned_mvp` | `MVP-1` | `guardian` | Ein Guardian kann mehrere Kinder verwalten. | mehrere Guardian-Accounts pro Kind | Gegen Datenmodell prüfen. |
-| `FC-GUARDIAN-005` | Mehrere Guardian-Accounts pro Kind erlauben | `rejected` | `Unassigned` | — | Mehrere eigenständige Guardian-Accounts pro Kind sind grundsätzlich nicht vorgesehen. | — | Weitere Angehörige werden als Kontaktpersonen im Guardian-Kontext dokumentiert. |
+| `FC-GUARDIAN-005` | Mehrere Guardian-Accounts pro Kind erlauben | `candidate` | `Unassigned` | `guardian` | Im frühen MVP nicht vorgesehen; eine spätere Erweiterung ist nicht entschieden. | MVP-0A/MVP-0B/MVP-1 | Weitere Angehörige werden zunächst als Kontaktpersonen ohne Login und RSVP-Recht geführt. |
 | `FC-GUARDIAN-006` | Guardian-Kontaktpersonen verwalten | `planned_mvp` | `MVP-1` | `guardian` | Guardian kann Kontaktpersonen mit Name, Beziehung, optionaler Telefonnummer und begrenzter Notiz verwalten. | eigener Login, eigene App-Rechte, eigene RSVP-Funktion | Datenschutz und Sichtbarkeit begrenzen. |
 | `FC-GUARDIAN-007` | Guardian-Kontaktpersonen für Trainerteam anzeigen | `planned_mvp` | `MVP-1` | `head_coach`, `assistant_coach` | Trainerteam sieht relevante Kontaktpersonen mit Name, Beziehung und Telefonnummer. | private Notizen, umfangreiche Familieninformationen | Nur relevante Kontaktinformationen anzeigen. |
 | `FC-GUARDIAN-008` | Guardian-Kontaktdaten bearbeiten | `planned_mvp` | `MVP-1` | `guardian` | Guardian kann eigene Kontakt- und Profildaten bearbeiten. | Bearbeitung durch Trainer | Telefonnummer bleibt optional. |
@@ -292,15 +297,15 @@ Diese Punkte sind nur für MVP-0A / MVP-0B ausgeschlossen. Sie sind nicht dauerh
 
 | ID | Feature | Status | Phase | Rollen | Kurzbeschreibung | Nicht enthalten | Abhängigkeiten / Risiko |
 |---|---|---|---|---|---|---|---|
-| `FC-INVITE-001` | Team-Einladungscode anzeigen | `implemented` | `MVP-0A` | `team_owner`, `head_coach` | Trainer kann Einladungscode/Join-Link für Team anzeigen. | mehrere parallele Codes pro Team | Code-Sicherheit prüfen. |
+| `FC-INVITE-001` | Team-Einladungscode anzeigen | `partial` | `MVP-0A` | `team_owner`, `head_coach`, `assistant_coach` | Alle drei aktiven Trainerrollen dürfen Einladungscode/Join-Link für ihr Team anzeigen und teilen. | mehrere parallele Codes pro Team | Für `team_owner` und `head_coach` umgesetzt; die aktuelle RLS-Policy für `team_invitation_links` schließt `assistant_coach` noch aus. |
 | `FC-INVITE-002` | Join-Link verwenden | `implemented` | `MVP-0A` | `authenticated_user` | Nutzer kann über Link/Code dem Join-Flow folgen. | öffentliche Teamaufnahme ohne Freigabe | Muss mit Beitrittsanfragen gekoppelt bleiben. |
-| `FC-INVITE-003` | Volljähriger Spieler tritt selbst bei | `implemented` | `MVP-0A` | `player` | Volljähriger Spieler kann selbst als Spieler beitreten. | Minderjährige ohne Guardian-Logik | Alters-/Geburtsdatum-Logik prüfen. |
+| `FC-INVITE-003` | Volljähriger Spieler tritt selbst bei | `partial` | `MVP-0A` | `player` | Volljähriger Spieler kann selbst als Spieler beitreten. | Minderjährige ohne Guardian-Logik | Der Self-Join ist umgesetzt, erzwingt die Volljährigkeitsgrenze derzeit aber nicht serverseitig. Die rechtlich maßgebliche Altersregel ist vor Pilotbetrieb festzulegen. |
 | `FC-INVITE-004` | Guardian meldet Kind per Join-Flow an | `implemented` | `MVP-0A` | `guardian` | Guardian meldet Kind über Join-Flow an. | mehrere Guardian-Accounts pro Kind | Consent-Erfassung noch ergänzen. |
-| `FC-INVITE-005` | Beitrittsanfragen anzeigen | `implemented` | `MVP-0A` | `head_coach`, `assistant_coach` | Trainerteam kann offene Beitrittsanfragen sehen. | Genehmigung durch `assistant_coach` | Nur `head_coach` darf entscheiden. |
-| `FC-INVITE-006` | Beitrittsanfrage annehmen | `implemented` | `MVP-0A` | `head_coach` | `head_coach` kann Beitrittsanfrage annehmen. | Annahme durch `assistant_coach` | Sicherheits- und Datenschutzrelevanz. |
-| `FC-INVITE-007` | Beitrittsanfrage ablehnen | `partial` | `MVP-0B` | `head_coach` | `head_coach` kann Anfrage ablehnen, optional mit kurzer Begründung. | Pflichtbegründung, Chat, Diskussion | Optionaler Grund ggf. noch nicht umgesetzt. |
-| `FC-INVITE-008` | Einladungscode erneuern / deaktivieren | `planned_mvp` | `MVP-0B` | `team_owner`, `head_coach` | Einladungscode kann manuell erneuert oder deaktiviert werden. | automatisches Ablaufdatum im frühen MVP | Sicherheitsrelevant. |
-| `FC-INVITE-009` | Alte Beitrittsanfragen bereinigen | `planned_later` | `Post-MVP` | `system`, `super_admin` | Alte, abgelehnte oder abgelaufene Anfragen werden später fachlich bereinigt. | konkrete Cron-/RPC-/Datenbankimplementierung | Technische Umsetzung nicht hier beschreiben. |
+| `FC-INVITE-005` | Beitrittsanfragen anzeigen | `partial` | `MVP-0A` | `team_owner`, `head_coach`, `assistant_coach` | Alle drei aktiven Trainerrollen dürfen offene Beitrittsanfragen sehen; entscheiden dürfen nur `team_owner` und `head_coach`. | Entscheidung durch `assistant_coach` | Für `team_owner` und `head_coach` umgesetzt; die aktuelle RLS-Policy für `team_join_requests` schließt `assistant_coach` noch aus. |
+| `FC-INVITE-006` | Beitrittsanfrage annehmen | `implemented` | `MVP-0A` | `team_owner`, `head_coach` | `team_owner` oder `head_coach` kann eine Beitrittsanfrage annehmen. | Annahme durch `assistant_coach` | Die aktuelle RPC prüft `team_owner` oder `head_coach`. |
+| `FC-INVITE-007` | Beitrittsanfrage ablehnen | `partial` | `MVP-0B` | `team_owner`, `head_coach` | `team_owner` oder `head_coach` kann eine Anfrage ablehnen, optional mit kurzer Begründung. | Pflichtbegründung, Chat, Diskussion, Ablehnung durch `assistant_coach` | Optionaler Grund und eigenständige Owner-Berechtigung sind noch nicht vollständig umgesetzt. |
+| `FC-INVITE-008` | Einladungscode erneuern / deaktivieren | `planned_mvp` | `MVP-0B` | `team_owner`, `head_coach`, `assistant_coach` | Alle drei aktiven Trainerrollen können den dauerhaft gültigen Einladungscode manuell erneuern oder deaktivieren. | automatisches Ablaufdatum oder sichtbares Nutzungslimit im frühen MVP | Erneuern macht den bisherigen Code ungültig. |
+| `FC-INVITE-009` | Alte Beitrittsanfragen bereinigen | `planned_mvp` | `MVP-0B` | `system` | Abgelehnte oder zurückgezogene Anfragen werden nach 90 Tagen automatisiert bereinigt; nicht mehr notwendige Kinderdaten werden so früh wie möglich entfernt. | konkrete Cron-/RPC-/Datenbankimplementierung | Automatisierung ist noch nicht umgesetzt und Voraussetzung vor Pilotbetrieb. |
 | `FC-INVITE-010` | Einladungscode automatisch ablaufen lassen | `planned_later` | `Post-MVP` | `head_coach`, `system` | Codes können später zeitlich begrenzt werden. | MVP-0A/MVP-0B | Muss mit UX und Sicherheit abgestimmt werden. |
 
 ## EVENT — Kalenderbasis & allgemeine Termine
@@ -322,8 +327,8 @@ Diese Punkte sind nur für MVP-0A / MVP-0B ausgeschlossen. Sie sind nicht dauerh
 | `FC-TRAINING-001` | Training erstellen | `implemented` | `MVP-0A` | `team_owner`, `head_coach`, `assistant_coach` | Trainerteam kann Training anlegen. | vollständige Serienverwaltung | Claude-Review gegen aktuelle Trainingsfunktion. |
 | `FC-TRAINING-002` | Training anzeigen | `implemented` | `MVP-0A` | `team_owner`, `head_coach`, `assistant_coach`, `player`, `guardian` | Trainings werden sichtbar angezeigt. | komplexe Kalenderansicht | Rollenabhängige Sichtbarkeit prüfen. |
 | `FC-TRAINING-003` | Training bearbeiten | `planned_mvp` | `MVP-0B` | `team_owner`, `head_coach`, `assistant_coach` | Training kann vor Startzeit bearbeitet werden. | Bearbeitung von Kernfeldern ab Trainingsbeginn | Kernfelder bleiben ab Beginn stabil. |
-| `FC-TRAINING-004` | Training löschen | `planned_mvp` | `MVP-0B` | `team_owner`, `head_coach` | Training kann vor Trainingsbeginn hart gelöscht werden. Laut `ROLES_AND_PERMISSIONS.md`-Berechtigungsmatrix ist „Termin löschen" nicht für `assistant_coach` vorgesehen (anders als „Termin erstellen"). | Löschen ab Trainingsbeginn | Fehleingaben korrigieren, Historie schützen. |
-| `FC-TRAINING-005` | Training absagen | `planned_mvp` | `MVP-0B` | `team_owner`, `head_coach`, `assistant_coach` | Training kann vor Beginn abgesagt werden; Termin bleibt sichtbar und bekommt Status `abgesagt`. | Löschen statt Absage, Pflichtbegründung | Optionale Begründung; RSVP bleibt erhalten. |
+| `FC-TRAINING-004` | Training löschen | `planned_mvp` | `MVP-0B` | `team_owner`, `head_coach` | Ein irrtümlich angelegtes Training darf nur vor Beginn und nur ohne abgegebene Spieler- oder Trainer-RSVP hart gelöscht werden. Zusätzlich ist eine bewusste Texteingabe wie `LÖSCHEN` erforderlich. | Löschen durch `assistant_coach`, Löschen ab Beginn, Löschen nach abgegebener RSVP | Automatisch angelegte, noch unbeantwortete Teilnahmezeilen blockieren das Löschen nicht; sobald eine Rückmeldung abgegeben wurde, ist ausschließlich Absagen zulässig. |
+| `FC-TRAINING-005` | Training absagen | `planned_mvp` | `MVP-0B` | `team_owner`, `head_coach`, `assistant_coach` | Alle drei Trainerrollen können ein Training absagen; der Termin bleibt sichtbar und wird als abgesagt markiert. | Löschen statt Absage, Pflichtbegründung | Optionale Begründung; abgegebene RSVP bleiben als Historie erhalten und neue oder geänderte RSVP sind danach gesperrt. |
 | `FC-TRAINING-006` | Trainingsdetails pflegen | `planned_mvp` | `MVP-1` | `team_owner`, `head_coach`, `assistant_coach` | Optionale Beschreibung und optionales Thema/Schwerpunkt können gepflegt werden. | detaillierte Trainingsplanung, Übungsdatenbank, Minutenplan | Darf nicht zur Trainingsplanungssoftware ausufern. |
 | `FC-TRAINING-007` | Trainingsort pflegen | `planned_mvp` | `MVP-1` | `team_owner`, `head_coach`, `assistant_coach` | Training hat einen Ort; kein eigenes Treffpunktfeld im MVP. | separater Treffpunkt, Anlagenverwaltung | Primärer Team-Ort kann übernommen werden. |
 | `FC-TRAINING-008` | Primären Team-Ort übernehmen | `planned_mvp` | `MVP-1` | `team_owner`, `head_coach`, `assistant_coach` | Beim Erstellen kann der primäre Team-Ort per 1-Klick übernommen werden. | mehrere Sportstätten, Platzbuchung | Abhängig von `FC-TEAM-007`. |
@@ -357,12 +362,12 @@ Diese Punkte sind nur für MVP-0A / MVP-0B ausgeschlossen. Sie sind nicht dauerh
 | `FC-RSVP-001` | Spieler-RSVP abgeben | `implemented` | `MVP-0A` | `player` | Spieler kann für eigene Termine zusagen, absagen oder `maybe` wählen. | Trainer trägt Spieler-RSVP nach | `maybe` zählt nicht als Zusage. |
 | `FC-RSVP-002` | Guardian-RSVP für Kind abgeben | `implemented` | `MVP-0A` | `guardian` | Guardian gibt RSVP für sein Kind ab. | RSVP für fremde Kinder | Guardian-Kind-Zuordnung prüfen. |
 | `FC-RSVP-003` | Trainer-RSVP abgeben | `planned_mvp` | `MVP-0B` | `team_owner`, `head_coach`, `assistant_coach` | Trainerteam kann eigene Teilnahme zu Terminen rückmelden. | RSVP für Spieler nachtragen | Bekannte Kernlücke. |
-| `FC-RSVP-004` | Trainer-RSVP-Übersicht anzeigen | `implemented` | `MVP-0A` | `head_coach`, `assistant_coach` | Trainerteam sieht Rückmeldungen zu Terminen. | vollständige Statistikplattform | Claude-Review erforderlich. |
-| `FC-RSVP-005` | RSVP-Status anzeigen | `implemented` | `MVP-0A` | `head_coach`, `assistant_coach`, `player`, `guardian` | Status wird je Termin sichtbar. | komplexe Historie | Rollenabhängige Sicht prüfen. |
+| `FC-RSVP-004` | Trainer-RSVP-Übersicht anzeigen | `implemented` | `MVP-0A` | `team_owner`, `head_coach`, `assistant_coach` | Trainerteam sieht Rückmeldungen zu Terminen. | vollständige Statistikplattform | Rollenabhängige Sicht prüfen. |
+| `FC-RSVP-005` | RSVP-Status anzeigen | `implemented` | `MVP-0A` | `team_owner`, `head_coach`, `assistant_coach`, `player`, `guardian` | Status wird je Termin sichtbar. | komplexe Historie | Rollenabhängige Sicht prüfen. |
 | `FC-RSVP-006` | `maybe` mit optionaler Notiz nutzen | `planned_mvp` | `MVP-1` | `player`, `guardian`, `head_coach`, `assistant_coach` | Nur bei `maybe` kann eine kurze optionale Notiz hinterlegt werden. | allgemeine Notiz bei `yes`/`no`, Gesundheitsdokumentation | Keine strukturierte Krankheits-/Abwesenheitslogik. |
 | `FC-RSVP-007` | Optionale RSVP-Deadline festlegen | `planned_mvp` | `MVP-1` | `team_owner`, `head_coach`, `assistant_coach` | Trainer kann Frist setzen; Standard ist bis Terminbeginn bzw. Treffpunkt. | starre globale Frist | Match nutzt standardmäßig Treffpunkt-Zeit. |
 | `FC-RSVP-008` | RSVP nach Deadline mit Begründung ändern | `planned_mvp` | `MVP-1` | `player`, `guardian`, `head_coach`, `assistant_coach` | Nach Deadline bleibt Änderung möglich, aber nur mit Begründung. | folgenlose Spätänderung | Vor Terminbeginn; ab Beginn gesperrt. |
-| `FC-RSVP-009` | RSVP ab Termin-/Treffpunktbeginn sperren | `planned_mvp` | `MVP-1` | `system` | Ab Startzeit übernimmt ATTEND; RSVP ist nicht mehr änderbar. | nachträgliche RSVP-Änderung | Klare Trennung RSVP vs. Anwesenheit. |
+| `FC-RSVP-009` | RSVP ab Termin-/Treffpunktbeginn sperren | `planned_mvp` | `MVP-1` | `system` | Spieler, Guardians und Trainer dürfen die eigene RSVP bis zum relevanten Startzeitpunkt ändern; danach übernimmt ATTEND und RSVP ist nicht mehr änderbar. Abgesagte Termine sperren RSVP sofort. | nachträgliche RSVP-Änderung | Klare Trennung RSVP vs. Anwesenheit. |
 | `FC-RSVP-010` | Trainer trägt RSVP für Spieler nach | `rejected` | `Unassigned` | — | Trainerteam soll keine Spieler-RSVP nachtragen. | — | Tatsächliche Anwesenheit wird in ATTEND gepflegt. |
 
 ## ATTEND — Anwesenheit
@@ -422,7 +427,7 @@ Diese Punkte sind nur für MVP-0A / MVP-0B ausgeschlossen. Sie sind nicht dauerh
 |---|---|---|---|---|---|---|---|
 | `FC-MOBILE-001` | Mobile-optimierte App-Nutzung | `planned_mvp` | `MVP-1` | `authenticated_user` | Vereon soll auf Smartphones hochwertig nutzbar sein. | nur grob responsives Desktop-Layout | Mobile UX ist zentral für Trainer/Eltern/Spieler. |
 | `FC-MOBILE-002` | Mobile Navigation | `planned_mvp` | `MVP-1` | `authenticated_user` | Mobile Navigation unterstützt schnelle Nutzung im Alltag. | komplexe App-Shell vor Kernflow | Muss mit Dashboard und Rollenlogik konsistent sein. |
-| `FC-MOBILE-003` | PWA-installierbar mit App-Icon | `partial` | `MVP-1` | `authenticated_user` | PWA-Grundlagen vorhanden (Manifest, Icons, `appleWebApp`-Metadaten, Phase PWA.1 committed); praktische Installierbarkeit und Qualität (Smartphone-Install-Test, Lighthouse-PWA-Audit) müssen noch geprüft werden. | native App Store App | Installierbar bedeutet im MVP PWA. |
+| `FC-MOBILE-003` | PWA-installierbar mit App-Icon | `partial` | `MVP-1` | `authenticated_user` | PWA-Grundlagen sind im Repo vorhanden; die praktische Installierbarkeit ist noch nicht freigegeben. Der blockierte Manifest-Abruf ist ein vorgelagerter technischer Pre-Pilot-Fix, macht die vollständige PWA-Abnahme aber nicht zu MVP-0B. | native App Store App | Technischer Befund und Priorität gehören in `STATUS.md`; installierbar bedeutet im MVP PWA. |
 | `FC-MOBILE-004` | Push-Benachrichtigungen mobil nutzen | `planned_later` | `Post-MVP` | `authenticated_user` | Spätere mobile Push-Funktion. | MVP-0A/MVP-0B | Gehört zu NOTIFY. |
 | `FC-MOBILE-005` | Offlinefähigkeit | `planned_later` | `Later` | `authenticated_user` | Später teilweise Offline-Nutzung. | früher MVP | Hohe Komplexität bei Sync/Konflikten. |
 | `FC-MOBILE-006` | Native iOS-/Android-App | `planned_later` | `Later` | `authenticated_user` | Später mögliche native App. | MVP-0A/MVP-0B | Store, Builds, Wartung, Push-Infrastruktur. |
@@ -434,10 +439,11 @@ Diese Punkte sind nur für MVP-0A / MVP-0B ausgeschlossen. Sie sind nicht dauerh
 | `FC-LEGAL-001` | Impressum anzeigen | `partial` | `MVP-0B` | `anonymous_user`, `authenticated_user` | Impressumsseite ist sichtbar. | finale juristische Textprüfung | Aktuell ggf. Platzhalter; rechtlich prüfen. |
 | `FC-LEGAL-002` | Datenschutzerklärung anzeigen | `partial` | `MVP-0B` | `anonymous_user`, `authenticated_user` | Datenschutzerklärung ist sichtbar. | vollständige DSGVO-Ausarbeitung in dieser Datei | Gehört in `DSGVO_PRIVACY_MODEL.md` und juristische Prüfung. |
 | `FC-LEGAL-003` | Join-Flow-Hinweise anzeigen | `planned_mvp` | `MVP-0B` | `player`, `guardian` | Join-Flow zeigt relevante Hinweise zu Anmeldung und Datenverarbeitung. | vollständige Rechtsberatung | Muss verständlich und knapp sein. |
-| `FC-LEGAL-004` | Guardian-Berechtigungsbestätigung im Join-Flow erfassen | `planned_mvp` | `MVP-0B` | `guardian` | Guardian bestätigt im Guardian-Kind-Join-Flow minimal, dass er/sie berechtigt ist, das Kind anzumelden. | digitale Signatur, Nachweis-Upload, Dokumentenmanagement, vollständige Consent-Versionierung, automatisierter DSGVO-Self-Service | Wichtig vor externem Pilot mit Minderjährigen; genaue rechtliche Formulierung gehört in `DSGVO_PRIVACY_MODEL.md` und juristische Prüfung. |
+| `FC-LEGAL-004` | Guardian-Berechtigungsbestätigung im Join-Flow erfassen | `planned_mvp` | `MVP-0B` | `guardian` | Guardian bestätigt im Guardian-Kind-Join-Flow, zur Anmeldung des Kindes berechtigt zu sein. Gespeichert werden Nutzer, Zeitpunkt und Version des bestätigten Textes. | Identitätsprüfung, digitale Signatur, Nachweis-Upload, Dokumentenmanagement, automatisierter DSGVO-Self-Service | Die Bestätigung ist eine Selbsterklärung, kein Identitätsnachweis; genaue Formulierung juristisch prüfen. |
 | `FC-LEGAL-005` | Datenschutz-/Löschanfrage-Kontaktweg anzeigen | `planned_mvp` | `MVP-1` | `authenticated_user`, `anonymous_user` | Nutzer sieht klaren Kontaktweg für Datenschutz- oder Löschanfragen. | automatisierte Kontolöschung, Datenexport, Self-Service-Portal | Vollständige Prozesse in DSGVO-Dokumentation. |
 | `FC-LEGAL-006` | DSGVO-Self-Service anbieten | `planned_later` | `Post-MVP` | `authenticated_user` | Später automatisierter Export-/Löschanfrageprozess. | früher MVP | Hohe rechtliche und technische Komplexität. |
 | `FC-LEGAL-007` | Erweiterte Consent- und Berechtigungslogik führen | `planned_mvp` | `MVP-1` | `guardian`, `system` | Später wird die einfache Guardian-Berechtigungsbestätigung um nachvollziehbarere Consent-/Berechtigungslogik erweitert. | automatisierter DSGVO-Self-Service, digitale Signatur, Dokumentenmanagement | Muss mit Datenschutzmodell, Minderjährigenlogik, Join-Flow und möglicher Consent-Historie abgestimmt werden. |
+| `FC-LEGAL-008` | Nutzungsbedingungen und Datenschutzannahme nachweisen | `planned_mvp` | `MVP-0B` | `authenticated_user` | Die Annahme der jeweils gültigen Nutzungsbedingungen und Datenschutzhinweise wird mit Version und Zeitpunkt gespeichert. | juristische Wirksamkeitsprüfung, frei formulierte Einwilligungen | Wortlaut und erforderlicher Zeitpunkt sind vor Pilotbetrieb juristisch zu prüfen. |
 
 ## ADMIN — internes Vereon-Admin-Panel
 
@@ -453,9 +459,9 @@ Diese Punkte sind nur für MVP-0A / MVP-0B ausgeschlossen. Sie sind nicht dauerh
 
 ---
 
-# 12. Claude Review Targets
+# 12. Pflege- und Reviewcheckliste
 
-Nach dem manuellen Einfügen von `docs/FEATURE_CATALOG.md` soll Claude im Review-only-Modus prüfen:
+Nach relevanten Änderungen am Feature-Katalog prüft ein unabhängiger Review:
 
 1. Stimmen alle `implemented`-Statuswerte mit Repo, UI, Server Actions, Migrationen, RLS und vorhandener Dokumentation überein?
 2. Gibt es Features, die im Code existieren, aber im Katalog fehlen?
@@ -470,12 +476,14 @@ Nach dem manuellen Einfügen von `docs/FEATURE_CATALOG.md` soll Claude im Review
 11. Sind bekannte MVP-0B-Kernlücken korrekt sichtbar?
 12. Werden technische Tasks fälschlich als Produktfeatures geführt?
 
-Claude soll nach dem Review eine Status-/Konflikt-Matrix liefern:
+Bei größeren Status- oder Scope-Änderungen ist folgende Konflikt-Matrix
+hilfreich:
 
 | Feature-ID | Feature | Status laut Katalog | Status laut Repo-Prüfung | Konflikt? | Empfohlene Änderung | Begründung |
 |---|---|---|---|---|---|---|
 
-Claude soll im ersten Review keine Datei automatisch umbauen, sondern Abweichungen und Korrekturvorschläge melden.
+Der Review verändert ohne eigenen Auftrag keine Datei, sondern meldet
+Abweichungen und Korrekturvorschläge.
 
 ## 13. Nachgelagerte Dokumente
 

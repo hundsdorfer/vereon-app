@@ -1,205 +1,197 @@
-# DSGVO und Datenschutzmodell — Vereon
+# Datenschutzmodell — Vereon
 
-**Stand:** 2026-06-25
-**Kontext:** Vereon verarbeitet potenziell Daten von Minderjährigen, Erziehungsberechtigten, Trainern und Vereinen. Datenschutz ist keine nachgelagerte Aufgabe, sondern Teil der Architektur.
+**Stand:** 2026-07-18
 
----
+**Zweck:** Produkt- und Technikmodell für personenbezogene Daten, insbesondere
+Minderjährigendaten.
 
-## Rechtliche Grundlagen
+**Hinweis:** Dieses Dokument ist keine Rechtsberatung. Rechtsgrundlagen,
+Verantwortlichkeiten, Altersgrenzen, Informationspflichten, Einwilligung und eine
+mögliche Datenschutz-Folgenabschätzung müssen vor einem Pilotbetrieb
+fachanwaltlich geprüft werden.
 
-- **DSGVO (EU 2016/679)** — gilt für alle personenbezogenen Daten
-- **Art. 8 DSGVO** — Einwilligung Minderjähriger: unter 14 Jahren ist Einwilligung der Erziehungsberechtigten erforderlich
-- **Art. 17 DSGVO** — Recht auf Löschung ("Recht auf Vergessenwerden")
-- **Art. 20 DSGVO** — Recht auf Datenübertragbarkeit
-- **DSG 2018 (Österreich)** — nationale Umsetzung; Vereon startet in Österreich
-- **DSGVO gilt unabhängig davon, ob der Verein selbst als Verantwortlicher agiert** — Vereon als Plattformbetreiber ist Auftragsverarbeiter und/oder gemeinsam Verantwortlicher
-
----
-
-## Grundprinzipien (Privacy by Design)
-
-### Datensparsamkeit
-Nur Daten erfassen, die für den konkreten Zweck zwingend nötig sind. Kein spekulatives Sammeln für "später mal nützliche" Features.
-
-### Zweckbindung
-Jede gespeicherte Information hat einen definierten, dokumentierten Zweck. Keine Zweckentfremdung (z.B. keine Nutzung von Spielerdaten für Werbung).
-
-### Speicherbegrenzung
-Daten werden nur solange aufbewahrt wie nötig. Austrittsprozesse und Löschkonzepte sind Teil der Architektur.
-
-### Transparenz
-Nutzer wissen, was gespeichert wird. Eltern wissen, welche Daten über ihr Kind gespeichert sind.
+Offizielle Ausgangsquellen für diese Prüfung sind die
+[DSGVO bei EUR-Lex](https://eur-lex.europa.eu/eli/reg/2016/679/oj?locale=de) und
+die Hinweise der
+[österreichischen Datenschutzbehörde zu Kindern](https://dsb.gv.at/ueber-die-datenschutzbehoerde/teens-kids).
 
 ---
 
-## Minderjährige — besonderer Schutz
+## 1. Verbindliche Produktprinzipien
 
-Viele Spieler in Amateurfußballvereinen sind Minderjährige, oft unter 14 Jahren.
-
-### Was das bedeutet:
-- Einwilligung zur Datenspeicherung **muss von Erziehungsberechtigten** erteilt werden
-- Keine direkte Vermarktung an Minderjährige
-- Keine Fotos von Minderjährigen ohne explizite Einwilligung der Erziehungsberechtigten
-- Keine öffentlich zugänglichen Profile von Minderjährigen
-- Kein Account für Kinder unter 14 ohne Guardian-Verknüpfung empfohlen
-
-### Architektonische Konsequenz:
-- `player_guardians.verified_at` ist ein technischer Verknüpfungszeitpunkt (gesetzt beim Absenden der Beitrittsanfrage über den Einladungsflow) — **kein vollständiger Einwilligungsnachweis** im Sinne von Art. 8 DSGVO (keine Referenz auf eine konkrete Consent-Version, keine separate Protokollierung des Einwilligungsinhalts). Offener Punkt, siehe `docs/LEGAL_TODO.md`.
-- Guardian-Verknüpfung über Einladungsflow (nicht durch Kinder selbst)
-- Kinder ohne Account erscheinen in Anwesenheitslisten, haben aber keine eigene Authentifizierung
+- **Datenminimierung:** Nur Daten mit dokumentiertem Zweck erfassen.
+- **Zweckbindung:** Keine Nutzung von Spieler- oder Kinderdaten für Werbung,
+  Leistungsprofile oder Weitergabe ohne neue Entscheidung und Rechtsprüfung.
+- **Transparenz:** Nutzer und Guardians werden verständlich über Daten, Zweck,
+  Empfänger, Sichtbarkeit und Löschung informiert.
+- **Speicherbegrenzung:** Lösch- und Anonymisierungsfristen gehören zum Feature,
+  nicht in einen späteren Nachtrag.
+- **Zugriffsminimierung:** Aktive Beziehung und fachliche Rolle begrenzen den
+  Zugriff; UI-Sichtbarkeit allein reicht nicht.
+- **Nachweisbarkeit:** Rechtstext-, Privacy- und Guardian-Erklärungen werden mit
+  Textversion und Zeitpunkt gespeichert.
 
 ---
 
-## Minimales Spielerprofil (MVP 1)
+## 2. Datenkategorien und Zwecke
 
-Das Spielerprofil muss so minimal wie möglich sein, solange die Kernfunktionen (Anwesenheit, Kalender) davon abhängen.
-
-### Was gespeichert wird (MVP 1):
-```
-players (minimal):
-  id
-  first_name          -- Vorname
-  last_name           -- Nachname
-  birth_year          -- Geburtsjahr (nicht Geburtsdatum — weniger sensibel)
-  position            -- optional, Spielposition
-  jersey_nr           -- optional, Trikotnummer
-  user_id             -- optional, wenn Account vorhanden
-  club_id / team_id   -- Zuordnung
-```
-
-### Was bewusst NICHT im MVP gespeichert wird:
-| Datenfeld | Begründung |
-|---|---|
-| Vollständiges Geburtsdatum | Geburtsjahr reicht für Altersklassen, weniger sensibel. Technisch umgesetzt seit Migration `20260702000000_players_birth_year_only`: Der Join-Flow (`submit_join_request_self`, `submit_join_request_guardian`) befüllt `players.date_of_birth` nicht mehr. Die Spalte existiert weiterhin nullable als Bestandsspalte; ggf. vorhandene Altdaten aus früheren lokalen Testläufen wurden nicht rückwirkend bereinigt. `profiles.date_of_birth` ist ein separates Feld für das Profil des registrierten Nutzers (Trainer/Self-Player/Guardian selbst) und von dieser Umstellung nicht betroffen. |
-| Nationalität | Nicht nötig für Kernfunktionen |
-| Gesundheitsdaten | Streng sensibel nach Art. 9 DSGVO, nie in MVP |
-| Medizinische Informationen | Dito — separates Modul wenn überhaupt |
-| Detaillierte Leistungsbewertungen | Risiko bei Minderjährigen, Phase 3 |
-| Fotos / Bilder von Kindern | Einwilligung komplex, nie automatisch |
-| Vollständige Privatadresse | Nicht nötig für Vereinsmanagement |
-| Telefonnummer des Kindes | Elternkontakt reicht |
-| Freie Trainernotizen über Kinder | Sensibel, kein freies Textfeld in MVP |
-
-### `tactics_notes` im Spielbericht:
-Interne Trainernotizen über Spieler (`tactics_notes` in `match_reports`) sind:
-- Niemals für Spieler oder Eltern sichtbar
-- Column-Level Security oder separate RLS-Policy
-- Kein Freitextfeld zu Minderjährigen ohne klare Einschränkung
-
----
-
-## Sichtbarkeit von Kinderdaten
-
-### Grundregel:
-**Ein Elternteil sieht nur die Daten seines eigenen Kindes — nicht die Daten anderer Kinder oder Elternkontakte.**
-
-| Daten | Sichtbar für |
-|---|---|
-| Eigenes Kindprofil | Guardian (via player_guardians) |
-| Kalender des eigenen Kindes | Guardian (can_view_schedule = true) |
-| RSVP des eigenen Kindes | Guardian (can_rsvp = true) |
-| Profil anderer Kinder | NICHT automatisch — nur Trainer/Admin |
-| Liste aller Eltern im Team | NICHT automatisch — nur Trainer/Admin |
-| Anwesenheitsquote anderer Kinder | NICHT für Eltern |
-
-### RLS-Umsetzung:
-`player_guardians.verified_at` muss gesetzt sein, bevor Guardian-Rechte aktiv werden. Kein direkter INSERT durch den Client — ausschließlich über verifizierten Einladungsflow.
-
----
-
-## Rollenbasierter Datenzugriff
-
-| Datenkategorie | Trainer | club_admin | sporting_director | Spieler | Guardian | Öffentlich |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|
-| Eigenes Profil | ✓ | ✓ | ✓ | ✓ | ✓ | — |
-| Profile Vereinsmitglieder | ✓ (Team) | ✓ | ✓* | — | — | — |
-| Spielerprofil (eigenes Team) | ✓ | ✓ | ✓* | Nur eigenes | Nur eigenes Kind | — |
-| Anwesenheitsquote | ✓ | ✓ | ✓* | Nur eigene | Nur eigenes Kind | — |
-| tactics_notes | ✓ | ✓ | — | — | — | — |
-| Finanzdaten | — | ✓ | — | — | — | — |
-| Audit-Logs | — | ✓ | — | — | — | — |
-
-\* sporting_director nur für Teams unter seiner Zuständigkeit
-
----
-
-## Audit-Logs (Langfristplanung)
-
-`audit_logs` ist als zukünftige Tabelle dokumentiert (MVP 1+). Kritische Aktionen, die protokolliert werden sollen:
-
-- Vereinserstellung und -änderung
-- Mitgliedschaftsvergabe und -entzug
-- Rollenvergabe und -entzug
-- Einladungen erstellen, einlösen, widerrufen
-- Team-Affiliation-Entscheidungen
-- Datenlöschungen (DSGVO-Requests)
-
-**Wichtig:** `audit_logs` ist append-only. Kein User kann direkt schreiben — nur via SECURITY DEFINER Funktionen. Kein User kann Einträge löschen (außer für DSGVO-Löschanfragen durch Plattform-Admin).
-
----
-
-## Lösch- und Austrittsprozesse
-
-### Benutzer verlässt einen Verein:
-- `club_memberships.status = 'left'` (Soft-Delete)
-- Vereinsdaten bleiben erhalten (anderen Mitgliedern zugehörig)
-- Profildaten des Users werden NICHT automatisch gelöscht
-- Spielerdaten (falls vorhanden) bleiben im Verein erhalten, `user_id` wird entkoppelt
-
-### Benutzer möchte Account löschen (Art. 17 DSGVO):
-- Prozess über Support-Kanal (MVP: manuell durch Plattform-Admin)
-- `auth.users` CASCADE löscht `profiles`, entkoppelt `players.user_id`
-- Zugehörige Spielerdaten bleiben im Verein (gehören dem Verein, nicht dem User)
-- Historische Audit-Logs bleiben mit `actor_id = NULL`
-
-### Verein wird archiviert:
-- Alle zugehörigen Daten werden nicht sofort gelöscht
-- `clubs.verification_status = 'suspended'` als erster Schritt
-- Echte Löschung mit Datenschutzfolgenabschätzung — Phase 3
-
----
-
-## Self-Service-Eltern/Kind-Beitritt (MVP 0A)
-
-Der Beitrittsprozess für Eltern/Kinder ist DSGVO-relevant:
-
-1. Trainer erstellt `team_invitation_link` — kein personenbezogenes Datum
-2. Elternteil öffnet Link, registriert sich (eigene E-Mail, Passwort)
-3. Elternteil legt Kind an — nur: Vorname, Nachname, Geburtsjahr
-4. `team_join_request` entsteht mit Status `pending`
-5. Trainer akzeptiert → `player` wird dem Team zugeordnet
-6. Erst nach Akzeptanz sind Daten des Kindes für das Team sichtbar
-
-**Kein automatischer Datenzugriff durch unbefugte Trainer.** Der Trainer sieht die Kindesdaten erst nach bewusstem Akzeptieren.
-
----
-
-## Service-Role-Key
-
-**Der `SUPABASE_SERVICE_ROLE_KEY` umgeht RLS vollständig.**
-
-Er darf niemals in:
-- Next.js-Anwendungscode (`/app`, `/src`)
-- Client Components
-- Server Actions im App-Code
-- `.env.example`
-- versionierten Dateien
-
-Er darf nur in:
-- Supabase CLI (lokale Entwicklung)
-- Admin-Scripts (nicht im Repo)
-- Serverseitige CI/CD-Prozesse (isoliert)
-
----
-
-## Offene Datenschutzfragen
-
-| Frage | Priorität | Wann klären |
+| Kategorie | Früher MVP-Zweck | Minimale Felder / Status |
 |---|---|---|
-| AV-Vertrag mit Supabase (Auftragsverarbeitungsvertrag) | Hoch | Vor Launch |
-| Datenschutzerklärung für Endnutzer | Hoch | Vor Launch |
-| Einwilligungsprozess für Minderjährige (u14) | Hoch | MVP 1 |
-| Datenexport für User (Art. 20) | Mittel | Phase 2 |
-| Automatische Löschroutinen | Mittel | Phase 2 |
-| Datenschutz-Folgenabschätzung für Kinderdaten | Hoch | Vor MVP 1 go-live |
-| Datenspeicherort (EU-Region bei Supabase) | Hoch | Vor Launch |
+| registrierter Nutzer | Anmeldung, Zuordnung, Kommunikation | Name, E-Mail, Geburtsjahr; vollständiges Geburtsdatum optional; Telefon optional |
+| Spieler/Kind | Teamzuordnung, Kalender, RSVP | Name, Geburtsjahr; vollständiges Geburtsdatum optional |
+| Guardian-Beziehung | Kind verwalten und RSVP abgeben | Nutzer, Kind, aktive/verifizierte Beziehung |
+| Guardian-Erklärung | dokumentieren, dass der Nutzer zur Anmeldung berechtigt zu sein erklärt | Nutzer, Zeitpunkt, Textversion |
+| Teammitgliedschaft/Rollen | Autorisierung | Nutzer, Team, Status, vordefinierte Rolle |
+| Join-Anfrage | kontrollierter Beitritt | Team, Antragsteller/Kind, Typ, Status, Zeitpunkte |
+| Termin/RSVP | Kalender und Teilnahmeplanung | Termin, Spieler, Antwortstatus, optionale RSVP-Notiz, Zeitpunkte |
+| Rechtstextannahme | Nachweis der angezeigten Fassung | Nutzer, Textart, Version, Zeitpunkt |
+
+Kontaktdatensätze weiterer Bezugspersonen sind keine Accounts, Rollen oder
+RSVP-Berechtigungen. Gesundheitsdaten, medizinische Informationen, Kinderfotos,
+Adressen, freie Trainerbewertungen und Uploads gehören nicht in den frühen MVP.
+
+---
+
+## 3. Geburtsjahr und vollständiges Geburtsdatum
+
+### Beschlossenes Zielmodell
+
+- Jeder registrierte Nutzer gibt sein Geburtsjahr an.
+- Jeder Spieler gibt sein Geburtsjahr an.
+- Das vollständige Geburtsdatum ist in beiden Fällen freiwillig.
+- Bei vorhandenem vollständigem Datum wird das Geburtsjahr daraus abgeleitet oder
+  muss damit übereinstimmen.
+- Kein vollständiges Datum führt zu keiner Warnung oder wiederholten Aufforderung;
+  die Oberfläche zeigt dann nur das Geburtsjahr.
+
+### Zusätzliche Grenze für Spieler
+
+Das vollständige Spielergeburtsdatum dient ausschließlich:
+
+1. einer Geburtstagsübersicht für das Trainerteam und
+2. altersbezogener Teamorganisation.
+
+Teamseitig ist es nur für aktive `team_owner`, `head_coach` und
+`assistant_coach` des betroffenen Teams sichtbar. Vor freiwilliger Eingabe wird
+klar erklärt, dass diese Rollen das Datum sehen können. Endet die aktive
+Teamzuordnung, bleibt in notwendiger Teamhistorie nur das Geburtsjahr sichtbar;
+der eigene Spieler-/Kind-Profilzugriff bleibt davon getrennt.
+Spieler dürfen das eigene freiwillige Datum sehen und korrigieren; Guardians nur
+das Datum des eigenen verknüpften Kindes. Andere Spieler und Guardians sehen es
+nicht.
+
+### Aktueller Implementierungsstand
+
+- `profiles.date_of_birth` ist vorhanden und bei Registrierung derzeit
+  verpflichtend (`src/actions/auth.ts`).
+- `players.birth_year` und die nullable Bestandsspalte
+  `players.date_of_birth` existieren.
+- Der aktuelle Guardian-Join erfasst nur das Geburtsjahr und befüllt
+  `players.date_of_birth` nicht
+  (`20260702000000_players_birth_year_only.sql`).
+
+Das Zielmodell ist damit **beschlossen, aber nicht implementiert**. Insbesondere
+fehlen freiwillige Eingabe, versionierte Information/Bestätigung und die
+beschriebene Sichtbarkeitsbegrenzung.
+
+---
+
+## 4. Minderjährige und Guardian-Modell
+
+- Im frühen MVP ist genau ein Guardian-Account pro Kind vorgesehen.
+- Der Guardian sieht nur das eigene verknüpfte Kind und dessen Termine/RSVP.
+- Andere Elternkontakte und andere Kinder sind nicht automatisch sichtbar.
+- Kinder ohne Account können als Spielerprofil geführt werden.
+- Der Guardian muss vor Absenden des Kind-Beitritts ausdrücklich erklären, zur
+  Anmeldung berechtigt zu sein.
+- Zu speichern sind der erklärende Nutzer, Zeitpunkt und Version des
+  Erklärungstextes.
+- Diese Erklärung ist eine Selbsterklärung, keine Identitäts- oder
+  Obsorgeprüfung.
+
+`player_guardians.verified_at` ist heute ein technischer
+Verknüpfungszeitpunkt. Er enthält weder die Textversion noch eine eigenständige
+rechtliche Bewertung und genügt deshalb nicht dem beschlossenen Nachweismodell.
+
+Ob und auf welcher Rechtsgrundlage Vereon Minderjährigendaten verarbeiten darf,
+welche Altersgrenze gilt und welche zusätzliche elterliche Einwilligung oder
+Prüfung erforderlich ist, bleibt ausdrücklich der Rechtsprüfung vorbehalten.
+
+---
+
+## 5. Sichtbarkeit
+
+| Daten | Zulässige Sichtbarkeit im Zielmodell |
+|---|---|
+| eigenes Nutzerprofil | betroffener Nutzer; notwendige Plattformprozesse |
+| eigenes Spielerprofil | verknüpfter Nutzer |
+| eigenes Kindprofil | aktiver Guardian |
+| Spieler-Stammdaten im Team | aktive `team_owner`, `head_coach`, `assistant_coach` |
+| vollständiges Spielergeburtsdatum | Spieler für sich selbst; Guardian für das eigene verknüpfte Kind; teamseitig nur aktive `team_owner`, `head_coach`, `assistant_coach`, nach vorheriger Information/Bestätigung |
+| RSVP eines Spielers | Spieler/Guardian im eigenen Kontext; aktive Trainerrollen für Teamplanung |
+| Profile anderer Kinder | nicht für Spieler oder Guardians |
+| Elternkontakte anderer Spieler | nicht für Spieler oder Guardians |
+
+Teamseitige Sichtbarkeit nach einer beendeten Beziehung wird nicht aus
+historischen Rollen abgeleitet. Vergangene Termin- und RSVP-Historie darf
+fachlich erhalten bleiben; das vollständige Geburtsdatum wird darin nicht weiter
+angezeigt. Der Spielerzugriff auf das eigene Profil und der Guardian-Zugriff auf
+das eigene verknüpfte Kind werden getrennt davon behandelt.
+
+---
+
+## 6. Aufbewahrung und Löschung
+
+| Daten / Ereignis | Beschlossene Behandlung | Implementierungsstand |
+|---|---|---|
+| abgelehnte Join-Anfrage | nach 90 Tagen automatisch löschen; unnötige Kinderdaten früher entfernen | Cleanup-Funktion vorhanden, Ausführung nicht automatisiert |
+| zurückgezogene Join-Anfrage | nach 90 Tagen automatisch löschen; unnötige Kinderdaten früher entfernen | Rücknahme und Cleanup-Funktion vorhanden, automatische Ausführung fehlt |
+| aktive Spielerzuordnung endet | Soft-Delete der Zuordnung; vergangene RSVP-Historie erhalten; künftige RSVP zählt nicht mehr | Spielerentfernung implementiert |
+| vollständiges Geburtsdatum nach Teamende | nicht mehr im Teamkontext anzeigen; notwendige Historie nur mit Geburtsjahr | nicht implementiert |
+| abgesagter Termin | sichtbar als abgesagt; keine neuen/geänderten RSVP | Absage-RPC vorhanden, App-Flow fehlt |
+| Nutzerkonto löschen | Prozess, Rechtsfolgen, Aufbewahrung und Entkopplung fachanwaltlich/technisch definieren | kein bestätigter Self-Service-Prozess |
+| Team archivieren | Historie erhalten; kein pauschaler Hard-Delete | Zielmodell, nicht vollständig implementiert |
+
+Fristen für angenommene Join-Anfragen, Profile, Events, RSVP, Sicherheitslogs und
+Backups sind noch nicht final festgelegt. Sie dürfen nicht erfunden werden.
+
+---
+
+## 7. Dienstleister und Verantwortlichkeiten
+
+Bestätigt sind Vercel als Hostingplattform sowie Supabase für Cloud-Datenbank,
+Authentifizierung und derzeitigen Test-E-Mail-Versand. Nicht verifiziert sind:
+
+- datenschutzrechtliche Rollen von Vereon, Verein/Team, Supabase und Vercel,
+- Auftragsverarbeitungsverträge,
+- Supabase-Datenregion,
+- Unterauftragsverarbeiter und internationale Übermittlungen,
+- produktiver E-Mail-Anbieter,
+- Backup-, Restore- und Löschverhalten in Sicherungen,
+- technische und organisatorische Maßnahmen außerhalb des Repositories.
+
+Diese Punkte sind Pilotblocker in `docs/LEGAL_TODO.md`; sie werden hier nicht als
+erfüllt dargestellt.
+
+---
+
+## 8. Pilot-Abnahmekriterien
+
+Vor echten Testnutzern müssen mindestens:
+
+- Privacy-, Terms- und Impressumsangaben ohne Platzhalter fachanwaltlich geprüft
+  sein,
+- Verantwortlichkeiten und Rechtsgrundlagen je Datenkategorie feststehen,
+- Guardian-Erklärung und Rechtstextannahmen versioniert gespeichert werden,
+- 90-Tage-Cleanup automatisiert und überwacht sein,
+- freiwilliges Geburtsdatum samt Zweck, Information, Sichtbarkeit und Löschung
+  vollständig umgesetzt und negativ getestet sein,
+- Betroffenenrechte, Kontaktweg, Export-, Berichtigungs- und Löschprozess
+  dokumentiert sein,
+- Supabase/Vercel-Verträge, Region, Unterauftragsverarbeiter und Transfers geprüft
+  sein,
+- Backup/Restore sowie Security-/Incident-Prozess geklärt sein,
+- eine mögliche Datenschutz-Folgenabschätzung fachkundig bewertet sein.
+
+Technische Abweichungen und Prioritäten werden in `docs/STATUS.md`, ausführbare
+Szenarien in `docs/MVP_TEST_CHECKLIST.md` gepflegt.

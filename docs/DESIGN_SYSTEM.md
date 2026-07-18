@@ -1,13 +1,16 @@
 # Design System — Vereon
 
-> **Stand:** 2026-06-29
+> **Stand:** 2026-07-18
 > Dieses Dokument beschreibt die UI/UX-Richtlinien für Vereon. Es ist Grundlage für alle zukünftigen UI-Entscheidungen. Keine Umsetzung ohne vorherige Dokumentation hier.
 
 ---
 
 ## 1. Designprinzipien
 
-1. **Rolle zuerst** — was ein User sieht, hängt von seiner Rolle ab. Traineransicht darf informationsdichter sein. Spieler-/Elternansicht ist fokussierter und schneller.
+1. **Aktiver Nutzungskontext zuerst** — was ein User sieht, hängt von echten
+   Datenbeziehungen und aktiven Teamrollen ab, nicht von
+   `profiles.onboarding_role`. Traineransichten dürfen informationsdichter sein;
+   Spieler-/Guardianansichten bleiben fokussierter.
 2. **3-Sekunden-Regel für RSVP** — ein Elternteil muss die nächste offene RSVP-Frage in unter 3 Sekunden sehen und beantworten können.
 3. **Outdoor-Kontrast** — alle Statusfarben müssen auch bei grellem Sonnenlicht lesbar sein (WCAG AA Minimum).
 4. **Touch-first** — Mindest-Touch-Target 44×44 px. Keine hover-only-Interaktionen.
@@ -96,6 +99,13 @@ Diese Zuordnung ist verbindlich und darf durch keine Vereinsfarbe überschrieben
 | Aktiv | `success` | `active` |
 | Eigenständig | `outline` | `independent` |
 | Archiviert | `danger` | `archived` |
+
+**Termin-Status:**
+
+| Status | Badge-Variante | Darstellung |
+|--------|---------------|-------------|
+| Geplant | `outline` | normaler Termin |
+| Abgesagt | `danger` | weiterhin in Kalender und Historie sichtbar, deutlich mit „Abgesagt" markiert |
 
 ### 2.6 Dark Mode
 
@@ -209,6 +219,11 @@ Tailwind 4px-Raster (`space-1 = 4px`). Intern verwendete Abstände:
 **Größen:** `sm` für Inline-Aktionen in Cards, `md` Standard, `lg` selten (große Hero-CTAs)
 
 **Regel:** Nicht mehr als zwei `primary`-Buttons auf einer Seite sichtbar.
+
+**Destruktive Aktionen:** Absagen und Löschen sind unterschiedliche Aktionen.
+Hard-Delete wird nur angezeigt, wenn es fachlich erlaubt ist. Vor dem endgültigen
+Löschen eines Trainings ist eine Texteingabe wie `LÖSCHEN` erforderlich. Ein
+gewöhnlicher Bestätigungsdialog allein genügt dafür nicht.
 
 ### 6.2 Card
 
@@ -350,7 +365,7 @@ Noch nicht implementiert. Breitere Übersicht über mehrere Teams, Club-Admin-Fu
 | Shadow-System | Definierte Shadow-Tokens für Dashboard-Cards und Modals | Nach Phase UI.2 |
 | Vereinsfarben / Team Theme | Akzentfarbe pro Verein/Team (siehe Abschnitt 3) | Nach MVP-Pilot |
 | Rollen-/Ansichtswechsler | „Aktive Ansicht: Trainer ▼" oben in der App | Nach MVP-Pilot |
-| PWA-Anpassungen | `manifest.json`, Splash Screen, App-Icon, Safe-Area-Erweiterungen | Stufe 2 lt. `docs/MOBILE_APP_STRATEGY.md` |
+| PWA-Ausbau | Manifest und App-Icons sind im Repository vorhanden; öffentliche Auslieferung, praktischer Install-Test, Splash-/Safe-Area-Feinschliff bleiben offen | Stufe 2 lt. `docs/MOBILE_APP_STRATEGY.md` |
 | Typografie-Erweiterung | Display-Schriftart für Hero-Zahlen (z. B. Spieleranzahl) | Bei Dashboard-Erweiterung |
 | Illustrationen / Icons | Einheitliches Icon-Set (aktuell nur wenige inline SVGs) | Eigene Phase |
 

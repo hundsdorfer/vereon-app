@@ -1,7 +1,14 @@
 # Monetarisierungsstrategie — Vereon
 
 **Stand:** 2026-06-25
-**Status:** Dokumentiert — keine Umsetzung in MVP 0. Billing-Infrastruktur kommt in Phase 3.
+**Status:** Strategische Hypothese — keine verbindliche Preis-, Paket- oder
+Featurefreigabe; keine Umsetzung im MVP
+
+Die beschriebenen Pläne dienen der späteren Geschäftsmodellprüfung. Sie sind
+keine Quelle für aktuelle Rollen-, Scope- oder Featureberechtigungen. Insbesondere
+wird eine im MVP fachlich benötigte Trainerrolle nicht allein durch diese Datei
+kostenpflichtig oder gesperrt. Verbindliche Produktrechte stehen in
+`FEATURE_CATALOG.md`, `MVP_SCOPE.md` und `ROLES_AND_PERMISSIONS.md`.
 
 ---
 

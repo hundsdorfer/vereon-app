@@ -1,7 +1,7 @@
 # Rollen und Berechtigungen — Vereon
 
-**Stand:** 2026-07-08  
-**Status:** Arbeitsfassung / konsolidierte Neufassung auf Basis von `docs/FEATURE_CATALOG.md`, `docs/MVP_SCOPE.md` und `docs/USER_FLOWS.md`  
+**Stand:** 2026-07-18
+**Status:** Verbindliches fachliches Zielmodell; Abweichungen zur Umsetzung werden in `docs/STATUS.md` geführt
 **Dokumenttyp:** Rollen- und Berechtigungskonzept, kein Implementierungsauftrag
 
 ---
@@ -108,7 +108,7 @@ Bei Spielern, Kindern, Guardians und Kontaktpersonen gilt Datenminimierung.
 
 Im frühen MVP dürfen Rollen nicht dazu führen, dass unnötige Daten sichtbar werden, insbesondere:
 
-- vollständige Geburtsdaten,
+- vollständige Geburtsdaten außerhalb eigener bzw. kindbezogener Einsicht und aktiver `team_owner`-, `head_coach`- und `assistant_coach`-Zuordnungen,
 - medizinische Daten,
 - private Familieninformationen,
 - fremde Guardian-Kontaktdaten,
@@ -143,7 +143,7 @@ Diese Liste beschreibt fachliche Rollen-Keys. Sie ist keine SQL-Seed-Liste und k
 
 | Key / Rollenidee | Entscheidung |
 |---|---|
-| `team_manager` | Nicht aktive Rolle. Wird aus dem aktuellen Rollenmodell gestrichen, weil die neuen Dokumente operative Trainer- und Anwesenheitslogik über `head_coach` und `assistant_coach` führen. Eine spätere Wiedereinführung braucht eine neue Produktentscheidung. |
+| `team_manager` | Keine Rolle des fachlichen Zielmodells. Legacy-Vorkommen in Rollen-Seed, RLS oder Lesewegen sind technische Abweichungen und werden in `docs/STATUS.md` verfolgt. Eine spätere fachliche Wiedereinführung braucht eine neue Produktentscheidung. |
 | `goalkeeper_coach` | Keine eigene frühe Rolle. Später höchstens Anzeige-/Spezialisierungsvariante von `assistant_coach`, aber keine eigene Rechtebasis im MVP. |
 | `president`, `board_member`, `secretary`, `treasurer`, `sporting_director`, `youth_director`, `youth_coordinator`, `viewer`, `media_manager`, `facility_manager`, `equipment_manager` | Ungeprüfte spätere Vereinsrollen-Kandidaten. Keine MVP-0A-/0B-Rechte, keine Matrix, keine Umsetzung ohne spätere Club-/Mehrteam-Entscheidung. |
 | `canteen_manager`, `sponsor_contact` | Keine Kernrollen. Wenn diese Bereiche später relevant werden, gehören sie in separate Module, nicht in das frühe Rollenmodell. |
@@ -185,6 +185,8 @@ MVP-0B ergänzt insbesondere:
 - minimale Guardian-Berechtigungsbestätigung,
 - E-Mail-Verifizierung,
 - Passwort-Reset.
+
+Rollen werden im MVP nur über vordefinierte Rollen vergeben. Granulare Einzelrechte pro Nutzer sind ausdrücklich nicht vorgesehen. Rollenvergabe und Rollenentzug liegen ausschließlich beim `team_owner`.
 
 MVP-0B ist weiterhin keine Vereinsverwaltungsphase.
 
@@ -255,8 +257,12 @@ Diese Rolle ist nicht identisch mit `head_coach`, auch wenn beide Rollen in der 
 - Mannschaft erstellen,
 - Mannschaft anzeigen,
 - Mannschaftsgrunddaten bearbeiten,
+- Mannschaft archivieren,
 - Einladungscode anzeigen,
 - Einladungscode erneuern oder deaktivieren,
+- Beitrittsanfragen sehen,
+- Beitrittsanfragen annehmen,
+- Beitrittsanfragen ablehnen,
 - Co-Trainer hinzufügen,
 - Co-Trainer entfernen,
 - Training erstellen,
@@ -264,7 +270,12 @@ Diese Rolle ist nicht identisch mit `head_coach`, auch wenn beide Rollen in der 
 - Training löschen,
 - Training absagen,
 - Spieler aus Team entfernen,
-- eigene Trainer-RSVP abgeben.
+- eigene Trainer-RSVP abgeben,
+- die Team-Eigentümerschaft kontrolliert übertragen.
+
+Es gibt genau einen `team_owner` pro Team. Die Rolle kann nicht normal entzogen, sondern nur atomar übertragen werden. Zielperson ist ein bereits registrierter, volljähriger und aktiver Nutzer desselben Teams und muss die Übernahme ausdrücklich bestätigen. Andere Rollen beider Personen bleiben unverändert.
+
+Ist der `team_owner` zugleich `head_coach`, gelten die Rechte beider Rollen. Die Person darf die eigene `head_coach`-Rolle ablegen, bleibt dabei aber `team_owner`.
 
 ### Begrenzung
 
@@ -283,7 +294,6 @@ Wenn `team_owner` und `head_coach` getrennte Personen sind, muss bei sensiblen o
 - Trainings- und Teamalltag führen.
 - Join-Requests entscheiden.
 - Spieler verwalten.
-- Co-Trainer operativ einbinden.
 - Trainerteam und Spieler-/Guardian-Kommunikation im Einzelteam-Kontext steuern.
 
 ### Typische Rechte im MVP-0A/0B
@@ -297,8 +307,6 @@ Wenn `team_owner` und `head_coach` getrennte Personen sind, muss bei sensiblen o
 - Beitrittsanfragen sehen,
 - Beitrittsanfragen annehmen,
 - Beitrittsanfragen ablehnen,
-- Co-Trainer hinzufügen,
-- Co-Trainer entfernen,
 - Training erstellen,
 - Training bearbeiten,
 - Training löschen,
@@ -312,6 +320,7 @@ Wenn `team_owner` und `head_coach` getrennte Personen sind, muss bei sensiblen o
 `head_coach` darf nicht automatisch:
 
 - `team_owner`-Rechte übertragen,
+- Rollen vergeben oder entziehen,
 - Team-Affiliation entscheiden,
 - spätere Club-/Mehrteam-Verwaltung ausüben,
 - Mannschaftsgrunddaten bearbeiten, sofern diese als `team_owner`-Einstellung definiert sind.
@@ -342,9 +351,11 @@ Diese Rolle ist ab MVP-0B aktiv zu konsolidieren, weil Co-Trainer im Einzelteam-
 - Training erstellen,
 - Training bearbeiten,
 - Training absagen,
+- Einladungscode anzeigen und teilen,
+- Einladungscode erneuern oder deaktivieren,
 - RSVP-Übersicht sehen,
 - eigene Trainer-RSVP abgeben,
-- Beitrittsanfragen sehen oder fachlich vorbereiten.
+- Beitrittsanfragen sehen.
 
 ### Explizite Begrenzung
 
@@ -357,7 +368,6 @@ Diese Rolle ist ab MVP-0B aktiv zu konsolidieren, weil Co-Trainer im Einzelteam-
 - Spieler aus Team entfernen,
 - Training löschen,
 - Mannschaftsgrunddaten bearbeiten,
-- Einladungscode erneuern oder deaktivieren,
 - `team_owner`-Rechte übertragen,
 - Team-Affiliation entscheiden,
 - Club-/Mehrteam-Verwaltung ausüben.
@@ -505,6 +515,43 @@ Insbesondere sind im frühen MVP nicht enthalten:
 
 ---
 
+## 7.9 Verbindliche Querschnittsregeln
+
+### Rollenverwaltung und Eigentum
+
+- Es gibt genau einen `team_owner`.
+- Nur `team_owner` darf vordefinierte Teamrollen vergeben oder entziehen.
+- Granulare Einzelrechte pro Nutzer sind vorerst nicht vorgesehen.
+- Eigentum wird ausschließlich über den bestätigten Transfer an einen registrierten, volljährigen und aktiven Nutzer desselben Teams übertragen.
+- Vor Umsetzung des Transfers muss geklärt werden, wie die Volljährigkeit trotz nur verpflichtendem Geburtsjahr verlässlich und datensparsam geprüft wird.
+- Ein Nutzer mit mehreren Rollen erhält die Vereinigungsmenge dieser Rollen. Der Verlust einer Rolle verändert andere Rollen nicht automatisch.
+
+### Trainings löschen und absagen
+
+- `team_owner` und `head_coach` dürfen ein Training nur vor Beginn und nur ohne abgegebene Spieler- oder Trainer-RSVP hart löschen. Automatisch angelegte, noch unbeantwortete Teilnahmezeilen zählen dabei nicht als RSVP.
+- Hard-Delete verlangt zusätzlich eine bewusste Texteingabe wie `LÖSCHEN`.
+- Sobald der Termin begonnen hat oder eine RSVP abgegeben wurde, ist Hard-Delete gesperrt.
+- `team_owner`, `head_coach` und `assistant_coach` dürfen absagen.
+- Abgesagte Trainings bleiben sichtbar; abgegebene RSVP bleiben als Historie erhalten und können nicht mehr neu abgegeben oder geändert werden.
+
+### RSVP
+
+- Spieler, Guardians und Trainer dürfen die eigene RSVP bis zum relevanten Terminbeginn ändern.
+- Danach ist RSVP gesperrt und eine spätere Anwesenheitserfassung ist fachlich getrennt.
+- Wird ein Spieler aus dem Team entfernt, bleiben vergangene RSVP in der Historie; zukünftige RSVP zählen sofort nicht mehr zu Zusagen oder Teilnehmerzahlen.
+
+### Geburtsdaten
+
+- Das Geburtsjahr ist für jeden Spieler Pflicht.
+- Das vollständige Geburtsdatum ist freiwillig. Wird es angegeben, muss das Geburtsjahr daraus abgeleitet werden oder dazu passen.
+- Das vollständige Datum dient ausschließlich Geburtstagsübersicht und altersbezogener Teamorganisation.
+- Sichtbar und korrigierbar ist es für den Spieler selbst beziehungsweise für den Guardian des eigenen Kindes. Zusätzlich sehen es aktive `team_owner`, `head_coach` und `assistant_coach` des jeweiligen Teams.
+- Vor der freiwilligen Angabe muss verständlich über Zweck und Sichtbarkeit informiert werden; die Eingabe ist ausdrücklich zu bestätigen.
+- Ohne vollständiges Datum wird nur das Geburtsjahr ohne Warnung oder wiederholte Aufforderung angezeigt.
+- Nach Ende der aktiven Teamzuordnung bleibt in notwendiger Historie nur das Geburtsjahr sichtbar.
+
+---
+
 ## 8. `team_owner` vs. `head_coach`
 
 | Merkmal | `team_owner` | `head_coach` |
@@ -512,17 +559,18 @@ Insbesondere sind im frühen MVP nicht enthalten:
 | Kernzweck | Administrative Teamhoheit | Operative Trainings-/Teamleitung |
 | Entsteht bei Team-Erstellung | Ja | Standardmäßig ja, sofern Ersteller auch Trainerrolle übernimmt |
 | Mannschaftsgrunddaten bearbeiten | Ja | Nein, nur sehen |
+| Mannschaft archivieren | Ja | Nein |
 | Trainings erstellen | Ja | Ja |
 | Trainings bearbeiten | Ja | Ja |
 | Trainings löschen | Ja | Ja |
 | Trainings absagen | Ja | Ja |
 | RSVP-Übersicht sehen | Ja, im Einzelteam-MVP zulässig | Ja |
 | Eigene Trainer-RSVP abgeben | Ja | Ja |
-| Beitrittsanfragen entscheiden | Nur wenn zusätzlich `head_coach` oder explizit später entschieden | Ja |
-| Co-Trainer hinzufügen/entfernen | Ja | Ja |
+| Beitrittsanfragen entscheiden | Ja | Ja |
+| Co-Trainer hinzufügen/entfernen | Ja | Nein |
 | Spieler aus Team entfernen | Ja | Ja |
 | Team-Affiliation entscheiden | Später ja | Nein |
-| `team_owner`-Rechte übertragen | Später zu prüfen | Nein |
+| `team_owner`-Rechte übertragen | Ja, nur bestätigter Transfer | Nein |
 | Club-/Mehrteam-Verwaltung | Nein | Nein |
 
 **Leitlinie:**  
@@ -544,11 +592,12 @@ Insbesondere sind im frühen MVP nicht enthalten:
 | Beitrittsanfragen sehen | Ja | Ja |
 | Beitrittsanfragen annehmen | Ja | Nein |
 | Beitrittsanfragen ablehnen | Ja | Nein |
-| Co-Trainer hinzufügen | Ja | Nein |
-| Co-Trainer entfernen | Ja | Nein |
+| Co-Trainer hinzufügen | Nein | Nein |
+| Co-Trainer entfernen | Nein | Nein |
 | Spieler entfernen | Ja | Nein |
 | Mannschaftsgrunddaten bearbeiten | Nein | Nein |
-| Einladungscode erneuern/deaktivieren | Ja | Nein |
+| Einladungscode anzeigen/teilen | Ja | Ja |
+| Einladungscode erneuern/deaktivieren | Ja | Ja |
 | Teamhoheit | Nein | Nein |
 
 **Leitlinie:**  
@@ -579,7 +628,7 @@ Ein Guardian verwaltet ein Kind im eigenen Kontext und darf kindbezogene Aktione
 
 Ein Kind ist nicht automatisch ein eigener Nutzeraccount.
 
-Das Spielerprofil darf im MVP nur notwendige Daten enthalten. Vollständiges Geburtsdatum, medizinische Daten oder unnötige private Angaben gehören nicht in den frühen MVP.
+Das Spielerprofil enthält ein verpflichtendes Geburtsjahr. Das vollständige Geburtsdatum ist freiwillig und unterliegt den Zweck-, Informations- und Sichtbarkeitsgrenzen aus Abschnitt 7.9. Medizinische Daten oder unnötige private Angaben gehören nicht in den frühen MVP.
 
 ### 10.4 Kontaktperson
 
@@ -636,38 +685,40 @@ Legende:
 | Mannschaft anzeigen | ✓ | ✓ | ✓ | eingeschränkt | eingeschränkt | später |
 | Mannschaftsgrunddaten sehen | ✓ | ✓ | eingeschränkt | — | — | später |
 | Mannschaftsgrunddaten bearbeiten | ✓ | — | — | — | — | später |
+| Mannschaft archivieren | ✓ | — | — | — | — | später |
 | Teammitglieder anzeigen | ✓ | ✓ | ✓ | eingeschränkt | eingeschränkt | später |
 | Spieler im Team anzeigen | ✓ | ✓ | ✓ | eingeschränkt | eingeschränkt | später |
 | Spieler aus Team entfernen | ✓ | ✓ | — | — | — | später |
-| Co-Trainer hinzufügen | ✓ | ✓ | — | — | — | später |
-| Co-Trainer entfernen | ✓ | ✓ | — | — | — | später |
-| Einladungscode anzeigen/teilen | ✓ | ✓ | — | — | — | später |
-| Einladungscode erneuern/deaktivieren | ✓ | ✓ | — | — | — | später |
+| Co-Trainer hinzufügen | ✓ | — | — | — | — | später |
+| Co-Trainer entfernen | ✓ | — | — | — | — | später |
+| Einladungscode anzeigen/teilen | ✓ | ✓ | ✓ | — | — | später |
+| Einladungscode erneuern/deaktivieren | ✓ | ✓ | ✓ | — | — | später |
 | Join-Link verwenden | — | — | — | ✓ | ✓ | — |
 | Self-Player-Join starten | — | — | — | ✓ | — | — |
 | Kind per Guardian-Join anmelden | — | — | — | — | ✓ | — |
-| Beitrittsanfragen sehen | —** | ✓ | ✓ | — | — | später |
-| Beitrittsanfragen vorbereiten/kommentieren | —** | ✓ | eingeschränkt | — | — | später |
-| Beitrittsanfrage annehmen | —** | ✓ | — | — | — | später |
-| Beitrittsanfrage ablehnen | —** | ✓ | — | — | — | später |
+| Beitrittsanfragen sehen | ✓ | ✓ | ✓ | — | — | später |
+| Beitrittsanfrage annehmen | ✓ | ✓ | — | — | — | später |
+| Beitrittsanfrage ablehnen | ✓ | ✓ | — | — | — | später |
 | Training erstellen | ✓ | ✓ | ✓ | — | — | später |
 | Training anzeigen | ✓ | ✓ | ✓ | ✓ | eingeschränkt | später |
 | Training bearbeiten | ✓ | ✓ | ✓ | — | — | später |
-| Training löschen | ✓ | ✓ | — | — | — | später |
+| Training hart löschen | eingeschränkt* | eingeschränkt* | — | — | — | später |
 | Training absagen | ✓ | ✓ | ✓ | — | — | später |
 | Eigene Spieler-RSVP abgeben | — | — | — | ✓ | — | — |
 | RSVP für eigenes Kind abgeben | — | — | — | — | ✓ | — |
 | Eigene Trainer-RSVP abgeben | ✓ | ✓ | ✓ | — | — | später |
 | RSVP-Übersicht sehen | ✓ | ✓ | ✓ | eingeschränkt | eingeschränkt | später |
 | Fremde Spieler-RSVP ändern | — | — | — | — | — | — |
+| Vollständiges Spieler-Geburtsdatum sehen | eingeschränkt** | eingeschränkt** | eingeschränkt** | eigenes | eigenes Kind | später |
+| Team-Eigentümerschaft übertragen | ✓ | — | — | — | — | später |
 | Legal-Seiten sehen | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Join-Hinweise sehen | — | — | — | ✓ | ✓ | — |
 | Guardian-Berechtigungsbestätigung abgeben | — | — | — | — | ✓ | — |
 | Club-/Mehrteam-Verwaltung | — | — | — | — | — | später |
 | Team-Affiliation | später | — | — | — | — | später |
 
-\* In der Praxis erhält der Team-Ersteller typischerweise `team_owner` und `head_coach`. Die fachliche Team-Erstellung wird aber über den Team-Erstellungsflow gesteuert, nicht über eine isolierte `head_coach`-Rolle.  
-\** Wenn dieselbe Person zusätzlich `head_coach` ist, entstehen Join-Entscheidungsrechte aus `head_coach`, nicht aus reinem `team_owner`.
+\* Hard-Delete nur vor Beginn, ohne abgegebene Spieler- oder Trainer-RSVP und nach zusätzlicher Texteingabe.
+\** Nur freiwillig hinterlegtes Datum bei aktiver Teamzuordnung; Zweck und Sichtbarkeit müssen vor Eingabe bestätigt werden. Für Mannschaft erstellen gilt: Der Team-Ersteller erhält im bestehenden Flow typischerweise `team_owner` und `head_coach`.
 
 ---
 
@@ -684,7 +735,6 @@ Dieser Abschnitt ist bewusst redundant zur Matrix. Er soll verhindern, dass Clau
 - Spieler aus Team entfernen,
 - Training löschen,
 - Mannschaftsgrunddaten bearbeiten,
-- Einladungscode erneuern oder deaktivieren,
 - Team-Affiliation entscheiden,
 - `team_owner`-Rechte übertragen,
 - Club-/Mehrteam-Verwaltung nutzen.
@@ -692,6 +742,7 @@ Dieser Abschnitt ist bewusst redundant zur Matrix. Er soll verhindern, dass Clau
 ### 13.2 `head_coach` darf nicht automatisch
 
 - `team_owner`-Rechte übertragen,
+- Rollen vergeben oder entziehen,
 - Team-Affiliation entscheiden,
 - sichtbare Club-/Mehrteam-Verwaltung ausüben,
 - vollständige Vereinsverwaltung starten,
@@ -754,7 +805,7 @@ Nicht enthalten:
 
 - freie Änderung sensibler Daten,
 - medizinische Daten,
-- vollständiges Geburtsdatum,
+- verpflichtendes vollständiges Geburtsdatum oder eine weitergehende Nutzung außerhalb der festgelegten Zwecke,
 - private Notizen über Kinder.
 
 ### 14.2 Guardian und Kontaktpersonen
@@ -856,57 +907,23 @@ Wenn später gewünscht, kann die Rolle als Anzeige-/Spezialisierungslabel von `
 
 ---
 
-## 17. Offene Prüfpunkte für nachgelagerte Dokumente
+## 17. Nachgelagerte technische und rechtliche Prüfpunkte
 
-Diese Punkte sind bewusst nicht in dieser Datei zu lösen.
+Die fachlichen Rollenentscheidungen sind getroffen. Nachgelagerte Dokumente
+trennen davon noch offene Umsetzungs- und Rechtsfragen:
 
-### 17.1 Für `docs/DATABASE_MODEL.md`
+- `docs/DATABASE_MODEL.md` beschreibt bestehende Rollenbeziehungen sowie offene
+  technische Details für Owner-Transfer, Kontaktpersonen und Auditierung.
+- `docs/SECURITY.md` führt fehlende serverseitige Checks, RLS-Abweichungen,
+  E-Mail-Verifizierung und Negativtests.
+- `docs/DSGVO_PRIVACY_MODEL.md` beschreibt Datenminimierung, Sichtbarkeit,
+  Guardian-Nachweis und Aufbewahrung; die rechtliche Bewertung bleibt
+  fachanwaltlich offen.
+- `docs/MVP_TEST_CHECKLIST.md` enthält die konkreten Bestands-, Ziel- und
+  Pilotprüfungen für alle hier festgelegten Rollenrechte.
 
-Zu prüfen:
-
-- Wie werden Mehrfachrollen technisch modelliert?
-- Wie werden `team_owner`, `head_coach`, `assistant_coach`, `player` und `guardian` gespeichert?
-- Ist `guardian` eine echte Teamrolle, ein Zugriffskontext oder beides?
-- Wie wird die Guardian-Kind-Beziehung technisch abgebildet?
-- Wie werden Kontaktpersonen ohne Account gespeichert?
-- Wie werden entfernte Spieler historisiert, ohne vollständige Löschung zu simulieren?
-- Wie werden Rollenänderungen nachvollziehbar gemacht?
-
-### 17.2 Für `docs/SECURITY.md`
-
-Zu prüfen:
-
-- Welche serverseitigen Checks sichern jede Aktion ab?
-- Welche Aktionen werden für unverifizierte Accounts blockiert?
-- Welche RLS-Policies sichern Team-, Spieler-, Guardian- und RSVP-Zugriffe?
-- Wie wird verhindert, dass `assistant_coach` sensible Entscheidungen trifft?
-- Wie wird verhindert, dass Guardian-Zugriffe auf fremde Kinder ausweiten?
-- Wie wird verhindert, dass spätere `club_admin`-Logik frühzeitig Zugriff auf Einzelteamdaten erhält?
-
-### 17.3 Für `docs/DSGVO_PRIVACY_MODEL.md`
-
-Zu prüfen:
-
-- Welche Daten von Kindern sind wirklich notwendig?
-- Wie wird minimale Guardian-Berechtigungsbestätigung dokumentiert?
-- Wie lange bleiben Join-Requests und abgelehnte Anfragen sichtbar?
-- Was sieht ein Spieler oder Guardian nach Entfernung aus dem Team?
-- Wie werden Kontaktpersonen datensparsam geführt?
-- Welche Informationen dürfen Trainerteamrollen über Minderjährige sehen?
-
-### 17.4 Für `docs/MVP_TEST_CHECKLIST.md`
-
-Zu prüfen:
-
-- Rollenbasierte Sichtbarkeit je Rolle,
-- erlaubte und verbotene Aktionen je Rolle,
-- unverifizierte Accounts,
-- Guardian-Kind-Zugriff,
-- Co-Trainer-Rechte,
-- Join-Request-Entscheidungen,
-- Spieler entfernen,
-- Training bearbeiten/löschen/absagen,
-- Einladungscode erneuern/deaktivieren.
+Diese technischen oder rechtlichen Folgefragen dürfen die Rollenmatrix nicht
+stillschweigend verändern.
 
 ---
 
@@ -921,13 +938,14 @@ Zu prüfen:
 7. Spätere Clubrollen dürfen nicht als MVP-0A-/0B-Rechte interpretiert werden.
 8. `assistant_coach` darf nicht still auf `head_coach`-Niveau erweitert werden.
 9. `guardian`-Rechte müssen immer kindbezogen und datensparsam bleiben.
-10. Nach finaler Änderung muss geprüft werden, ob `docs/CHATGPT_CONTEXT.md` aktualisiert werden soll.
+10. Nach finaler Änderung muss geprüft werden, ob `docs/PROJECT_BRIEF.md` oder
+    `docs/CURRENT_TASK.md` betroffen sind.
 
 ---
 
-## 19. Claude-Review-Ziel nach Übernahme
+## 19. Pflege- und Reviewcheckliste
 
-Nach manueller Übernahme oder Copy-/Replace soll Claude nur im Review-only-Modus prüfen:
+Nach relevanten Rollenänderungen prüft ein unabhängiger Review:
 
 1. Stimmt die Rollenlogik mit `docs/FEATURE_CATALOG.md` überein?
 2. Stimmt die Phasenlogik mit `docs/MVP_SCOPE.md` überein?
@@ -938,4 +956,5 @@ Nach manueller Übernahme oder Copy-/Replace soll Claude nur im Review-only-Modu
 7. Sind Guardian-/Kind-/Kontaktpersonenrechte ausreichend getrennt?
 8. Gibt es Folgeprüfpunkte für `DATABASE_MODEL.md`, `SECURITY.md`, `DSGVO_PRIVACY_MODEL.md` oder `MVP_TEST_CHECKLIST.md`?
 
-Claude soll dabei keine Datei automatisch ändern, keine Codeänderungen durchführen, keine Migrationen erstellen, keine Remote-Datenbank verwenden und keinen Commit ausführen.
+Der Review verändert ohne eigenen Auftrag keine Datei, erstellt keine
+Migration, verwendet keine Remote-Datenbank und führt keinen Commit aus.

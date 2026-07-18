@@ -1,297 +1,316 @@
 # MVP-Testcheckliste — Vereon
 
-**Stand:** 2026-07-01
-**Zweck:** Manueller Qualitätscheck des MVP-Kernflows vor Releases und nach größeren Änderungen.
+**Stand:** 2026-07-18
 
-> **Wichtig:** Alle Tests laufen auf der lokalen Supabase-Instanz (`npx supabase start`).
-> Keine Produktivdaten. Keine Remote-Datenbank. Kein `db push`.
+**Zweck:** Manuelle und automatisierte Abnahme des Einzelteam-MVP.
+
+**Umgebung:** Lokale Next.js-App mit lokaler Supabase-Instanz. Keine
+Produktivdaten, keine Remote-Migration und kein `db push`.
+
+Diese Datei trennt:
+
+- **Bestandstest:** heute implementierbarer Ablauf;
+- **Zieltest:** beschlossene MVP-0B-Anforderung, die erst nach Implementierung
+  bestanden werden kann;
+- **Pilotblocker:** muss vor echten Testnutzern bestanden sein.
+
+Fachliche Quelle: `docs/FEATURE_CATALOG.md`, `docs/MVP_SCOPE.md`,
+`docs/USER_FLOWS.md`, `docs/ROLES_AND_PERMISSIONS.md`
+
+Technische Abweichungen: `docs/STATUS.md`
 
 ---
 
-## Testrollen
+## 1. Testvoraussetzungen
 
-Für den vollständigen Kernflow werden drei separate Test-Accounts benötigt:
+- [ ] Docker und lokale Supabase-Container laufen.
+- [ ] `.env.local` verweist auf die lokale Supabase-URL.
+- [ ] Entwicklungsserver läuft.
+- [ ] Testdaten sind künstlich und enthalten keine realen Minderjährigendaten.
+- [ ] Browserdaten lassen sich pro Rolle isolieren.
 
-| Rolle | Beschreibung |
+Benötigte Konten:
+
+| Konto | Zweck |
 |---|---|
-| **Trainer** | Registriert sich, erstellt Team, verwaltet Anfragen |
-| **Spieler (erwachsen)** | Registriert sich, tritt selbst bei |
-| **Elternteil / Guardian** | Registriert sich, meldet Kind an |
+| `team_owner` + `head_coach` | Team erstellen und Kernverwaltung |
+| `head_coach` ohne Owner | Rollenabgrenzung |
+| `assistant_coach` | erlaubte/unerlaubte Traineraktionen |
+| volljähriger Self-Player | Self-Join und eigenes RSVP |
+| Guardian | Kind-Join und RSVP fürs Kind |
+| fremder angemeldeter Nutzer | Mandantentrennung |
+| unverifiziertes Konto | Verifikationsgrenzen |
 
 ---
 
-## Kernflow — Schritt für Schritt
-
-### 1. Trainer registrieren
-
-- [ ] `/register` aufrufen
-- [ ] Alle Pflichtfelder ausfüllen: Vorname, Nachname, E-Mail, Geburtsdatum, Telefon, Rolle, Passwort
-- [ ] Passwort-Anforderungen prüfen: mind. 8 Zeichen, Groß-/Kleinbuchstabe, Zahl, Sonderzeichen
-- [ ] Nutzungsbedingungen und Datenschutzerklärung akzeptieren (beide Checkboxen)
-- [ ] Nach Registrierung: Redirect zu `/dashboard` (lokal ohne E-Mail-Bestätigung)
-- [ ] `profiles`-Eintrag in DB vorhanden (Supabase Studio → Table Editor → profiles)
-
-### 2. Team erstellen
-
-- [ ] „Team erstellen" aufrufen (`/teams/new`)
-- [ ] Teamname eingeben, optional Altersgruppe und Geschlecht setzen
-- [ ] Nach Erstellung: Redirect zu `/teams/[teamId]`
-- [ ] Team erscheint in `/teams`
-- [ ] DB: `teams`-Eintrag mit `ownership_type = 'independent'`, `status = 'active'`
-- [ ] DB: `team_memberships`-Eintrag für den Trainer
-- [ ] DB: `team_member_roles` mit `team_owner` und `head_coach`
-
-### 3. Einladungscode, Link und QR-Code prüfen
-
-- [ ] Auf der Team-Detailseite: CTA „Spieler & Eltern einladen" vorhanden
-- [ ] `/teams/[teamId]/invite` aufrufen
-- [ ] Einladungscode wird angezeigt (Format: 8-stellig, Großbuchstaben/Zahlen)
-- [ ] „Code kopieren" kopiert den Code in die Zwischenablage
-- [ ] Join-Link wird angezeigt: `http://localhost:3000/join/[code]`
-- [ ] „Link kopieren" kopiert den vollständigen Link
-- [ ] QR-Code wird gerendert (schwarz auf weißem Hintergrund, auch im Dark Mode)
-- [ ] DB: `team_invitation_links`-Eintrag mit `revoked_at = NULL`
-
-### 4. Join-Link ausgeloggt öffnen
-
-- [ ] Ausloggen
-- [ ] `/join/[code]` im Browser öffnen
-- [ ] Teamname und Beitrittsmöglichkeit werden angezeigt
-- [ ] Keine Fehlermeldung, kein 404
-
-### 5. Login/Register-Redirect prüfen
-
-- [ ] Auf der Join-Seite: Login-Link anklicken → landet auf `/login?redirect=/join/[code]`
-- [ ] Auf der Login-Seite: „Registrieren"-Link anklicken → landet auf `/register?redirect=/join/[code]` (Redirect bleibt erhalten)
-- [ ] Auf der Register-Seite: „Anmelden"-Link anklicken → landet auf `/login?redirect=/join/[code]` (Redirect bleibt erhalten)
-
-### 6. Selbstbeitritt testen (Spieler-Account)
-
-- [ ] Mit Spieler-Account registrieren oder einloggen
-- [ ] Nach Login: automatischer Redirect zurück zu `/join/[code]`
-- [ ] Option „Ich trete selbst bei" auswählen
-- [ ] Profildaten werden read-only angezeigt (kein Name-Spoofing möglich)
-- [ ] Beitrittsanfrage absenden
-- [ ] Bestätigungsmeldung erscheint
-- [ ] DB: `team_join_requests` mit `status = 'pending'`, `request_type = 'self'`, `player_id` gesetzt
-
-### 7. Kind anmelden testen (Guardian-Account)
-
-- [ ] Mit Elternteil-Account registrieren oder einloggen
-- [ ] Nach Login: automatischer Redirect zurück zu `/join/[code]`
-- [ ] Option „Ich melde mein Kind an" auswählen
-- [ ] Kindsdaten eingeben: Vorname, Nachname, Geburtsdatum (Pflichtfelder)
-- [ ] Anfrage absenden
-- [ ] Bestätigungsmeldung erscheint
-- [ ] DB: `team_join_requests` mit `status = 'pending'`, `request_type = 'guardian'`, `player_id` gesetzt
-- [ ] DB: `players`-Eintrag mit Kindsdaten, `user_id = NULL`
-
-### 8. Trainer sieht offene Anfragen
-
-- [ ] Mit Trainer-Account einloggen
-- [ ] Team-Detailseite: Badge „X offen" bei Beitrittsanfragen sichtbar (falls Anfragen vorhanden)
-- [ ] CTA „Anfragen ansehen" führt zu `/teams/[teamId]/requests`
-- [ ] Beide Anfragen (Self + Guardian) erscheinen in der Liste
-- [ ] Name und Beitrittstyp erkennbar
-
-### 9. Anfrage annehmen
-
-- [ ] Auf `/teams/[teamId]/requests`: „Annehmen" für die Self-Player-Anfrage klicken
-- [ ] Anfrage verschwindet aus der Liste (oder Status wechselt)
-- [ ] DB: `team_join_requests.status = 'approved'`
-- [ ] DB: `player_team_assignments`-Eintrag vorhanden (`status = 'active'`)
-
-### 10. Anfrage ablehnen
-
-- [ ] Auf `/teams/[teamId]/requests`: „Ablehnen" für die Guardian-Anfrage klicken
-- [ ] Anfrage verschwindet aus der Liste
-- [ ] DB: `team_join_requests.status = 'rejected'`
-- [ ] DB: Kein `player_team_assignments`-Eintrag für diesen Spieler
-
-### 11. Angenommener Spieler erscheint im Team
-
-- [ ] Team-Detailseite aufrufen
-- [ ] Spielerbereich zeigt „1 Spieler"
-- [ ] Name des angenommenen Spielers in der Liste sichtbar
-- [ ] Geburtsdatum oder Jahrgang korrekt formatiert
-- [ ] Beitrittsart korrekt: „Selbst beigetreten" oder „Über Erziehungsberechtigte/n angemeldet"
-- [ ] Abgelehnter Spieler erscheint **nicht** in der Liste
-
----
-
-## Fehlerfälle
-
-### Ungültiger Code
-
-- [ ] `/join/UNGUELTIG` aufrufen → sinnvolle Fehlermeldung (kein 500, kein leerer Screen)
-- [ ] `/join/` ohne Code → 404 oder Redirect
-
-### Abgelaufener/deaktivierter Code
-
-> Lokal testbar durch direktes Setzen in Supabase Studio: `team_invitation_links.revoked_at = now()`
-
-- [ ] `revoked_at` manuell setzen, Link erneut öffnen → Fehlermeldung „Link ungültig oder abgelaufen"
-
-### Doppelte Anfrage
-
-- [ ] Mit demselben Spieler-Account nochmals dieselbe Join-URL öffnen
-- [ ] Erwartet: Hinweis, dass bereits eine Anfrage existiert — oder Anfrage wird nicht doppelt erstellt
-- [ ] DB: Nur ein `team_join_requests`-Eintrag mit `status = 'pending'` für diese Kombination
-
-### Ablehnen einer Anfrage (bereits oben in Schritt 10)
-
-- [ ] Kein `player_team_assignments`-Eintrag nach Ablehnung
-- [ ] Abgelehnter Spieler nicht in Teamliste sichtbar
-
-### Unvollständiges Profil beim Selbstbeitritt
-
-- [ ] Trainer-Account hat vollständiges Profil (durch Registrierung sichergestellt)
-- [ ] Join als Spieler mit fehlendem Profilnamen: prüfen, ob Fehlermeldung kommt oder Profildaten korrekt geladen werden
-
----
-
-## Lokale DB-Prüfqueries (Supabase Studio)
-
-Supabase Studio läuft lokal unter `http://127.0.0.1:54323` → SQL Editor.
-
-```sql
--- Alle Teams prüfen
-SELECT id, name, ownership_type, status, created_at FROM public.teams;
-
--- Trainer-Rollen prüfen
-SELECT u.email, r.key AS role
-FROM auth.users u
-JOIN public.team_memberships tm ON tm.user_id = u.id
-JOIN public.team_member_roles tmr ON tmr.team_membership_id = tm.id
-JOIN public.roles r ON r.id = tmr.role_id;
-
--- Aktive Einladungslinks
-SELECT id, team_id, created_at, revoked_at
-FROM public.team_invitation_links
-WHERE revoked_at IS NULL
-ORDER BY created_at DESC;
-
--- Offene Join-Anfragen
-SELECT id, team_id, request_type, status, created_at
-FROM public.team_join_requests
-WHERE status = 'pending'
-ORDER BY created_at DESC;
-
--- Alle Spieler
-SELECT id, first_name, last_name, birth_year, date_of_birth, user_id
-FROM public.players
-ORDER BY created_at DESC;
-
--- Aktive Spielerzuordnungen
-SELECT pta.id, pta.team_id, pta.player_id, pta.status, pta.joined_at,
-       p.first_name, p.last_name
-FROM public.player_team_assignments pta
-JOIN public.players p ON p.id = pta.player_id
-WHERE pta.status = 'active';
-```
-
----
-
-## DSGVO- und Sichtbarkeitschecks
-
-### Wann sieht der Trainer Kindesdaten?
-
-- [ ] Solange `team_join_requests.status = 'pending'`: Trainer sieht Name und Anfragedaten in `/teams/[teamId]/requests`
-- [ ] Nach Annehmen (`status = 'approved'`): Spieler erscheint in der Team-Liste
-- [ ] Nach Ablehnen (`status = 'rejected'`): Keine Daten im UI sichtbar, kein `player_team_assignments`-Eintrag
-
-### Wann wird ein Spieler in der Team-Liste sichtbar?
-
-- [ ] Erst nach `approve_join_request` → `player_team_assignments.status = 'active'`
-- [ ] Pending-Anfragen erscheinen **nicht** in der Spielerliste auf der Team-Detailseite
-
-### Self-Player vs. Guardian-Child
-
-- [ ] Self-Player: `players.user_id` gesetzt → Label „Selbst beigetreten"
-- [ ] Guardian-Child: `players.user_id = NULL` → Label „Über Erziehungsberechtigte/n angemeldet"
-- [ ] Guardian-Child: Geburtsdatum aus `players.date_of_birth` (Pflichtfeld beim Guardian-Flow)
-
-### Kein Name-Spoofing beim Selbstbeitritt
-
-- [ ] Profildaten (Vorname, Nachname) werden aus `profiles` gelesen, nicht aus dem Formular übernommen
-- [ ] User kann keinen anderen Namen für sich selbst angeben
-
----
-
-## Abschlusskriterien
-
-Der MVP-Kernflow gilt als bestanden, wenn:
-
-- [ ] Alle 11 Kernflow-Schritte ohne Fehler durchlaufen
-- [ ] Alle Fehlerfälle zeigen sinnvolle Fehlermeldungen (kein 500, kein weißer Screen)
-- [ ] DB-Prüfqueries bestätigen korrekten Datenbankzustand
-- [ ] DSGVO-Checks: Kindesdaten erst nach Trainer-Akzeptanz im Team sichtbar
-- [ ] `npm run lint` — keine Fehler
-- [ ] `npm run build` — kein Fehler
-
----
-
-## Retest-Protokoll
-
-### Retest P.1 nach Phase P.2A — 2026-07-01
-
-Manueller Retest des Kernflows nach Umsetzung der 9 P.2A-Fixes. Alle Punkte bestanden.
-
-| Bereich | Ergebnis |
-|---------|----------|
-| Registrierung ohne Telefonnummer | ✓ funktioniert, kein Fehler |
-| Team-Erstellung → Redirect zu `/teams/[teamId]` | ✓ direkter Redirect zur Detailseite |
-| Training erstellen: Datum + Uhrzeit getrennt | ✓ zwei Felder, Wiener Zeit korrekt |
-| Training erstellen → Redirect zu Detailseite | ✓ landet direkt auf `/teams/[teamId]/events/[eventId]` |
-| Join-Erfolgsscreen: „Zurück zum Dashboard"-Link | ✓ vorhanden nach Self-Player und Guardian-Flow |
-| Dashboard Spieler: wartende Beitrittsanfrage | ✓ zeigt Typ (self/guardian), Teamname, Hinweistext |
-| Dashboard Trainer: Beitrittsanfragen mit Teamname | ✓ gruppiert nach Team, Direktlink zu `/teams/[teamId]/requests` |
-| iOS Auto-Zoom (Inputs, DevTools-Emulator) | ✓ kein Auto-Zoom bei Input-Focus |
-| RootLayout Script-Warnung | ✓ behoben via `next/script beforeInteractive` |
-| `npm run lint` | ✓ keine Fehler |
-| `npm run build` | ✓ erfolgreich, 18 Routen |
-
-**Phase M abgeschlossen** — 5/5 E2E-Tests lokal und in GitHub Actions grün.
-
----
-
-### Playwright E2E-Automatisierung — 2026-07-01
-
-Kernflow automatisiert mit Playwright. Alle Tests laufen lokal gegen die lokale Supabase-Instanz.
-
-```
+## 2. Automatisierte Basisprüfungen
+
+```text
+npm run lint
+npm run build
 npm run test:e2e
 ```
 
-Supabase (`npx supabase start`) und Dev-Server (`npm run dev`) müssen laufen.
+- [ ] `npm run lint` ohne Fehler.
+- [ ] `npm run build` ohne Fehler; dies ist zugleich der vorhandene
+  TypeScript-Buildcheck.
+- [ ] `npm run test:e2e` lokal mit laufender Supabase und App.
+- [ ] Drei vorhandene E2E-Dateien laufen:
+  `smoke.spec.ts`, `core-flow-self-player.spec.ts`,
+  `core-flow-guardian.spec.ts`.
 
-GitHub Actions: `.github/workflows/e2e.yml` — manuell via `workflow_dispatch` auslösbar (M.4). `ci.yml` bleibt für Lint + Build zuständig.
-
-| Test-Datei | Inhalt | Ergebnis |
-|------------|--------|----------|
-| `tests/e2e/smoke.spec.ts` | Login-Seite, Register-Seite, Root-Redirect | 3/3 ✓ |
-| `tests/e2e/core-flow-self-player.spec.ts` | Trainer → Team → Invite → Self-Player Join → Annahme → Training → RSVP → Trainer sieht „Kommt" | 1/1 ✓ |
-| `tests/e2e/core-flow-guardian.spec.ts` | Trainer → Team → Invite → Guardian → Kind anmelden → Annahme → Training → RSVP fürs Kind → Trainer sieht Kind unter „Kommt" | 1/1 ✓ |
-
-**Gesamt: 5/5 grün**
+Es gibt derzeit kein separates `typecheck`-Skript und keine Unit- oder
+Integrationstest-Suite. GitHub führt Lint und Build bei Push/PR nach `main` aus;
+E2E ist nur manuell per `workflow_dispatch` konfiguriert.
 
 ---
 
-### Phase PWA.1 — Basis-PWA-Metadaten / Installierbarkeit vorbereitet — 2026-07-02
+## 3. Bestandstest — Auth und Registrierung
 
-| Prüfpunkt | Ergebnis |
-|-----------|----------|
-| `/manifest.webmanifest` wird im Next.js-Build erzeugt | ✓ |
-| `public/icon-192.png` vorhanden | ✓ |
-| `public/icon-512.png` vorhanden | ✓ |
-| `public/apple-touch-icon.png` vorhanden | ✓ |
-| `metadata.icons` ergänzt | ✓ |
-| `metadata.appleWebApp` ergänzt | ✓ |
-| `viewport.themeColor` gesetzt | ✓ |
-| `npm run lint` | ✓ keine Fehler |
-| `npm run build` | ✓ erfolgreich |
-| Service Worker | nicht vorhanden (bewusst) |
-| Offline-Modus | nicht vorhanden (bewusst) |
-| Push Notifications | nicht vorhanden (bewusst) |
+- [ ] `/register` und `/login` sind ohne Anmeldung erreichbar.
+- [ ] Registrierung validiert Name, E-Mail, heutige Passwortregeln und
+  verpflichtende Checkboxen serverseitig.
+- [ ] Ungültige E-Mail und schwaches Passwort liefern verständliche Fehler.
+- [ ] Offener Redirect bleibt nach Login/Registrierung erhalten.
+- [ ] Externe oder Auth-Schleifen-Redirects werden nicht akzeptiert.
+- [ ] Abmeldung beendet die Session und führt zu `/login`.
+- [ ] Nicht angemeldeter Zugriff auf `/dashboard` führt zu `/login?redirect=...`.
+- [ ] Öffentliche Legal-Seiten sind ohne Anmeldung erreichbar.
 
-**Nicht durchgeführt:** praktischer Install-Test auf iOS/Android, Lighthouse-PWA-Audit. Beides bleibt offen und wird nicht als erledigt markiert.
+Aktuell verlangt die Registrierung das vollständige Geburtsdatum. Das ist ein
+bekannter Widerspruch zum beschlossenen Zielmodell und wird nicht als finale
+Anforderung festgeschrieben.
+
+---
+
+## 4. Zieltest — Verifikation, Profil und Rechtstexte
+
+**Pilotblocker**
+
+- [ ] Geburtsjahr ist Pflicht; vollständiges Geburtsdatum ist freiwillig.
+- [ ] Bei vollständigem Datum stimmt das gespeicherte Geburtsjahr überein.
+- [ ] Ohne vollständiges Datum erscheint keine Warnung oder wiederholte
+  Aufforderung.
+- [ ] Terms- und Privacy-Annahme speichern Nutzer, Textversion und Zeitpunkt.
+- [ ] Unverifiziertes Konto darf sich anmelden und Informationsseiten sehen.
+- [ ] Unverifiziertes Konto kann kein Team erstellen, keine Join-Anfrage senden
+  und kein RSVP abgeben — auch nicht über direkten Server-/RPC-Aufruf.
+- [ ] Verifiziertes Konto kann diese Aktionen bei sonstiger Berechtigung ausführen.
+- [ ] Passwort-Reset funktioniert ohne Kontoinformationen unnötig preiszugeben.
+- [ ] Produktiver E-Mail-Versand und Bestätigungslink funktionieren in einer
+  kontrollierten gehosteten Testumgebung.
+
+---
+
+## 5. Bestandstest — Team, Einladung und Join
+
+### Team-Erstellung
+
+- [ ] Berechtigter Trainer erstellt ein eigenständiges Team.
+- [ ] Team, aktive Mitgliedschaft sowie `team_owner` und `head_coach` entstehen
+  atomar.
+- [ ] Ersteller landet auf `/teams/[teamId]`.
+- [ ] Fremder Nutzer kann Teamdaten weder über URL noch direkten Datenzugriff
+  verwalten.
+
+### Einladungscode
+
+- [ ] Ein `public_code` im Format `VRN-XXXX-XXXX-XXXX` wird angezeigt.
+- [ ] Join-Link und QR-Code verwenden diesen Code.
+- [ ] `/join/[code]` ist ausgeloggt erreichbar.
+- [ ] Ungültiger Code liefert eine verständliche Fehlermeldung, keinen
+  500-Fehler.
+- [ ] Ein aktiver Code bleibt ohne automatische Ablaufzeit gültig.
+
+### Self-Join
+
+- [ ] Self-Player sendet eine `pending`-Anfrage mit
+  `request_type = 'self_player'`.
+- [ ] Name wird aus dem Profil bezogen und kann nicht im Join-Formular gefälscht
+  werden.
+- [ ] Doppelte offene Anfrage wird verhindert.
+
+### Guardian-/Kind-Join
+
+- [ ] Guardian gibt Vorname, Nachname und Pflicht-Geburtsjahr des Kindes an.
+- [ ] Anfrage erhält `request_type = 'guardian_child'`.
+- [ ] Kind besitzt keinen eigenen Login, wenn kein `players.user_id` gesetzt ist.
+- [ ] Guardian-Beziehung wird nur für das eigene Kind wirksam.
+- [ ] Trainer sieht `pending`-Anfragedaten zur Prüfung; das Kind erscheint erst
+  nach Annahme in der aktiven Team-Spielerliste.
+---
+
+## 6. Zieltest — Guardian-Erklärung und freiwilliges Spielergeburtsdatum
+
+**Pilotblocker**
+
+- [ ] Vor Kind-Join wird verständlich erklärt, welche Daten gespeichert werden
+  und welche aktiven Trainerrollen sie sehen.
+- [ ] Die rechtlich festgelegte Altersgrenze zwischen Self-Player- und
+  Guardian-Flow wird serverseitig durchgesetzt und kann nicht über einen
+  direkten RPC-Aufruf umgangen werden.
+- [ ] Guardian bestätigt ausdrücklich, zur Anmeldung des Kindes berechtigt zu
+  sein.
+- [ ] Gespeichert sind Guardian-Nutzer, Zeitpunkt und Textversion.
+- [ ] UI bezeichnet dies als Selbsterklärung, nicht als Identitäts- oder
+  Obsorgeprüfung.
+- [ ] Ein vollständiges Spielergeburtsdatum ist freiwillig.
+- [ ] Zweckhinweis nennt nur Geburtstagsübersicht und altersbezogene
+  Teamorganisation.
+- [ ] Nur aktive `team_owner`, `head_coach` und `assistant_coach` desselben Teams
+  sehen das vollständige Datum im Teamkontext.
+- [ ] Fremdes Team und inaktive Trainerbeziehung sehen es nicht.
+- [ ] Spieler kann das eigene freiwillige Datum sehen und korrigieren.
+- [ ] Guardian kann das Datum des eigenen verknüpften Kindes sehen und
+  korrigieren.
+- [ ] Andere Spieler und Guardians sehen das Datum nicht.
+- [ ] Nach Ende der aktiven Teamzuordnung wird im Team-/Historienkontext nur das
+  Geburtsjahr angezeigt.
+- [ ] Der eigene Spieler-/Kind-Profilzugriff bleibt davon getrennt erhalten,
+  solange die eigene bzw. Guardian-Beziehung aktiv ist.
+
+---
+
+## 7. Bestandstest — Join-Anfragen und Spieler entfernen
+
+- [ ] `team_owner` kann offene Anfrage annehmen und ablehnen.
+- [ ] `head_coach` kann offene Anfrage annehmen und ablehnen.
+- [ ] `assistant_coach` kann beides weder über UI noch direkten RPC-Aufruf.
+- [ ] Annahme erzeugt eine aktive `player_team_assignments`-Zuordnung.
+- [ ] Ablehnung erzeugt keine aktive Zuordnung.
+- [ ] `team_owner` und `head_coach` können Spieler aus dem Team entfernen.
+- [ ] `assistant_coach` kann das nicht.
+- [ ] Entfernen beendet die Zuweisung, löscht aber weder Person noch vergangene
+  RSVP-Historie.
+- [ ] Entfernte Spieler können auf künftige Termine nicht mehr antworten.
+
+---
+
+## 8. Zieltest — Rollen und Eigentumsübertragung
+
+- [ ] Nur `team_owner` vergibt oder entzieht vordefinierte Rollen.
+- [ ] Es können keine granularen Einzelrechte vergeben werden.
+- [ ] Es existiert jederzeit genau ein `team_owner`.
+- [ ] Owner-Entzug ist nur als explizite Eigentumsübertragung möglich.
+- [ ] Zielnutzer ist registriert, volljährig, aktiv im selben Team und bestätigt
+  die Übernahme.
+- [ ] Eigentumsübertragung ändert nur `team_owner`; andere Rollen beider Nutzer
+  bleiben erhalten.
+- [ ] Owner + Head Coach besitzt die Vereinigungsmenge beider Rollen.
+- [ ] Entfernt dieser Nutzer seine eigene Head-Coach-Rolle, bleibt Owner erhalten.
+- [ ] `team_owner`, `head_coach` und `assistant_coach` dürfen Einladungscode
+  anzeigen, erneuern und deaktivieren.
+- [ ] Alter Code funktioniert nach Erneuerung/Deaktivierung nicht mehr.
+- [ ] `assistant_coach` darf offene Beitrittsanfragen sehen, aber weder annehmen
+  noch ablehnen.
+
+---
+
+## 9. Bestandstest — Training und Spieler-RSVP
+
+- [ ] `team_owner`, `head_coach` und `assistant_coach` erstellen ein Training.
+- [ ] Datum/Uhrzeit werden als Wiener Lokalzeit korrekt gespeichert und angezeigt,
+  einschließlich Sommer-/Winterzeit-Grenzfällen.
+- [ ] Training erscheint in Liste und Detailansicht.
+- [ ] Self-Player antwortet nur für sich selbst.
+- [ ] Guardian antwortet nur für das verknüpfte Kind.
+- [ ] Fremder Spieler/Guardian kann kein RSVP setzen.
+- [ ] Antwortwerte `attending`, `declined`, `maybe` funktionieren; andere Werte
+  werden abgelehnt.
+
+---
+
+## 10. Zieltest — Training bearbeiten, löschen und Trainer-RSVP
+
+- [ ] Alle drei Trainerrollen dürfen ein Training bearbeiten und absagen.
+- [ ] Abgesagtes Training bleibt sichtbar und klar markiert.
+- [ ] Abgesagtes Training akzeptiert keine neue oder geänderte RSVP.
+- [ ] Nur `team_owner` und `head_coach` sehen/verwenden Hard-Delete.
+- [ ] Hard-Delete ist ausschließlich vor Terminbeginn möglich.
+- [ ] Sobald irgendein RSVP vorhanden ist, ist Hard-Delete gesperrt.
+- [ ] Nach Terminbeginn ist Hard-Delete gesperrt.
+- [ ] Vor Hard-Delete muss exakt die festgelegte Bestätigung, z. B. `LÖSCHEN`,
+  eingegeben werden.
+- [ ] Wenn Löschen gesperrt ist, führt die UI zur Absage statt zu einem
+  funktionslosen Button.
+- [ ] Änderung/Absage/Löschung wird serverseitig geprüft, nicht nur über UI.
+- [ ] Spieler, Guardians und Trainer können RSVP bis zum Terminbeginn ändern,
+  danach nicht mehr.
+- [ ] Trainer-RSVP liegt getrennt von Spieler-RSVP, z. B. in
+  `event_staff_rsvps`.
+- [ ] `team_owner`, `head_coach` und `assistant_coach` dürfen für sich selbst
+  Trainer-RSVP setzen; niemand antwortet für einen anderen Trainer.
+- [ ] Anwesenheitserfassung ist von RSVP getrennt.
+
+---
+
+## 11. Zieltest — Archivierung und Historie
+
+- [ ] Ein Team mit Mitgliedern, Terminen oder Historie bietet keinen normalen
+  Hard-Delete-Button.
+- [ ] Nur `team_owner` archiviert das Team.
+- [ ] Archivierung entzieht produktive Schreibrechte, erhält aber notwendige
+  Historie.
+- [ ] Vergangene RSVP eines entfernten Spielers bleibt historisch nachvollziehbar.
+- [ ] Künftige RSVP/Teilnehmerzahlen schließen entfernte Spieler aus.
+- [ ] Abgesagte Termine bleiben in Kalender/Historie sichtbar.
+
+---
+
+## 12. Datenschutz- und Cleanup-Tests
+
+**Pilotblocker**
+
+- [ ] Pending-Join-Anfrage ist nur für Antragsteller und berechtigte
+  Einsichtsrollen sichtbar.
+- [ ] Abgelehnte Anfrage erscheint nicht als aktiver Spieler.
+- [ ] Abgelehnte und zurückgezogene Join-Anfragen werden nach 90 Tagen
+  automatisch bereinigt.
+- [ ] Cleanup läuft wiederholbar, protokolliert Fehler und löscht keine aktiven
+  oder angenommenen Anfragen.
+- [ ] Unnötige Kinderdaten werden beim frühestmöglichen fachlich sicheren Schritt
+  entfernt.
+- [ ] Kein Rollenwechsel macht frühere Kinderdaten unbefugt sichtbar.
+- [ ] Legal-Seiten enthalten keine Platzhalter und stimmen mit realen Feldern,
+  Diensten und Fristen überein.
+
+---
+
+## 13. Deployment-, PWA- und Betriebsabnahme
+
+Die jeweilige Prüfung ist als Pilotblocker oder späterer Zieltest
+gekennzeichnet.
+
+- [ ] **Pilotblocker:** Vollständiges Vercel-Deployment ist während der internen Entwicklung
+  geschützt.
+- [ ] **Pilotblocker:** `https://vereon.app` leitet dauerhaft auf
+  `https://www.vereon.app` weiter.
+- [ ] **Pilotblocker:** `/manifest.webmanifest` ist im App-Routing ohne
+  App-Login als Manifest erreichbar und
+  liefert kein HTML.
+- [ ] **MVP-1-Zieltest:** Manifest, Icons und Installierbarkeit werden auf iOS
+  und Android praktisch getestet.
+- [ ] Service Worker, Offline-Modus und Push werden nicht als vorhanden behauptet.
+- [ ] **Pilotblocker:** Cloud-Backup-/Restore-/Rollback-Verfahren ist
+  dokumentiert und getestet.
+- [ ] **Pilotblocker:** Monitoring, Fehlerverantwortung und Alarmierung sind
+  geklärt.
+- [ ] Remote-Migrationen werden nur nach separater ausdrücklicher Freigabe
+  angewendet und verifiziert.
+
+---
+
+## 14. Abschlussprotokoll
+
+Ein Testlauf dokumentiert:
+
+- Datum, Branch und Commit,
+- lokale oder kontrollierte gehostete Umgebung,
+- verwendete Testrollen,
+- bestandene/fehlgeschlagene Abschnitte,
+- Belege für Negativtests,
+- offene Abweichungen mit Verweis auf `docs/STATUS.md`,
+- Lint-, Build- und E2E-Ergebnis.
+
+Frühere erfolgreiche Testläufe bleiben Git-Historie, sind aber kein Nachweis, dass
+der aktuelle Stand unverändert grün ist.
