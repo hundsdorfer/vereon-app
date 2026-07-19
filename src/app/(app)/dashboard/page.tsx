@@ -4,6 +4,7 @@ import { formatTrainingDateTime } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { RsvpStatusBadge } from '@/components/ui/RsvpStatusBadge'
+import { Badge } from '@/components/ui/Badge'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,6 +16,7 @@ type EventRow = {
   starts_at: string
   location: string | null
   team_id: string
+  is_cancelled: boolean
   teams: { id: string; name: string } | null
 }
 
@@ -62,9 +64,8 @@ export default async function DashboardPage() {
       .single(),
     supabase
       .from('events')
-      .select('id, title, starts_at, location, team_id, teams(id, name)')
+      .select('id, title, starts_at, location, team_id, is_cancelled, teams(id, name)')
       .eq('event_type', 'training')
-      .eq('is_cancelled', false)
       .gte('starts_at', now)
       .order('starts_at')
       .limit(5),
@@ -171,8 +172,9 @@ export default async function DashboardPage() {
                         <Link href={href} className="block group">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                              <p className="flex items-center gap-2 text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
                                 {event.title}
+                                {event.is_cancelled && <Badge variant="danger">Abgesagt</Badge>}
                               </p>
                               <p className="mt-0.5 text-xs text-muted-foreground">
                                 {formatTrainingDateTime(event.starts_at)}
@@ -194,8 +196,9 @@ export default async function DashboardPage() {
                     return (
                       <li key={event.id} className="py-3 first:pt-0 last:pb-0">
                         <Link href={href} className="block group">
-                          <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                          <p className="flex items-center gap-2 text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
                             {event.title}
+                            {event.is_cancelled && <Badge variant="danger">Abgesagt</Badge>}
                           </p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
                             {formatTrainingDateTime(event.starts_at)}
@@ -219,8 +222,9 @@ export default async function DashboardPage() {
                                   {playerName}
                                 </p>
                               )}
-                              <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                              <p className="flex items-center gap-2 text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
                                 {event.title}
+                                {event.is_cancelled && <Badge variant="danger">Abgesagt</Badge>}
                               </p>
                               <p className="mt-0.5 text-xs text-muted-foreground">
                                 {formatTrainingDateTime(event.starts_at)}

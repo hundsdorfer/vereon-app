@@ -1,13 +1,13 @@
 # Status — technisches Audit
 
 **Stand:** 2026-07-19
-**Geprüfter Stand:** `main` / `029de98`, einschließlich lokaler Dokumentations-, Code- und Teständerungen.
+**Geprüfter Stand:** `main` / `5caf3b7`, einschließlich lokaler Dokumentations-, Code- und Teständerungen (FC-TRAINING-005).
 
 Dieses Dokument ist die verbindliche lebende Übersicht für belegte technische Abweichungen, Risiken und Übergabepunkte. Technischer Ist-Zustand: `docs/ARCHITECTURE.md`. Fachliches Ziel: `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`.
 
 ## 1. Kurzurteil
 
-Der Einzelteam-Kernflow ist im Repository implementiert: Auth, Team-Erstellung, Einladung, Self-/Guardian-Join, Join-Entscheidung, Spieler-Soft-Remove, Trainingsanlage und Spieler-/Guardian-RSVP.
+Der Einzelteam-Kernflow ist im Repository implementiert: Auth, Team-Erstellung, Einladung, Self-/Guardian-Join, Join-Entscheidung, Spieler-Soft-Remove, Trainingsanlage, Trainingsabsage und Spieler-/Guardian-RSVP.
 
 Die App ist intern gehostet, aber nicht pilotbereit. Der Zugriff auf die gehostete Instanz ist seit 2026-07-19 durch einen temporären internen Zugangsschutz begrenzt (verifiziert, siehe Abschnitt 2). Die größten verbleibenden Lücken betreffen Legal-/Consent-Themen, E-Mail-Verifizierung, automatisierte Datenbereinigung, Backup/Restore sowie mehrere beschlossene MVP-0B-Funktionen.
 
@@ -22,11 +22,12 @@ Die App ist intern gehostet, aber nicht pilotbereit. Der Zugriff auf die gehoste
 | Annehmen/Ablehnen von Anfragen | `src/actions/joinRequests.ts`, `approve_join_request()`, `reject_join_request()` |
 | Spieler per Soft-Delete entfernen | `src/actions/players.ts`, Migration `20260704120000_remove_player_from_team.sql` |
 | Trainings erstellen und anzeigen | `src/actions/events.ts`, `src/app/(app)/teams/[teamId]/events/*` |
+| Training absagen (`team_owner`, `head_coach`, `assistant_coach` laut RPC-Rechteprüfung) | `cancelEventAction()` in `src/actions/events.ts`, `cancel_event()` in `20260629200000_add_events.sql`, UI in `src/features/events/CancelEventButton.tsx` und `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx`; abgesagte Trainings bleiben in allen Übersichten (Liste, Team, Dashboard) sichtbar und markiert; neue/geänderte RSVP nach Absage serverseitig gesperrt; wiederholte Absage bleibt konsistent (zustands-idempotent). End-to-end verifiziert nur für `team_owner`-only (`tests/e2e/core-flow-cancel-training.spec.ts`); `head_coach`-only/`assistant_coach`-only sind **weiterhin nicht end-to-end verifiziert** (Begründung: Abschnitt 5) und stattdessen nur über RPC-Code-Review sowie einen statischen Rollenvertrags-Test für `TRAINING_CANCEL_ROLES` (`tests/e2e/trainingCancelRoleContract.spec.ts`) abgedeckt — kein Ersatz für die offenen Integrationsfälle. |
 | Spieler-/Guardian-RSVP und Trainerübersicht | `respond_to_event()`, `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx` |
 | RLS auf allen 18 öffentlichen Tabellen | `supabase/migrations/*` |
 | CI für Lint und Build | `.github/workflows/ci.yml` |
 | Temporärer interner Zugangsschutz (HTTP Basic Auth vor Supabase-Login) | lokal automatisiert getestet (`tests/e2e/internal-access.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts`); auf Vercel aktiviert (Projekt `vereon`, Scope `vereon-app`, Production-Deployment `dpl_NnTeWpNNmmEP9BbSAXfmwcXFxM5t`, Commit `029de982`); extern gegen `https://www.vereon.app` geprüft am 2026-07-19: ohne Zugangsdaten `HTTP 401` mit `WWW-Authenticate: Basic realm="Vereon Internal Access"` und `Cache-Control: private, no-store`, mit korrekten Zugangsdaten `HTTP 307` auf `/login`. Kein Ersatz für Supabase Auth/RLS, ausdrücklich temporär (`DEC-011`), vor externem Pilot zu entfernen/ersetzen. |
-| `/manifest.webmanifest` ohne Supabase-Login-Weiterleitung, interner Zugangsschutz bleibt davor aktiv | lokal implementiert und automatisiert getestet (`src/proxy.ts`, `tests/e2e/smoke.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts`); nicht deployed, nicht extern gegen `www.vereon.app` verifiziert |
+| `/manifest.webmanifest` ohne Supabase-Login-Weiterleitung, interner Zugangsschutz bleibt davor aktiv | lokal implementiert und automatisiert getestet (`src/proxy.ts`, `tests/e2e/smoke.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts`); deployed (Production-Deployment `dpl_EQdwdj8bj5WidmbvAfKYptHtg5yT`, Commit `5caf3b7276893013ba2ef1b5da39d66907bb2b17`, Status `READY`) und extern gegen `https://www.vereon.app` verifiziert am 2026-07-19 (durch Codex geprüft, laut Nutzerangabe): ohne interne Zugangsdaten `HTTP 401`, mit korrekten internen Zugangsdaten `HTTP 200` mit `Content-Type: application/manifest+json; charset=utf-8` ohne Supabase-Login-Weiterleitung; `/dashboard` antwortet mit korrektem internem Zugang ohne Supabase-Session weiterhin mit `HTTP 307` auf `/login?redirect=%2Fdashboard`. Damit ist die Reihenfolge extern bestätigt: interner Zugangsschutz → Supabase-Routenschutz → Anwendung. |
 
 ## 3. Prüfstand
 
@@ -37,6 +38,16 @@ Am 2026-07-18 wurden ohne Codeänderung erfolgreich ausgeführt:
 - `npm run build` mit Next.js `16.2.9`.
 
 E2E wurde in diesem Audit nicht ausgeführt. Der Workflow `.github/workflows/e2e.yml` ist nur manuell startbar.
+
+**Am 2026-07-19, nach Implementierung von FC-TRAINING-005 (lokale Änderungen,
+kein Commit), zusätzlich erfolgreich ausgeführt:** `npx tsc --noEmit`,
+`npm run lint`, `npm run build` und der vollständige `npx playwright test`-Lauf
+gegen den lokalen Supabase-Docker-Stack: **40/40 Tests bestanden**, darin
+enthalten die drei neuen Specs (`core-flow-cancel-training.spec.ts`,
+`trainingCancelRoleContract.spec.ts`, `helpers/supabaseTestGuard.spec.ts`)
+sowie Regression der bestehenden Specs
+(`core-flow-self-player.spec.ts`, `core-flow-guardian.spec.ts`,
+`smoke.spec.ts`, `internal-access*.spec.ts`).
 
 Lokale Supabase-Prüfung:
 
@@ -55,9 +66,14 @@ Vercel aktiviert und extern gegen `https://www.vereon.app` verifiziert
 vor einem externen Pilot zu entfernen oder durch eine geeignete
 Plattformlösung zu ersetzen (`DEC-011`).
 
+**Verifiziert geschlossen (2026-07-19):** „Manifest-Korrektur noch nicht
+deployed oder extern verifiziert" ist kein offener P0-Punkt mehr. Deployment
+und externe Verifikation gegen `https://www.vereon.app` sind erfolgt (Beleg
+siehe Abschnitt 2). Praktischer Installationstest auf iOS/Android bleibt ein
+separater, nicht-P0-Zieltest (siehe `docs/MVP_TEST_CHECKLIST.md`).
+
 | Abweichung/Risiko | Beleg oder Verifikationsstand | Erforderliches Ergebnis |
 |---|---|---|
-| Manifest-Korrektur noch nicht deployed oder extern verifiziert | `/manifest.webmanifest` ist lokal ohne Supabase-Login-Weiterleitung implementiert; der interne Zugangsschutz bleibt davor aktiv. Der vollständige Playwright-Lauf war mit `29/29` Tests erfolgreich. Die Änderung ist noch nicht committet, gepusht, deployed oder extern gegen `www.vereon.app` geprüft. | Änderungen gezielt committen und pushen, Production-Deployment durchführen und anschließend extern verifizieren, dass das Manifest nach erfolgreichem internem Zugang ohne Supabase-Login erreichbar ist |
 | Legal-Seiten enthalten Platzhalter | `src/app/legal/{imprint,privacy,terms}/page.tsx` | rechtlich geprüfte Texte und Betreiberangaben |
 | E-Mail-Verifizierung nicht als Aktionsvoraussetzung erzwungen | `supabase/config.toml`: lokal aus; kein zentraler App-/RPC-Check | Team, Join und RSVP nur für verifizierte E-Mail |
 | Produktionsfähiger E-Mail-Versand fehlt | Nutzerangabe: nur Supabase-Test-/Standardversand | SMTP/Provider, Zustellung und Absender verifizieren |
@@ -76,7 +92,7 @@ Plattformlösung zu ersetzen (`DEC-011`).
 | Ziel | Ist-Zustand |
 |---|---|
 | Training bearbeiten | keine Action, RPC oder UI |
-| Training absagen | `cancel_event()` existiert, aber keine App-Verdrahtung |
+| Training absagen | umgesetzt und verifiziert (siehe Abschnitt 2); bekannte Testlücke: keine legitime `head_coach`-only-/`assistant_coach`-only-E2E-Verifikation ohne Service-Role oder neue Migration — kein `GRANT INSERT`/`DELETE` auf `team_member_roles` für `authenticated`, keine Co-Trainer-RPC (`FC-ROLE-002` noch `planned_mvp`). Isolierte Rollen-Fixture-Provisionierung für Tests ist als separater Folgebedarf offen, eigene Freigabe nötig. |
 | Training bedingt hart löschen | keine RPC/UI; Regeln in `docs/DATABASE_MODEL.md` |
 | RSVP nur bis Terminbeginn | `respond_to_event()` prüft keine `starts_at`-Deadline |
 | Trainer-RSVP | keine `event_staff_rsvps`-Tabelle und kein Flow |

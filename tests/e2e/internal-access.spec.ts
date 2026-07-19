@@ -12,6 +12,7 @@ import {
   applySupabaseSessionState,
   updateSession,
 } from '@/lib/supabase/middleware'
+import { isLoopbackSupabaseUrl } from './helpers/supabaseTestGuard'
 
 // .env.local wird von Next.js selbst geladen (dev/build), aber nicht von
 // `npx playwright test` — für den P1-Regressionstest unten wird ein echter
@@ -25,21 +26,6 @@ loadEnvConfig(process.cwd())
 
 function basicAuthHeader(username: string, password: string): string {
   return 'Basic ' + Buffer.from(`${username}:${password}`, 'utf8').toString('base64')
-}
-
-function isLoopbackSupabaseUrl(value: string | undefined): boolean {
-  if (!value) return false
-
-  try {
-    const url = new URL(value)
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
-
-    return ['localhost', '127.0.0.1', '::1', '[::1]'].includes(
-      url.hostname.toLowerCase()
-    )
-  } catch {
-    return false
-  }
 }
 
 const ORIGINAL_ENV = { ...process.env }

@@ -116,10 +116,9 @@ export default async function TeamDetailPage({
       .order('joined_at', { ascending: true }),
     supabase
       .from('events')
-      .select('id, title, starts_at, location')
+      .select('id, title, starts_at, location, is_cancelled')
       .eq('team_id', teamId)
       .eq('event_type', 'training')
-      .eq('is_cancelled', false)
       .gte('starts_at', new Date().toISOString())
       .order('starts_at', { ascending: true })
       .limit(3),
@@ -341,7 +340,10 @@ export default async function TeamDetailPage({
                       href={`/teams/${team.id}/events/${training.id}`}
                       className="block hover:opacity-80 transition-opacity"
                     >
-                      <p className="text-sm font-semibold text-foreground">{training.title}</p>
+                      <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        {training.title}
+                        {training.is_cancelled && <Badge variant="danger">Abgesagt</Badge>}
+                      </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {formatTrainingDateTime(training.starts_at)}
                       </p>

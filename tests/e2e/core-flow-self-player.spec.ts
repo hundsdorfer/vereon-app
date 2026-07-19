@@ -1,7 +1,14 @@
 import { test, expect } from '@playwright/test'
+import { getLoopbackSupabaseEnv } from './helpers/supabaseTestGuard'
 
 test('Kernflow: Trainer + Self-Player', async ({ browser }) => {
   test.setTimeout(120_000)
+
+  // Sicherheitsgrenze: registriert echte Nutzer und legt echte Daten über
+  // den Browser an — bricht sofort ab, falls die konfigurierte
+  // Supabase-URL nicht auf eine lokale Loopback-Adresse zeigt, statt
+  // versehentlich gegen eine Cloud-Instanz zu laufen.
+  getLoopbackSupabaseEnv()
 
   const ts           = Date.now()
   const trainerEmail = `trainer+${ts}@vereon.test`

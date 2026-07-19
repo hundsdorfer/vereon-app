@@ -222,9 +222,30 @@ Anforderung festgeschrieben.
 
 ## 10. Zieltest — Training bearbeiten, löschen und Trainer-RSVP
 
-- [ ] Alle drei Trainerrollen dürfen ein Training bearbeiten und absagen.
-- [ ] Abgesagtes Training bleibt sichtbar und klar markiert.
-- [ ] Abgesagtes Training akzeptiert keine neue oder geänderte RSVP.
+- [ ] Alle drei Trainerrollen dürfen ein Training bearbeiten. (Bearbeiten ist
+  weiterhin nicht implementiert.)
+- [x] `team_owner`-only: echter End-to-End-Test bestanden
+  (`tests/e2e/core-flow-cancel-training.spec.ts`).
+- [ ] `head_coach`-only: End-to-End-Test offen/blockiert (kein legitimer
+  App-/RPC-Weg für ein isoliertes Testkonto, siehe `docs/STATUS.md`,
+  verknüpft mit `FC-ROLE-002`).
+- [ ] `assistant_coach`-only: End-to-End-Test offen/blockiert (dito).
+- [x] Statischer Rollenvertrag (`TRAINING_CANCEL_ROLES`) und RPC-Code-Review
+  für alle drei Rollen vorhanden — dies ersetzt NICHT die beiden offenen
+  Integrationsfälle oben. `cancel_event()` prüft serverseitig symmetrisch
+  `team_owner`, `head_coach` und `assistant_coach` (Code-Review gegen
+  `supabase/migrations/20260629200000_add_events.sql`); der statische
+  Rollenvertrag (`tests/e2e/trainingCancelRoleContract.spec.ts`) prüft nur
+  den Inhalt der Konstante `TRAINING_CANCEL_ROLES`. Die produktive
+  UI-Gating-Entscheidung erfolgt serverseitig über `has_team_role()` mit
+  `TRAINING_CANCEL_ROLES` (Event-Detailseite) — es gibt keine eigene
+  Gating-Funktion.
+- [x] Abgesagtes Training bleibt sichtbar und klar markiert (Trainingsliste,
+  Team- und Dashboard-Übersicht, Detailseite; `danger`-Badge „Abgesagt").
+- [x] Abgesagtes Training akzeptiert keine neue oder geänderte RSVP (UI- und
+  serverseitig verifiziert).
+- [x] Wiederholtes Absagen eines bereits abgesagten Trainings bleibt
+  konsistent (zustands-idempotent, kein Fehler).
 - [ ] Nur `team_owner` und `head_coach` sehen/verwenden Hard-Delete.
 - [ ] Hard-Delete ist ausschließlich vor Terminbeginn möglich.
 - [ ] Sobald irgendein RSVP vorhanden ist, ist Hard-Delete gesperrt.

@@ -31,9 +31,19 @@ lokalen Supabase-Docker-Stacks wurde zusätzlich der vollständige
 Playwright-Lauf mit `npx playwright test` ausgeführt: **29/29 Tests
 bestanden**. Darin enthalten waren beide Kernflows, die
 Cookie-Refresh-Regression, sämtliche Manifest-/Basic-Auth-Tests und die
-POST-/Server-Action-Regression. Diese Umsetzung ist ausschließlich **lokal
-implementiert und getestet**; kein Deployment, kein Push, keine externe
-Verifikation gegen `www.vereon.app`.
+POST-/Server-Action-Regression.
+
+**Deployment und externe Verifikation (Stand 2026-07-19, laut Nutzerangabe):**
+Deployed auf Production-Deployment `dpl_EQdwdj8bj5WidmbvAfKYptHtg5yT`, Commit
+`5caf3b7276893013ba2ef1b5da39d66907bb2b17`, Status `READY`. Extern durch Codex
+gegen `https://www.vereon.app` geprüft: `/manifest.webmanifest` antwortet ohne
+interne Zugangsdaten mit `HTTP 401`, mit korrekten internen Zugangsdaten mit
+`HTTP 200` und `Content-Type: application/manifest+json; charset=utf-8` ohne
+Supabase-Login-Weiterleitung; `/dashboard` antwortet mit korrektem internem
+Zugang ohne Supabase-Session weiterhin mit `HTTP 307` auf
+`/login?redirect=%2Fdashboard`. Vollständiger Beleg: `docs/STATUS.md`. Damit
+gilt dieser Auftrag als **abgeschlossen**, der P0-Punkt „Manifest-Korrektur
+deployed/extern verifiziert" als verifiziert geschlossen.
 
 ## Vorangegangene Umsetzung: Temporärer interner Zugangsschutz
 
@@ -120,14 +130,46 @@ Playwright-Lauf (`27/27` Tests), der gezielte P1-Regressionstest,
 Variablen-Setzung in Vercel und externe Verifikation sind erfolgt (siehe
 oben und `docs/STATUS.md`). Damit ist dieser Auftrag abgeschlossen.
 
-## Nächste Aufgabe
+## Aufgabe lokal abgeschlossen: FC-TRAINING-005 „Training absagen" verdrahtet
 
-Als nächste vorgesehene Produktaufgabe gilt die Verdrahtung der bereits
-vorhandenen Training-Absage (`FC-TRAINING-005` in `docs/FEATURE_CATALOG.md`;
-Datenbank-/Statusgrundlage laut `supabase/migrations/20260629200000_add_events.sql`
-teilweise vorhanden) in den App-Flow. Diese Aufgabe wurde in dieser Sitzung
-**nicht begonnen** und benötigt vor Umsetzung eine eigene ausdrückliche
-Freigabe.
+Die bereits vorhandene, vollständig rechteprüfende `cancel_event()`-RPC
+(`supabase/migrations/20260629200000_add_events.sql`) wurde ohne Migration in
+den App-Flow verdrahtet (`FC-TRAINING-005` in `docs/FEATURE_CATALOG.md`, jetzt
+`implemented`).
+
+**Neue/geänderte Dateien:** `src/actions/events.ts` (`cancelEventAction`),
+`src/lib/permissions.ts` (neu, `TRAINING_CANCEL_ROLES`
+— von der bestehenden `isTrainer`-Anzeige bewusst getrennt, da diese die
+fachlich nicht mehr aktive Rolle `team_manager` einschließt; produktiv
+ausschließlich als Parameter von `has_team_role()` auf der Event-Detailseite
+verwendet, keine eigene Gating-Funktion),
+`src/features/events/CancelEventButton.tsx` (neu), Event-Detailseite,
+Trainingsliste, Team-Detailseite und Dashboard (jeweils: „Abgesagt"-Badge
+ergänzt, bisheriger `.eq('is_cancelled', false)`-Filter entfernt, damit
+abgesagte Trainings wie fachlich gefordert sichtbar bleiben).
+
+**Geprüft (Stand 2026-07-19):** `npx tsc --noEmit`, `npm run lint`,
+`npm run build` und vollständiger `npx playwright test`-Lauf gegen lokales
+Supabase: **40/40 Tests bestanden** (neu: `core-flow-cancel-training.spec.ts`,
+`trainingCancelRoleContract.spec.ts` und
+`helpers/supabaseTestGuard.spec.ts`; keine Regression in bestehenden Specs).
+Details: `docs/STATUS.md`.
+
+**Bekannte Testlücke:** `head_coach`-only und `assistant_coach`-only sind
+**nicht** end-to-end verifiziert — es gibt aktuell keinen legitimen
+App-/RPC-Weg, ein isoliertes Testkonto für diese Rollen zu erzeugen (kein
+`GRANT INSERT`/`DELETE` auf `team_member_roles` für `authenticated`, keine
+Co-Trainer-RPC; `FC-ROLE-002` weiterhin `planned_mvp`). Stattdessen über
+RPC-Code-Review (`cancel_event()` prüft alle drei Rollen symmetrisch) und
+einen statischen Rollenvertrags-Test für `TRAINING_CANCEL_ROLES`
+(`tests/e2e/trainingCancelRoleContract.spec.ts`) abgedeckt — dies ersetzt
+NICHT die offene End-to-End-Verifikation für `head_coach`-only und
+`assistant_coach`-only. Isolierte, rein testbezogene
+Rollen-Fixture-Provisionierung ist als separater Folgebedarf offen und braucht
+eine eigene Freigabe.
+
+Diese Umsetzung ist ausschließlich **lokal implementiert und geprüft**; kein
+Commit, kein Push, kein Deployment, keine Remote-Datenbankaktion.
 
 ## Harte Grenzen
 

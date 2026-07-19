@@ -103,3 +103,53 @@ export async function respondToEventAction(
   revalidatePath(`/teams/${teamId}`)
   redirect(`/teams/${teamId}/events/${eventId}`)
 }
+
+export type CancelEventState = { error: string } | { success: true } | null
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export async function cancelEventAction(
+  _prevState: CancelEventState,
+  formData: FormData,
+): Promise<CancelEventState> {
+  const eventId = (formData.get('event_id') as string | null)?.trim()
+
+  if (!eventId || !UUID_RE.test(eventId)) return { error: 'Termin nicht gefunden.' }
+
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Bitte melde dich erneut an.' }
+
+  const { data: event } = await supabase
+    .from('events')
+    .select('team_id, event_type')
+    .eq('id', eventId)
+    .single()
+
+  if (!event || event.event_type !== 'training') {
+    return { error: 'Termin nicht gefunden.' }
+  }
+
+  const teamId = event.team_id
+
+  const { error: cancelError } = await supabase.rpc('cancel_event', {
+    p_event_id: eventId,
+  })
+
+  if (cancelError) {
+    const msg = cancelError.message.toLowerCase()
+    if (msg.includes('nicht eingeloggt'))   return { error: 'Bitte melde dich erneut an.' }
+    if (msg.includes('nicht gefunden'))     return { error: 'Termin nicht gefunden.' }
+    if (msg.includes('keine berechtigung')) return { error: 'Du hast keine Berechtigung für diese Aktion.' }
+    return { error: 'Training konnte nicht abgesagt werden. Bitte erneut versuchen.' }
+  }
+
+  revalidatePath(`/teams/${teamId}/events/${eventId}`)
+  revalidatePath(`/teams/${teamId}/events`)
+  revalidatePath(`/teams/${teamId}`)
+  revalidatePath(`/dashboard`)
+  return { success: true }
+}

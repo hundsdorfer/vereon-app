@@ -123,7 +123,6 @@ Belegte Einschränkungen:
 - Die lokale Supabase-Konfiguration hat `enable_confirmations = false`.
 - Registrierung verlangt aktuell ein vollständiges Geburtsdatum und speichert Annahmezeitpunkte für AGB und Datenschutz, aber keine Dokumentversionen.
 - Passwort-Reset ist nicht implementiert.
-- `src/app/manifest.ts` erzeugt `/manifest.webmanifest`, doch der Pfad ist im Proxy weder öffentlich noch vom Matcher ausgenommen. Unangemeldete Abrufe werden daher zum Login umgeleitet.
 
 ## 6. Autorisierung
 
@@ -161,7 +160,7 @@ Der Self-Player-Flow wird derzeit nicht serverseitig auf Volljährigkeit begrenz
 
 ### Trainings und RSVP
 
-`create_event()` erlaubt `team_owner`, `head_coach` und `assistant_coach` das Erstellen. `cancel_event()` existiert in der Datenbank, ist aber nicht in der Oberfläche verdrahtet. Eine Bearbeiten- oder Hard-Delete-Funktion existiert nicht.
+`create_event()` erlaubt `team_owner`, `head_coach` und `assistant_coach` das Erstellen. `cancel_event()` ist über `cancelEventAction()` (`src/actions/events.ts`) und `CancelEventButton` (`src/features/events/CancelEventButton.tsx`) in der Oberfläche verdrahtet; die Berechtigung wird auf der Detailseite über eine von der bestehenden `isTrainer`-Anzeige getrennte Prüfung (`has_team_role()` mit `TRAINING_CANCEL_ROLES` aus `src/lib/permissions.ts`, ohne `team_manager`) ermittelt. Abgesagte Trainings bleiben in Trainingsliste, Team- und Dashboard-Übersicht sichtbar und sind mit einem `danger`-Badge „Abgesagt" gekennzeichnet. Eine Bearbeiten- oder Hard-Delete-Funktion existiert nicht.
 
 Beim Erstellen eines Termins erzeugt ein Trigger `event_attendance`-Zeilen für aktive Spieler. Self-Player oder verifizierte Guardians setzen RSVP über `respond_to_event()`. Entfernte Spieler werden durch `is_active_player_assignment()` blockiert. Eine RSVP-Deadline am Terminbeginn wird derzeit nicht geprüft.
 

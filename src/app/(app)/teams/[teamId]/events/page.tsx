@@ -5,6 +5,7 @@ import { formatTrainingDateTime } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Badge } from '@/components/ui/Badge'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,10 +33,9 @@ export default async function TeamEventsPage({
       .single(),
     supabase
       .from('events')
-      .select('id, title, starts_at, location')
+      .select('id, title, starts_at, location, is_cancelled')
       .eq('team_id', teamId)
       .eq('event_type', 'training')
-      .eq('is_cancelled', false)
       .order('starts_at', { ascending: false }),
     supabase.rpc('has_team_role', {
       p_team_id: teamId,
@@ -128,7 +128,10 @@ export default async function TeamEventsPage({
                       href={`/teams/${teamId}/events/${training.id}`}
                       className="block hover:opacity-80 transition-opacity"
                     >
-                      <p className="text-sm font-semibold text-foreground">{training.title}</p>
+                      <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        {training.title}
+                        {training.is_cancelled && <Badge variant="danger">Abgesagt</Badge>}
+                      </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {formatTrainingDateTime(training.starts_at)}
                       </p>
@@ -156,7 +159,10 @@ export default async function TeamEventsPage({
                       href={`/teams/${teamId}/events/${training.id}`}
                       className="block hover:opacity-80 transition-opacity"
                     >
-                      <p className="text-sm font-semibold text-foreground">{training.title}</p>
+                      <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        {training.title}
+                        {training.is_cancelled && <Badge variant="danger">Abgesagt</Badge>}
+                      </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {formatTrainingDateTime(training.starts_at)}
                       </p>

@@ -657,7 +657,7 @@ Unabhängig davon bleibt jederzeit genau ein `team_owner` erhalten.
 ### UF-0B-13 — Training absagen
 
 **Phase:** `MVP-0B`  
-**Flow-Status:** `offen`  
+**Flow-Status:** `bestehend`<br>
 **Hauptrollen:** `team_owner`, `head_coach`, `assistant_coach`  
 **Betroffene Feature-IDs:** `FC-TRAINING-005`
 

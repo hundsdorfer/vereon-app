@@ -78,7 +78,7 @@ Zielmodell: `docs/DATABASE_MODEL.md`; Datenschutz: `docs/DSGVO_PRIVACY_MODEL.md`
 - Die gehostete Instanz ist interne Entwicklung, keine freigegebene Produktion.
 - Ein temporärer interner Zugangsschutz (HTTP Basic Auth vor dem Supabase-Login) ist auf Vercel aktiviert und wurde am 2026-07-19 extern gegen `https://www.vereon.app` verifiziert; kein Ersatz für Supabase Auth/RLS, vor externem Pilot zu entfernen oder zu ersetzen (`DEC-011`, Details in `docs/STATUS.md`, `docs/SECURITY.md`).
 - Legal-Texte, produktionsfähiger E-Mail-Versand, Backup/Restore, Monitoring, Supabase-Region und AV-Themen sind vor Pilot zu verifizieren.
-- Seit 2026-07-19 leitet `/manifest.webmanifest` lokal implementiert und getestet nicht mehr zum Login um; nicht deployed, nicht extern verifiziert.
+- Seit 2026-07-19 leitet `/manifest.webmanifest` nicht mehr zum Login um; deployed und extern gegen `www.vereon.app` verifiziert (Details: `docs/STATUS.md`).
 
 Prioritäten und Belege: `docs/STATUS.md`.
 

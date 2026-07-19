@@ -290,7 +290,11 @@ Die Oberfläche verwendet derzeit nur `event_type = 'training'`.
 - Abgesagte Trainings bleiben sichtbar und eindeutig markiert.
 - Nach Absage sind keine neuen oder geänderten RSVP möglich.
 
-Erstellen und die Datenbank-RPC zum Absagen sind vorhanden. Bearbeiten, Hard-Delete und die zugehörige UI fehlen; Absagen ist noch nicht in der App verdrahtet.
+Erstellen und Absagen sind vorhanden und in der App verdrahtet
+(`cancelEventAction()` in `src/actions/events.ts` ruft `cancel_event()`;
+UI in `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx` und
+`src/features/events/CancelEventButton.tsx`). Bearbeiten und Hard-Delete
+fehlen weiterhin.
 
 ### `event_attendance`
 

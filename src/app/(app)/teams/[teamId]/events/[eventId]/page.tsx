@@ -4,7 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 import { formatTrainingDateTime } from '@/lib/format'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
 import { RsvpForm } from '@/features/events/RsvpForm'
+import { CancelEventButton } from '@/features/events/CancelEventButton'
+import { TRAINING_CANCEL_ROLES } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,7 +33,7 @@ export default async function EventDetailPage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: team }, { data: event }, { data: isTrainer }] = await Promise.all([
+  const [{ data: team }, { data: event }, { data: isTrainer }, { data: canCancel }] = await Promise.all([
     supabase
       .from('teams')
       .select('id, name')
@@ -46,6 +49,10 @@ export default async function EventDetailPage({
     supabase.rpc('has_team_role', {
       p_team_id: teamId,
       p_role_keys: ['team_owner', 'head_coach', 'assistant_coach', 'team_manager'],
+    }),
+    supabase.rpc('has_team_role', {
+      p_team_id: teamId,
+      p_role_keys: TRAINING_CANCEL_ROLES,
     }),
   ])
 
@@ -104,7 +111,11 @@ export default async function EventDetailPage({
         </Link>
       </div>
 
-      <PageHeader title={event.title} subtitle={team.name} />
+      <PageHeader
+        title={event.title}
+        subtitle={team.name}
+        action={event.is_cancelled ? <Badge variant="danger">Abgesagt</Badge> : undefined}
+      />
 
       <div className="mt-6 space-y-4">
         <Card>
@@ -134,6 +145,22 @@ export default async function EventDetailPage({
             )}
           </CardContent>
         </Card>
+
+        {!!canCancel && !event.is_cancelled && (
+          <Card>
+            <CardHeader>
+              <h2 className="text-sm font-semibold text-foreground">Training absagen</h2>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Bestehende Rückmeldungen bleiben als Historie erhalten.
+              </p>
+              <div className="mt-4">
+                <CancelEventButton eventId={eventId} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {isTrainer && (
           <Card>
