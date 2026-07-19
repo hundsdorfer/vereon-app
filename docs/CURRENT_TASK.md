@@ -1,26 +1,65 @@
 # Current Task
 
-**Stand:** 2026-07-18
+**Stand:** 2026-07-19
 
-## Aktueller Stand
+## Aufgabe abgeschlossen: /manifest.webmanifest ohne Login-Weiterleitung
+
+`/manifest.webmanifest` (erzeugt von `src/app/manifest.ts`) wurde von
+`src/proxy.ts` bislang wie jede andere geschützte Anwendungsroute behandelt:
+Ohne Supabase-Session leitete der Proxy auf `/login` um, bevor Next.js die
+Manifest-Antwort ausliefern konnte. Der vorgelagerte temporäre interne
+Zugangsschutz (HTTP Basic Auth) prüft zwar vor jeder weiteren Logik, war
+davon aber nicht betroffen — er blieb unverändert vor allen Routen aktiv.
+
+**Lösung:** `/manifest.webmanifest` wurde in `PUBLIC_ROUTES` in
+`src/proxy.ts` aufgenommen, analog zu `/`, `/login`, `/register` und
+`/auth/callback`. Keine Änderung an `src/lib/internal-access.ts` oder an
+der Prüfreihenfolge — der interne Zugangsschutz greift weiterhin zuerst und
+unverändert vor dem Manifest und allen anderen Routen.
+
+Geänderte/neue Dateien: `src/proxy.ts`, `tests/e2e/smoke.spec.ts` (neuer
+Test: Manifest ohne Supabase-Login erreichbar, `200`,
+`application/manifest+json`, kein Redirect), `tests/e2e/internal-access-enabled.spec.ts`
+(neuer Test: mit korrekten internen Zugangsdaten ist das Manifest ohne
+Supabase-Login erreichbar; der bereits vorhandene Test, dass das Manifest
+ohne internen Zugang mit `401` blockiert bleibt, deckte den aktivierten
+Schutzzustand bereits ab).
+
+**Lokal geprüft (Stand 2026-07-19):** `npx tsc --noEmit`, `npm run lint`,
+`npm run build` und `git diff --check` waren erfolgreich. Nach dem Start des
+lokalen Supabase-Docker-Stacks wurde zusätzlich der vollständige
+Playwright-Lauf mit `npx playwright test` ausgeführt: **29/29 Tests
+bestanden**. Darin enthalten waren beide Kernflows, die
+Cookie-Refresh-Regression, sämtliche Manifest-/Basic-Auth-Tests und die
+POST-/Server-Action-Regression. Diese Umsetzung ist ausschließlich **lokal
+implementiert und getestet**; kein Deployment, kein Push, keine externe
+Verifikation gegen `www.vereon.app`.
+
+## Vorangegangene Umsetzung: Temporärer interner Zugangsschutz
 
 Ein temporärer interner Zugangsschutz (HTTP Basic Auth vor der bestehenden
-Supabase-Anmeldung) wurde lokal implementiert, weil Vercel Deployment
-Protection auf dem aktuellen Tarif Custom-Production-Domains
+Supabase-Anmeldung) wurde implementiert, weil Vercel Deployment Protection
+auf dem aktuellen Tarif Custom-Production-Domains
 (`vereon.app`/`www.vereon.app`) nicht abdeckt (`ssoProtection.deploymentType`
 lässt sich dort nicht auf `all` setzen, HTTP 428). Grundlage: `DEC-011`
 (geschütztes Entwicklungs-Deployment).
 
-Ablauf: `Besucher → interner Zugangsschutz (neu) → Vereon-/Supabase-Login
-(bestehend) → Anwendung`. Kein Ersatz für Supabase Auth/RLS, keine
+Ablauf: `Besucher → interner Zugangsschutz → Vereon-/Supabase-Login →
+Anwendung`. **Basic Auth ist kein Ersatz für Supabase Auth oder RLS**, keine
 Nutzerverwaltung, ausdrücklich **temporär** — wird vor einem externen Pilot
 entfernt oder durch eine geeignete Plattformlösung ersetzt.
 
-**Wichtig:** Der Schutz ist ausschließlich **lokal implementiert und
-lokal automatisiert getestet**. Ein Deployment auf `www.vereon.app` hat in
-dieser Sitzung nicht stattgefunden und wurde extern nicht geprüft. Bis zur
-Verifikation gegen die gehostete Umgebung gilt der Schutz dort **nicht** als
-aktiv.
+**Auftrag abgeschlossen (Stand 2026-07-19):** Der Schutz ist lokal
+automatisiert getestet, auf Vercel aktiviert und extern gegen
+`https://www.vereon.app` verifiziert. Für dieses Deployment wurde kein
+weiterer Anwendungscode verändert. Vollständiger Betriebs- und
+HTTP-Nachweis (Deployment-ID, Commit, externe Prüfergebnisse):
+`docs/STATUS.md`. Der P0-Punkt „Deployment öffentlich erreichbar“ gilt
+damit als **verifiziert geschlossen** — der Schutz bleibt ausdrücklich
+temporär und ist vor einem externen Pilot zu entfernen oder durch eine
+geeignete Plattformlösung zu ersetzen.
+
+## Vorangegangene Umsetzung: Codex-Review-Korrekturen
 
 **Nachgebesserter Stand nach unabhängigen Codex-Reviews:** Die Befunde aus
 beiden Reviews wurden behoben.
@@ -65,38 +104,30 @@ Geänderte/neue Dateien: `src/lib/internal-access.ts` (neu),
 `tests/e2e/internal-access.spec.ts` (neu, inkl. P1-Regressionstest),
 `tests/e2e/internal-access-enabled.spec.ts` (neu).
 
-Benötigte, noch nicht gesetzte Server-Umgebungsvariablen (Namen, keine
-Werte): `INTERNAL_ACCESS_ENABLED`, `INTERNAL_ACCESS_USERNAME`,
-`INTERNAL_ACCESS_PASSWORD`. Für ein künftiges Deployment wird ein langes,
-zufällig erzeugtes Passwort empfohlen, das außerhalb des Repositorys in
-einem Passwortmanager verwahrt wird — in dieser Sitzung wurde kein Passwort
-erzeugt oder gesetzt.
+Server-Umgebungsvariablen (Namen, keine Werte): `INTERNAL_ACCESS_ENABLED`,
+`INTERNAL_ACCESS_USERNAME`, `INTERNAL_ACCESS_PASSWORD`. Sie sind laut
+verifiziertem Betriebsstand vom 2026-07-19 für Production und Preview in
+Vercel gesetzt; Werte, Benutzername und Passwort werden nicht dokumentiert.
 
-## Verbleibende Schritte
+## Abgeschlossen
 
-Der lokale Implementierungsblock ist vollständig geprüft und für einen
-gezielten Git-Handoff vorbereitet; Branch, Commit und aktueller Dirty-Status
-werden bei Bedarf direkt mit Git ermittelt. Der vollständige Playwright-Lauf
-ist nach den Korrekturen mit `27/27` Tests erfolgreich gelaufen;
-`tsconfig.json` und der Git-Status blieben dabei unverändert. Die übrigen
-vereinbarten Prüfungen (gezielter P1-Regressionstest, `tsc --noEmit`, `lint`,
-`build`, `git diff --check`) sind ebenfalls erfolgreich. Nicht erfolgt sind
-Push, Deployment, das Setzen der `INTERNAL_ACCESS_*`-Variablen in Vercel und
-die externe Verifikation; diese Schritte benötigen weiterhin eine separate
+Der Implementierungsblock ist vollständig geprüft und committet (`029de982`);
+Branch, Commit und aktueller Dirty-Status werden bei Bedarf direkt mit Git
+ermittelt. Lokal waren nach den Codex-Review-Korrekturen der vollständige
+Playwright-Lauf (`27/27` Tests), der gezielte P1-Regressionstest,
+`tsc --noEmit`, `lint`, `build` und `git diff --check` erfolgreich;
+`tsconfig.json` und der Git-Status blieben dabei unverändert. Deployment,
+Variablen-Setzung in Vercel und externe Verifikation sind erfolgt (siehe
+oben und `docs/STATUS.md`). Damit ist dieser Auftrag abgeschlossen.
+
+## Nächste Aufgabe
+
+Als nächste vorgesehene Produktaufgabe gilt die Verdrahtung der bereits
+vorhandenen Training-Absage (`FC-TRAINING-005` in `docs/FEATURE_CATALOG.md`;
+Datenbank-/Statusgrundlage laut `supabase/migrations/20260629200000_add_events.sql`
+teilweise vorhanden) in den App-Flow. Diese Aufgabe wurde in dieser Sitzung
+**nicht begonnen** und benötigt vor Umsetzung eine eigene ausdrückliche
 Freigabe.
-
-## Nächste Produkt-/Technikarbeit
-
-Nach Abschluss dieses Auftrags bleibt als nächste kleine, risikoarme Aufgabe
-weiterhin vorgesehen:
-
-- `/manifest.webmanifest` im App-Routing ohne Login-Weiterleitung korrekt
-  ausliefern,
-- einen passenden Routentest ergänzen,
-- geschützte Anwendungsrouten unverändert geschützt lassen.
-
-Nicht Teil dieser Aufgabe sind vollständige PWA-Installierbarkeit, Service
-Worker, Offlinebetrieb, Push oder native Apps.
 
 ## Harte Grenzen
 

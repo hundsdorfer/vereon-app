@@ -1,6 +1,6 @@
 # Vereon — Project Brief
 
-**Stand:** 2026-07-18
+**Stand:** 2026-07-19
 
 Kompakter Einstieg für neue Entwicklungs- und Review-Sitzungen. Details nicht aus dieser Datei ableiten, sondern in den jeweils genannten Quellen prüfen.
 
@@ -76,9 +76,9 @@ Zielmodell: `docs/DATABASE_MODEL.md`; Datenschutz: `docs/DSGVO_PRIVACY_MODEL.md`
 - Lint, TypeScript-Check und Build waren am 2026-07-18 erfolgreich.
 - E2E wurde im Dokumentationsaudit nicht ausgeführt.
 - Die gehostete Instanz ist interne Entwicklung, keine freigegebene Produktion.
-- Das gesamte Deployment soll bis zum Pilot geschützt werden.
+- Ein temporärer interner Zugangsschutz (HTTP Basic Auth vor dem Supabase-Login) ist auf Vercel aktiviert und wurde am 2026-07-19 extern gegen `https://www.vereon.app` verifiziert; kein Ersatz für Supabase Auth/RLS, vor externem Pilot zu entfernen oder zu ersetzen (`DEC-011`, Details in `docs/STATUS.md`, `docs/SECURITY.md`).
 - Legal-Texte, produktionsfähiger E-Mail-Versand, Backup/Restore, Monitoring, Supabase-Region und AV-Themen sind vor Pilot zu verifizieren.
-- `/manifest.webmanifest` wird derzeit für unangemeldete Nutzer zum Login umgeleitet.
+- Seit 2026-07-19 leitet `/manifest.webmanifest` lokal implementiert und getestet nicht mehr zum Login um; nicht deployed, nicht extern verifiziert.
 
 Prioritäten und Belege: `docs/STATUS.md`.
 

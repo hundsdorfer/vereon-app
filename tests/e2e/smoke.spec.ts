@@ -16,3 +16,13 @@ test('Root-Redirect zu /login oder /dashboard', async ({ page }) => {
   await page.goto('/')
   await expect(page).toHaveURL(/\/(login|dashboard)/)
 })
+
+test('/manifest.webmanifest ist ohne Supabase-Login erreichbar und leitet nicht zu /login um', async ({
+  request,
+}) => {
+  const response = await request.get('/manifest.webmanifest', { maxRedirects: 0 })
+
+  expect(response.status()).toBe(200)
+  expect(response.headers()['content-type']).toContain('application/manifest+json')
+  expect(response.headers()['location']).toBeUndefined()
+})

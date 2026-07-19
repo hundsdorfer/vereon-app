@@ -1,6 +1,6 @@
 # Sicherheitsarchitektur — Vereon
 
-**Stand:** 2026-07-18
+**Stand:** 2026-07-19
 
 **Zweck:** Sicherheitsregeln, bestätigte Schutzmechanismen und offene Risiken.
 **Ist-Status:** Für den implementierten Stand sind `docs/ARCHITECTURE.md` und
@@ -38,9 +38,9 @@ nicht implementiert** und **offen**.
 | `NEXT_PUBLIC_SUPABASE_URL` | öffentlich | Browser und Server |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | öffentlich, RLS bleibt zwingend | Browser und Server |
 | `SUPABASE_SERVICE_ROLE_KEY` | geheim, umgeht RLS | ausschließlich kontrollierte Admin-/CLI-Prozesse außerhalb des App-Codes |
-| `INTERNAL_ACCESS_ENABLED` | serverseitig, kein Secret | schaltet den temporären internen Zugangsschutz scharf (`"true"`) |
-| `INTERNAL_ACCESS_USERNAME` | serverseitig, geheim | Benutzername für den temporären internen Zugangsschutz |
-| `INTERNAL_ACCESS_PASSWORD` | serverseitig, geheim | Passwort für den temporären internen Zugangsschutz; für ein künftiges Deployment wird ein langes, zufällig erzeugtes Passwort empfohlen, verwahrt außerhalb des Repositorys in einem Passwortmanager — in dieser Sitzung nicht erzeugt oder gesetzt |
+| `INTERNAL_ACCESS_ENABLED` | serverseitig, kein Secret | schaltet den temporären internen Zugangsschutz scharf (`"true"`); für Production und Preview in Vercel gesetzt |
+| `INTERNAL_ACCESS_USERNAME` | serverseitig, geheim | Benutzername für den temporären internen Zugangsschutz; für Production und Preview in Vercel gesetzt, Wert nicht dokumentiert |
+| `INTERNAL_ACCESS_PASSWORD` | serverseitig, geheim | Passwort für den temporären internen Zugangsschutz; für Production und Preview in Vercel gesetzt, Wert nicht dokumentiert |
 
 Die lokale Next.js-Entwicklung verwendet laut geprüftem URL-Muster in
 `.env.local` die lokale Supabase-Instanz. Das interne Vercel-Deployment nutzt
@@ -52,8 +52,8 @@ Supabase Cloud. Werte und Schlüssel werden nicht dokumentiert.
 
 | Bereich | Bestätigter Stand | Beleg |
 |---|---|---|
-| Interner Zugangsschutz (temporär) | HTTP Basic Auth vor der Supabase-Anmeldung, nur aktiv bei `INTERNAL_ACCESS_ENABLED === "true"`; fail-closed bei unvollständiger Konfiguration; Authorization-Header wird nach erfolgreicher Prüfung nicht an Server Components/Route Handler/Server Actions weitergereicht. Lokal implementiert und automatisiert getestet; auf `www.vereon.app` nicht deployed/extern nicht geprüft. Grund: Vercel Deployment Protection deckt Custom-Production-Domains auf dem aktuellen Tarif nicht ab (DEC-011). | `src/lib/internal-access.ts`, `src/proxy.ts`, `tests/e2e/internal-access.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts` |
-| Routenschutz | `src/proxy.ts` prüft die Supabase-Session und leitet nicht angemeldete Nutzer geschützter Routen zu `/login` um | `src/proxy.ts` |
+| Interner Zugangsschutz (temporär) | HTTP Basic Auth vor der Supabase-Anmeldung, nur aktiv bei `INTERNAL_ACCESS_ENABLED === "true"`; fail-closed bei unvollständiger Konfiguration; Authorization-Header wird nach erfolgreicher Prüfung der Zugangsdaten nicht an Server Components/Route Handler/Server Actions weitergereicht. Grund: Vercel Deployment Protection deckt Custom-Production-Domains auf dem aktuellen Tarif nicht ab (DEC-011). **Kein Ersatz für Supabase Auth oder RLS**, keine Nutzerverwaltung; ausdrücklich temporär und vor einem externen Pilot zu entfernen oder durch eine geeignete Plattformlösung zu ersetzen. Aktivierung auf Vercel und externer Betriebsnachweis: `docs/STATUS.md`. | `src/lib/internal-access.ts`, `src/proxy.ts`, `tests/e2e/internal-access.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts` |
+| Routenschutz | `src/proxy.ts` prüft die Supabase-Session und leitet nicht angemeldete Nutzer geschützter Routen zu `/login` um; `/manifest.webmanifest` ist seit dieser lokal implementierten und getesteten Änderung als öffentliche Route von dieser Umleitung ausgenommen, der vorgelagerte interne Zugangsschutz bleibt davor unverändert aktiv | `src/proxy.ts`, `tests/e2e/smoke.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts` |
 | Server-Sessions | serverseitige Clients verwenden Cookie-basierte Supabase-Sessions und `getUser()`; der Proxy reicht erneuerte Cookies an Server Components und Browser weiter und übernimmt die von `@supabase/ssr` gelieferten Cache-Schutz-Header auch auf Session-Redirects | `src/lib/supabase/server.ts`, `src/lib/supabase/middleware.ts`, `src/lib/supabase/route-handler.ts`, `src/proxy.ts` |
 | RLS | die vorhandenen Kerntabellen aktivieren RLS; Policies und Grants sind migrationsgeführt | `supabase/migrations/20260625190923_init_mvp0_core.sql`, `20260625221615_mvp0a_team_flows.sql`, `20260627000001_fix_authenticated_table_grants.sql`, `20260629200000_add_events.sql` |
 | Team-Erstellung | eigenständiges Team, Mitgliedschaft und Rollen werden atomar über `create_independent_team()` angelegt | `20260625190923_init_mvp0_core.sql`, ersetzt/erweitert in `20260627100000_add_team_public_code.sql` |

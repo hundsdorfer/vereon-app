@@ -1,7 +1,7 @@
 # Status — technisches Audit
 
-**Stand:** 2026-07-18
-**Geprüfter Stand:** `main` / `bf2158c`, einschließlich lokaler Dokumentationsänderungen
+**Stand:** 2026-07-19
+**Geprüfter Stand:** `main` / `029de98`, einschließlich lokaler Dokumentations-, Code- und Teständerungen.
 
 Dieses Dokument ist die verbindliche lebende Übersicht für belegte technische Abweichungen, Risiken und Übergabepunkte. Technischer Ist-Zustand: `docs/ARCHITECTURE.md`. Fachliches Ziel: `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`.
 
@@ -9,7 +9,7 @@ Dieses Dokument ist die verbindliche lebende Übersicht für belegte technische 
 
 Der Einzelteam-Kernflow ist im Repository implementiert: Auth, Team-Erstellung, Einladung, Self-/Guardian-Join, Join-Entscheidung, Spieler-Soft-Remove, Trainingsanlage und Spieler-/Guardian-RSVP.
 
-Die App ist intern gehostet, aber nicht pilotbereit. Die größten Lücken betreffen Deployment-Schutz, Legal-/Consent-Themen, E-Mail-Verifizierung, automatisierte Datenbereinigung, Backup/Restore sowie mehrere beschlossene MVP-0B-Funktionen.
+Die App ist intern gehostet, aber nicht pilotbereit. Der Zugriff auf die gehostete Instanz ist seit 2026-07-19 durch einen temporären internen Zugangsschutz begrenzt (verifiziert, siehe Abschnitt 2). Die größten verbleibenden Lücken betreffen Legal-/Consent-Themen, E-Mail-Verifizierung, automatisierte Datenbereinigung, Backup/Restore sowie mehrere beschlossene MVP-0B-Funktionen.
 
 ## 2. Verifiziert funktionsfähig
 
@@ -25,6 +25,8 @@ Die App ist intern gehostet, aber nicht pilotbereit. Die größten Lücken betre
 | Spieler-/Guardian-RSVP und Trainerübersicht | `respond_to_event()`, `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx` |
 | RLS auf allen 18 öffentlichen Tabellen | `supabase/migrations/*` |
 | CI für Lint und Build | `.github/workflows/ci.yml` |
+| Temporärer interner Zugangsschutz (HTTP Basic Auth vor Supabase-Login) | lokal automatisiert getestet (`tests/e2e/internal-access.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts`); auf Vercel aktiviert (Projekt `vereon`, Scope `vereon-app`, Production-Deployment `dpl_NnTeWpNNmmEP9BbSAXfmwcXFxM5t`, Commit `029de982`); extern gegen `https://www.vereon.app` geprüft am 2026-07-19: ohne Zugangsdaten `HTTP 401` mit `WWW-Authenticate: Basic realm="Vereon Internal Access"` und `Cache-Control: private, no-store`, mit korrekten Zugangsdaten `HTTP 307` auf `/login`. Kein Ersatz für Supabase Auth/RLS, ausdrücklich temporär (`DEC-011`), vor externem Pilot zu entfernen/ersetzen. |
+| `/manifest.webmanifest` ohne Supabase-Login-Weiterleitung, interner Zugangsschutz bleibt davor aktiv | lokal implementiert und automatisiert getestet (`src/proxy.ts`, `tests/e2e/smoke.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts`); nicht deployed, nicht extern gegen `www.vereon.app` verifiziert |
 
 ## 3. Prüfstand
 
@@ -46,9 +48,16 @@ Die Vector-Störung ist ein lokales Betriebsrisiko; ein Fehler des fachlichen Ke
 
 ## 4. Priorität 0 — vor externem Pilotbetrieb
 
+**Verifiziert geschlossen (2026-07-19):** „Deployment öffentlich erreichbar“
+ist kein offener P0-Punkt mehr. Der temporäre interne Zugangsschutz ist auf
+Vercel aktiviert und extern gegen `https://www.vereon.app` verifiziert
+(Beleg siehe Abschnitt 2). Der Schutz bleibt ausdrücklich temporär und ist
+vor einem externen Pilot zu entfernen oder durch eine geeignete
+Plattformlösung zu ersetzen (`DEC-011`).
+
 | Abweichung/Risiko | Beleg oder Verifikationsstand | Erforderliches Ergebnis |
 |---|---|---|
-| Deployment noch öffentlich erreichbar | `www.vereon.app` antwortet; Vercel Deployment Protection deckt Custom-Production-Domains auf dem aktuellen Tarif nicht ab (`ssoProtection.deploymentType` lässt sich nicht auf `all` setzen, HTTP 428); temporärer interner Zugangsschutz (HTTP Basic Auth, `src/lib/internal-access.ts`) lokal implementiert und automatisiert getestet, aber nicht deployed/extern nicht geprüft | Deployment mit gesetzten `INTERNAL_ACCESS_*`-Variablen (langes, zufällig erzeugtes Passwort aus einem Passwortmanager) durchführen und extern verifizieren |
+| Manifest-Korrektur noch nicht deployed oder extern verifiziert | `/manifest.webmanifest` ist lokal ohne Supabase-Login-Weiterleitung implementiert; der interne Zugangsschutz bleibt davor aktiv. Der vollständige Playwright-Lauf war mit `29/29` Tests erfolgreich. Die Änderung ist noch nicht committet, gepusht, deployed oder extern gegen `www.vereon.app` geprüft. | Änderungen gezielt committen und pushen, Production-Deployment durchführen und anschließend extern verifizieren, dass das Manifest nach erfolgreichem internem Zugang ohne Supabase-Login erreichbar ist |
 | Legal-Seiten enthalten Platzhalter | `src/app/legal/{imprint,privacy,terms}/page.tsx` | rechtlich geprüfte Texte und Betreiberangaben |
 | E-Mail-Verifizierung nicht als Aktionsvoraussetzung erzwungen | `supabase/config.toml`: lokal aus; kein zentraler App-/RPC-Check | Team, Join und RSVP nur für verifizierte E-Mail |
 | Produktionsfähiger E-Mail-Versand fehlt | Nutzerangabe: nur Supabase-Test-/Standardversand | SMTP/Provider, Zustellung und Absender verifizieren |
@@ -59,7 +68,6 @@ Die Vector-Störung ist ein lokales Betriebsrisiko; ein Fehler des fachlichen Ke
 | Backup/Restore der Cloud nicht verifiziert | nicht im Repo belegt, Nutzer unbekannt | Verfahren dokumentieren und Rücksetzung testen |
 | Supabase-Region/AV und Vercel-AV nicht verifiziert | nicht aus Repo ableitbar; `docs/LEGAL_TODO.md` | vor Pilot organisatorisch bestätigen |
 | Monitoring/Alerting nicht verifiziert | keine dedizierte Konfiguration im Repo | Mindestkonzept, Zuständigkeit und Alarmweg festlegen |
-| Manifest ist unangemeldet nicht erreichbar | `src/app/manifest.ts` plus fehlende Ausnahme in `src/proxy.ts` | `/manifest.webmanifest` öffentlich ausliefern |
 
 „Nicht verifiziert“ bedeutet ausdrücklich nicht „nicht vorhanden“.
 

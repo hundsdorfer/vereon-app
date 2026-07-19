@@ -67,6 +67,19 @@ test.describe('interner Zugangsschutz — aktivierter Zustand', () => {
     expect(response.headers()['location']).toContain('/login')
   })
 
+  test('mit korrekten internen Zugangsdaten ist /manifest.webmanifest ohne Supabase-Login erreichbar', async ({
+    request,
+  }) => {
+    const response = await request.get('/manifest.webmanifest', {
+      headers: { authorization: VALID_AUTH },
+      maxRedirects: 0,
+    })
+
+    expect(response.status()).toBe(200)
+    expect(response.headers()['content-type']).toContain('application/manifest+json')
+    expect(response.headers()['location']).toBeUndefined()
+  })
+
   test('Basic-Auth-Zugangsdaten erscheinen nicht in der ausgelieferten Antwort', async ({
     request,
   }) => {

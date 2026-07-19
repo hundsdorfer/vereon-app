@@ -10,7 +10,13 @@ import {
 } from '@/lib/internal-access'
 
 // Routen, die ohne Login zugänglich sind
-const PUBLIC_ROUTES = new Set(['/', '/login', '/register', '/auth/callback'])
+const PUBLIC_ROUTES = new Set([
+  '/',
+  '/login',
+  '/register',
+  '/auth/callback',
+  '/manifest.webmanifest',
+])
 // Pfad-Präfixe, die ohne Login zugänglich sind
 const PUBLIC_PREFIXES = [
   '/join/',

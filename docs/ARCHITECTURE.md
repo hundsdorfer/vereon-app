@@ -1,8 +1,8 @@
 # Architektur — Vereon
 
-**Stand:** 2026-07-18
+**Stand:** 2026-07-19
 **Dokumenttyp:** code-verifizierte technische Ist-Dokumentation
-**Geprüfter Stand:** `main` / `bf2158c`, einschließlich lokaler Dokumentationsänderungen
+**Geprüfter Stand:** `main` / `029de98`, einschließlich lokaler Dokumentations-, Code- und Teständerungen.
 
 Dieses Dokument beschreibt ausschließlich den im Repository belegbaren Ist-Zustand. Fachliche Zielentscheidungen stehen in `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`. Abweichungen zwischen Ist und Ziel werden in `docs/STATUS.md` geführt.
 
@@ -74,7 +74,7 @@ Die Anwendung verwendet keinen eigenen klassischen API-Layer. Server Components 
 
 ## 5. Authentifizierung und Routing
 
-Supabase Auth verwaltet Nutzer und Sessions. `src/proxy.ts` behandelt `/`, `/login`, `/register`, `/auth/callback`, `/join/*` und `/legal/*` als öffentlich. Andere Routen führen ohne Session zu `/login`.
+Supabase Auth verwaltet Nutzer und Sessions. `src/proxy.ts` behandelt `/`, `/login`, `/register`, `/auth/callback`, `/manifest.webmanifest`, `/join/*` und `/legal/*` als öffentlich. Andere Routen führen ohne Session zu `/login`. `/manifest.webmanifest` (erzeugt von `src/app/manifest.ts`) wurde lokal implementiert und getestet in die öffentliche Routenliste aufgenommen, damit Next.js' generierte Manifest-Route nicht fälschlich zu `/login` umgeleitet wird; der vorgelagerte interne Zugangsschutz bleibt davon unberührt und greift weiterhin zuerst.
 
 Vor dieser bestehenden Logik prüft `src/proxy.ts` seit dieser Änderung
 zusätzlich einen **temporären internen Zugangsschutz** (`src/lib/internal-access.ts`,
@@ -85,11 +85,13 @@ Passwort fehlt), antwortet die Anwendung fail-closed mit `401` für jede
 Anfrage. Der Ablauf ist `Besucher → interner Zugangsschutz → Supabase-Login
 → Anwendung`; Grund ist die auf dem aktuellen Vercel-Tarif fehlende
 Deployment-Protection-Abdeckung für Custom-Production-Domains (siehe
-`docs/DECISION_LOG.md` DEC-011). Der Schutz ist ausdrücklich temporär und
-lokal implementiert; ein Deployment und externe Prüfung stehen aus (siehe
-`docs/CURRENT_TASK.md`). Nach erfolgreicher interner Prüfung wird der
-Authorization-Header vor Weitergabe an Server Components/Route Handler aus
-den weitergereichten Request-Headern entfernt
+`docs/DECISION_LOG.md` DEC-011). Der Schutz ist ausdrücklich temporär, kein
+Ersatz für Supabase Auth oder RLS und wird vor einem externen Pilot entfernt
+oder durch eine geeignete Plattformlösung ersetzt. Er ist auf Vercel
+aktiviert und extern verifiziert; vollständiger Betriebs- und HTTP-Nachweis:
+`docs/STATUS.md`. Nach erfolgreicher Prüfung der Basic-Auth-Zugangsdaten
+wird der Authorization-Header vor Weitergabe an Server Components/Route
+Handler aus den weitergereichten Request-Headern entfernt
 (`NextResponse.next({ request: { headers } })`). `src/lib/supabase/middleware.ts`
 `updateSession()` erhält dafür ein `stripAuthorization`-Flag statt einer vorab
 erzeugten Header-Kopie und baut die weiterzureichenden Header bei jedem
@@ -185,13 +187,15 @@ RLS ist für alle öffentlichen Tabellen aktiviert. Kritische RPCs verwenden `SE
 | Umgebung | App | Datenbank | Verifizierter Stand |
 |---|---|---|---|
 | lokal | `npm run dev` | lokaler Supabase-Docker-Stack | `.env.local` verweist auf `127.0.0.1:54321`; Kerncontainer laufen, `supabase_vector_vereon-app` startet wiederholt neu |
-| gehostete interne Entwicklung | Vercel, `www.vereon.app` | Supabase Cloud | Nutzerangabe und öffentlich sichtbare Vercel-Antworten; Cloud-Konfiguration nicht aus dem Repo auslesbar |
+| gehostete interne Entwicklung | Vercel, `www.vereon.app` | Supabase Cloud | Nutzerangabe und öffentlich sichtbare Vercel-Antworten; Cloud-Konfiguration nicht aus dem Repo auslesbar; temporärer interner Zugangsschutz aktiviert, Betriebsnachweis: `docs/STATUS.md` |
 
 `main` wird laut Nutzerangabe automatisch über Vercel bereitgestellt. Laut
 öffentlich sichtbarer Vercel-Antwort leitet `vereon.app` permanent auf
 `www.vereon.app` um. Die gehostete Instanz ist noch keine freigegebene
-Produktion: Deployment-Schutz, Legal-Texte, E-Mail, Backup/Restore und Monitoring
-sind vor einem Pilotbetrieb zu klären.
+Produktion: Legal-Texte, E-Mail, Backup/Restore und Monitoring sind vor
+einem Pilotbetrieb zu klären. Der temporäre interne Zugangsschutz begrenzt
+den Zugriff bereits, ist aber kein Ersatz für die noch offenen Punkte und
+bleibt selbst vor Pilot zu entfernen oder zu ersetzen.
 
 Remote-Migrationen wurden bisher durch Claude Code ausgeführt. Künftig ist dafür immer eine separate ausdrückliche Freigabe erforderlich.
 
