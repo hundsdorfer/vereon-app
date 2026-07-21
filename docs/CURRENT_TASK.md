@@ -1,6 +1,103 @@
 # Current Task
 
-**Stand:** 2026-07-19
+**Stand:** 2026-07-21
+
+## Aktuell: FC-TRAINING-003 „Training bearbeiten" — lokal implementiert und verifiziert
+
+**Stand:** 2026-07-21. Ausgangslage: `main` / `e3a0698` (enthält bereits
+committet und auf `origin/main` gepusht `FC-TRAINING-005` „Training absagen";
+Deployment dieses Commits nicht verifiziert). Die Planung wurde in
+mehreren Runden unabhängig durch Codex reviewt und entsprechend korrigiert
+(RPC-Benennung `update_training()` statt `update_event()`, serverseitig
+ermittelte `team_id` statt Client-Wert für Redirect/Revalidation, explizite
+`REVOKE`/`GRANT EXECUTE`, Entfernung beider dormant Schreib-Policies,
+`clock_timestamp()` statt `now()` für die Zeitgrenzen, `src/lib/datetime.ts`
+mit expliziter DST-/Kalenderdatum-Validierung, RSVP-Warnung, Testinfrastruktur
+ohne neue Pakete).
+
+**Bestätigte Produktentscheidungen:**
+
+1. Ein abgesagtes Training bleibt unveränderliche Historie und ist nicht mehr bearbeitbar.
+2. Bestehende Spieler-RSVP bleiben bei einer Terminverschiebung vollständig erhalten.
+3. Bei vorhandenen RSVP und Zeitänderung weist das Formular deutlich darauf hin, dass Rückmeldungen erhalten bleiben und keine automatische Benachrichtigung versendet wird; bei tatsächlicher Zeitänderung ist eine zusätzliche bewusste Bestätigung erforderlich.
+4. `ends_at` wird in diesem Block nicht bearbeitet und bleibt unverändert.
+5. Die beiden bislang wirkungslosen RLS-Policies `events_insert_coach` und `events_update_coach` werden entfernt; Schreibzugriffe auf `events` erfolgen ausschließlich über gehärtete RPCs.
+6. Sowohl das aktuell gespeicherte als auch das neu eingereichte `starts_at` müssen zum Ausführungszeitpunkt der RPC in der Zukunft liegen.
+
+**Neue/geänderte Dateien:**
+
+- `supabase/migrations/20260721094219_update_training.sql` (neu): RPC
+  `update_training()` — nur `team_owner`/`head_coach`/`assistant_coach`, nur
+  `event_type='training'`, nur solange weder gespeichertes noch neues
+  `starts_at` erreicht ist (`clock_timestamp()`), nur solange nicht
+  abgesagt; `team_id`, `club_id`, `season_id`, `created_by`, `event_type`,
+  `is_cancelled`, `ends_at` sind nicht Teil der Signatur; generische
+  Fehlermeldung „Termin nicht gefunden" für nicht existente, fremde und
+  Nicht-Training-Events (Enumerationsschutz); explizites `REVOKE`/
+  `GRANT EXECUTE` auf `authenticated`; `DROP POLICY` für
+  `events_insert_coach` und `events_update_coach`.
+- `src/lib/datetime.ts` (neu): `viennaLocalToUTC()`/`utcToViennaLocal()` mit
+  expliziter Validierung ungültiger Kalenderdaten/Uhrzeiten, Ablehnung nicht
+  existierender Lokalzeiten (Sommerzeit-Beginn) und dokumentierter,
+  deterministischer Auflösung mehrdeutiger Lokalzeiten (Winterzeit-Beginn:
+  frühere/Sommerzeit-Entsprechung).
+- `src/actions/events.ts` (geändert): neue `updateTrainingAction()` (nutzt
+  ausschließlich die von der RPC zurückgegebene `team_id`, nie einen
+  Client-Wert, für Redirect/Revalidation); `createEventAction()` nutzt jetzt
+  dieselbe zentrale `viennaLocalToUTC()` statt einer lokalen Kopie.
+- `src/lib/permissions.ts` (geändert): neue `TRAINING_EDIT_ROLES`.
+- `src/features/events/EditEventForm.tsx` (neu): Formular analog
+  `CreateEventForm.tsx`, vorbefüllt, mit zweistufiger RSVP-Warnung
+  (dauerhafter Hinweis + `ConfirmButton`-Bestätigung bei Zeitänderung).
+- `src/app/(app)/teams/[teamId]/events/[eventId]/edit/page.tsx` (neu):
+  Server Component, serverseitiges Rollen-/Status-/Zeit-Gating (kosmetisch,
+  Durchsetzung liegt in der RPC).
+- `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx` (geändert):
+  „Bearbeiten"-Einstiegspunkt, sichtbar nur für berechtigte, nicht
+  abgesagte, noch nicht begonnene Trainings.
+- `tests/e2e/core-flow-edit-training.spec.ts` (neu), `tests/e2e/
+  trainingEditRoleContract.spec.ts` (neu), `tests/e2e/datetime.spec.ts`
+  (neu, reine Tests ohne Browser-Fixture).
+- `docs/ARCHITECTURE.md`, `docs/DATABASE_MODEL.md`, `docs/FEATURE_CATALOG.md`,
+  `docs/MVP_SCOPE.md`, `docs/MVP_TEST_CHECKLIST.md`, `docs/PROJECT_BRIEF.md`,
+  `docs/ROADMAP.md`, `docs/SECURITY.md`, `docs/STATUS.md`,
+  `docs/USER_FLOWS.md` aktualisiert.
+
+**Lokal geprüft (Stand 2026-07-21):** Migration
+`20260721094219_update_training.sql` mit `supabase migration up --local`
+gegen den lokalen Supabase-Docker-Stack angewendet und über
+`supabase migration list --local` bestätigt. Der gezielte
+`core-flow-edit-training.spec.ts`-Lauf sowie der vollständige
+`npx playwright test`-Lauf waren erfolgreich: **58/58 Tests bestanden**.
+Ebenfalls erfolgreich: `npx tsc --noEmit`, `npm run lint`, `npm run build`,
+`git diff --check`, `supabase db lint --local` und
+`supabase db advisors --local`. Lint/Advisors meldeten keinen neuen Befund zu
+`update_training()`; bestehende Hinweise bleiben getrennt dokumentiert.
+
+**Bekannte Testlücke (wie bei FC-TRAINING-005):** `head_coach`-only und
+`assistant_coach`-only sind **nicht** end-to-end verifizierbar — kein
+legitimer App-/RPC-Weg für ein isoliertes Testkonto (`FC-ROLE-002`
+weiterhin `planned_mvp`). Ersatzweise über RPC-Code-Review und den
+statischen Rollenvertrags-Test `TRAINING_EDIT_ROLES`
+(`tests/e2e/trainingEditRoleContract.spec.ts`) abgedeckt — ersetzt NICHT die
+offene Integrationsverifikation.
+
+**Dokumentierter Security-Folgebedarf (nicht in diesem Auftrag behoben):**
+Die bereits bestehenden RPCs `create_event()`, `respond_to_event()`,
+`cancel_event()` u. a. haben kein `REVOKE`/`GRANT EXECUTE` und laufen
+weiterhin mit Standard-`PUBLIC`-Execute (neu dokumentiert in
+`docs/SECURITY.md` Abschnitt 6). Kein Rückbau bestehender Funktionalität
+ohne eigenen Auftrag.
+
+**Getrennte Freigabepunkte (aus dem Planungsblock übernommen, jeweils
+einzeln einzuholen, keine Kettenfreigabe):** Implementierung (**erteilt und
+umgesetzt**) → lokale Migration und lokale Tests (**erteilt, umgesetzt und
+58/58 grün**) → Remote-Migration/`db push` (**offen**) → Commit (**offen**)
+→ Push (**offen**) → Deployment (**offen**).
+
+Diese Umsetzung ist **lokal implementiert, migriert und getestet**; kein
+Commit, kein Push, kein Deployment und keine Remote-Datenbankaktion für
+`FC-TRAINING-003`.
 
 ## Aufgabe abgeschlossen: /manifest.webmanifest ohne Login-Weiterleitung
 
@@ -168,8 +265,13 @@ NICHT die offene End-to-End-Verifikation für `head_coach`-only und
 Rollen-Fixture-Provisionierung ist als separater Folgebedarf offen und braucht
 eine eigene Freigabe.
 
-Diese Umsetzung ist ausschließlich **lokal implementiert und geprüft**; kein
-Commit, kein Push, kein Deployment, keine Remote-Datenbankaktion.
+**Nachtrag (Stand 2026-07-21):** Diese Umsetzung wurde inzwischen als Commit
+`e3a0698` auf `main` committet und ist bestätigt auf `origin/main` gepusht
+(`git rev-parse HEAD` entspricht `git rev-parse origin/main`). Ein
+Deployment-Nachweis für diesen Commit liegt aktuell nicht vor und gilt als
+nicht verifiziert, nicht als abgeschlossen (siehe `docs/STATUS.md`). Die
+Formulierung „kein Commit" oben bezog sich auf den damaligen Stand zum
+Zeitpunkt der Implementierung.
 
 ## Harte Grenzen
 

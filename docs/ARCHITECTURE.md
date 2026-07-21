@@ -1,8 +1,8 @@
 # Architektur — Vereon
 
-**Stand:** 2026-07-19
+**Stand:** 2026-07-21
 **Dokumenttyp:** code-verifizierte technische Ist-Dokumentation
-**Geprüfter Stand:** `main` / `029de98`, einschließlich lokaler Dokumentations-, Code- und Teständerungen.
+**Geprüfter Stand:** `main` / `e3a0698`, einschließlich lokaler, noch nicht committeter Code- und Migrationsänderungen für `FC-TRAINING-003` (Details: `docs/CURRENT_TASK.md`).
 
 Dieses Dokument beschreibt ausschließlich den im Repository belegbaren Ist-Zustand. Fachliche Zielentscheidungen stehen in `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`. Abweichungen zwischen Ist und Ziel werden in `docs/STATUS.md` geführt.
 
@@ -19,7 +19,7 @@ Vereon ist eine deutschsprachige Webanwendung für die Organisation einzelner Fu
 - Spieler- und Guardian-RSVP,
 - RSVP-Übersicht für Trainerrollen.
 
-Club-/Mehrteam-Verwaltung ist im Schema vorbereitet, besitzt aber keinen vollständigen App-Flow. Match, Trainer-RSVP, Anwesenheitsabschluss, Rollenverwaltung, Training bearbeiten und Training hart löschen sind nicht implementiert.
+Club-/Mehrteam-Verwaltung ist im Schema vorbereitet, besitzt aber keinen vollständigen App-Flow. Match, Trainer-RSVP, Anwesenheitsabschluss, Rollenverwaltung und Training hart löschen sind nicht implementiert. Training bearbeiten ist lokal vollständig umgesetzt, migriert und im vollständigen Playwright-Lauf verifiziert (Stand 2026-07-21, siehe `docs/CURRENT_TASK.md`).
 
 ## 2. Laufzeitarchitektur
 
@@ -160,7 +160,9 @@ Der Self-Player-Flow wird derzeit nicht serverseitig auf Volljährigkeit begrenz
 
 ### Trainings und RSVP
 
-`create_event()` erlaubt `team_owner`, `head_coach` und `assistant_coach` das Erstellen. `cancel_event()` ist über `cancelEventAction()` (`src/actions/events.ts`) und `CancelEventButton` (`src/features/events/CancelEventButton.tsx`) in der Oberfläche verdrahtet; die Berechtigung wird auf der Detailseite über eine von der bestehenden `isTrainer`-Anzeige getrennte Prüfung (`has_team_role()` mit `TRAINING_CANCEL_ROLES` aus `src/lib/permissions.ts`, ohne `team_manager`) ermittelt. Abgesagte Trainings bleiben in Trainingsliste, Team- und Dashboard-Übersicht sichtbar und sind mit einem `danger`-Badge „Abgesagt" gekennzeichnet. Eine Bearbeiten- oder Hard-Delete-Funktion existiert nicht.
+`create_event()` erlaubt `team_owner`, `head_coach` und `assistant_coach` das Erstellen. `cancel_event()` ist über `cancelEventAction()` (`src/actions/events.ts`) und `CancelEventButton` (`src/features/events/CancelEventButton.tsx`) in der Oberfläche verdrahtet; die Berechtigung wird auf der Detailseite über eine von der bestehenden `isTrainer`-Anzeige getrennte Prüfung (`has_team_role()` mit `TRAINING_CANCEL_ROLES` aus `src/lib/permissions.ts`, ohne `team_manager`) ermittelt. Abgesagte Trainings bleiben in Trainingsliste, Team- und Dashboard-Übersicht sichtbar und sind mit einem `danger`-Badge „Abgesagt" gekennzeichnet.
+
+Training bearbeiten (`update_training()` in `supabase/migrations/20260721094219_update_training.sql`, `updateTrainingAction()` in `src/actions/events.ts`, Route `src/app/(app)/teams/[teamId]/events/[eventId]/edit/page.tsx`, `EditEventForm`) ist lokal vollständig vorhanden, migriert und per Playwright verifiziert. Die RPC erlaubt ausschließlich `team_owner`, `head_coach` und `assistant_coach`, ausschließlich `event_type = 'training'`, ausschließlich solange weder das gespeicherte noch das neu eingereichte `starts_at` erreicht ist, und ausschließlich solange das Training nicht abgesagt ist; `team_id`, `club_id`, `season_id`, `created_by`, `event_type`, `is_cancelled` und `ends_at` sind nicht Teil der Funktionssignatur. Die Server Action verwendet für Redirect/Revalidation ausschließlich die von der RPC zurückgegebene `team_id`, nie einen Client-Wert. Der echte E2E-Rollennachweis besteht für `team_owner`-only; die bekannten Integrationslücken für `head_coach`-only und `assistant_coach`-only bleiben offen. Eine Hard-Delete-Funktion existiert weiterhin nicht.
 
 Beim Erstellen eines Termins erzeugt ein Trigger `event_attendance`-Zeilen für aktive Spieler. Self-Player oder verifizierte Guardians setzen RSVP über `respond_to_event()`. Entfernte Spieler werden durch `is_active_player_assignment()` blockiert. Eine RSVP-Deadline am Terminbeginn wird derzeit nicht geprüft.
 
@@ -172,7 +174,7 @@ Trainer-RSVP ist nicht implementiert; `event_attendance` ist ausschließlich spi
 
 ## 8. Datenbank und Sicherheit
 
-Das Repository enthält 13 Migrationen. Sie erzeugen 18 öffentliche Tabellen:
+Das Repository enthält 14 Migrationen; `20260721094219_update_training.sql` ist gegen den lokalen Supabase-Docker-Stack angewendet. Sie erzeugen 18 öffentliche Tabellen:
 
 - Rollen/Organisation: `roles`, `permissions`, `role_permissions`, `profiles`, `clubs`, `seasons`,
 - Mitgliedschaften: `club_memberships`, `club_member_roles`, `teams`, `team_memberships`, `team_member_roles`,
@@ -203,7 +205,10 @@ Remote-Migrationen wurden bisher durch Claude Code ausgeführt. Künftig ist daf
 - `npm run lint` führt ESLint aus.
 - `npm run build` erstellt den Next.js-Produktionsbuild und beinhaltet den TypeScript-Check.
 - Ein separates `typecheck`- oder Unit-Test-Script existiert nicht.
-- Playwright enthält drei E2E-Specs.
+- Playwright enthält elf Spec-Dateien unter `tests/e2e/`, darunter drei ohne
+  Browser-Fixture (`datetime.spec.ts`, `trainingCancelRoleContract.spec.ts`,
+  `trainingEditRoleContract.spec.ts`), die reine Funktionen/Konstanten direkt
+  in Node testen.
 - `.github/workflows/ci.yml` führt bei Push/PR auf `main` Lint und Build aus.
 - `.github/workflows/e2e.yml` läuft nur manuell über `workflow_dispatch`.
 

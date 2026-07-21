@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { RsvpForm } from '@/features/events/RsvpForm'
 import { CancelEventButton } from '@/features/events/CancelEventButton'
-import { TRAINING_CANCEL_ROLES } from '@/lib/permissions'
+import { TRAINING_CANCEL_ROLES, TRAINING_EDIT_ROLES } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +33,7 @@ export default async function EventDetailPage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: team }, { data: event }, { data: isTrainer }, { data: canCancel }] = await Promise.all([
+  const [{ data: team }, { data: event }, { data: isTrainer }, { data: canCancel }, { data: canEdit }] = await Promise.all([
     supabase
       .from('teams')
       .select('id, name')
@@ -54,10 +54,16 @@ export default async function EventDetailPage({
       p_team_id: teamId,
       p_role_keys: TRAINING_CANCEL_ROLES,
     }),
+    supabase.rpc('has_team_role', {
+      p_team_id: teamId,
+      p_role_keys: TRAINING_EDIT_ROLES,
+    }),
   ])
 
   if (!team || !event) notFound()
   if (event.event_type !== 'training') notFound()
+
+  const hasStarted = new Date(event.starts_at) <= new Date()
 
   const { data: attendanceRows, error: attendanceError } = await supabase
     .from('event_attendance')
@@ -114,7 +120,18 @@ export default async function EventDetailPage({
       <PageHeader
         title={event.title}
         subtitle={team.name}
-        action={event.is_cancelled ? <Badge variant="danger">Abgesagt</Badge> : undefined}
+        action={
+          event.is_cancelled ? (
+            <Badge variant="danger">Abgesagt</Badge>
+          ) : !!canEdit && !hasStarted ? (
+            <Link
+              href={`/teams/${teamId}/events/${eventId}/edit`}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Bearbeiten
+            </Link>
+          ) : undefined
+        }
       />
 
       <div className="mt-6 space-y-4">

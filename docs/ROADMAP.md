@@ -38,7 +38,8 @@ Sicherheitsgrenzen haben dennoch sofort Vorrang.
 Parallel zu den Pilot-Gates werden die beschlossenen fachlichen Kernlücken
 geschlossen:
 
-- Training bearbeiten, bedingt hart löschen und absagen (`FC-TRAINING-003` bis `FC-TRAINING-005`).
+- Training bedingt hart löschen (`FC-TRAINING-004`); Bearbeiten und Absagen
+  (`FC-TRAINING-003`, `FC-TRAINING-005`) sind umgesetzt.
 - Trainer-RSVP getrennt von Spieler-RSVP ermöglichen (`FC-RSVP-003`).
 - Co-Trainer-Rolle ausschließlich durch `team_owner` vergeben und entziehen (`FC-ROLE-002`, `FC-ROLE-003`).
 - Einladungscode für alle drei Trainerrollen anzeigen, erneuern und deaktivieren (`FC-INVITE-001`, `FC-INVITE-008`).

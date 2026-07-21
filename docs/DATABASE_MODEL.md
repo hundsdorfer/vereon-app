@@ -282,7 +282,7 @@ Die Oberfläche verwendet derzeit nur `event_type = 'training'`.
 
 **Beschlossen – teilweise implementiert:**
 
-- `team_owner`, `head_coach` und `assistant_coach` dürfen Trainings erstellen, bearbeiten und absagen.
+- `team_owner`, `head_coach` und `assistant_coach` dürfen Trainings erstellen, bearbeiten und absagen. Bearbeiten ist nur vor `starts_at`, nur für `event_type = 'training'` und nur solange nicht abgesagt zulässig; `team_id`, `club_id`, `season_id`, `created_by`, `event_type`, `is_cancelled` und `ends_at` sind dabei nicht änderbar.
 - Nur `team_owner` und `head_coach` dürfen hart löschen.
 - Hard-Delete ist nur vor `starts_at` und nur ohne abgegebene Spieler- oder Trainer-RSVP zulässig. Automatisch vorbereitete `event_attendance`-Zeilen ohne Status zählen nicht als Antwort.
 - Die Oberfläche verlangt eine zusätzliche Texteingabe wie `LÖSCHEN`.
@@ -293,8 +293,12 @@ Die Oberfläche verwendet derzeit nur `event_type = 'training'`.
 Erstellen und Absagen sind vorhanden und in der App verdrahtet
 (`cancelEventAction()` in `src/actions/events.ts` ruft `cancel_event()`;
 UI in `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx` und
-`src/features/events/CancelEventButton.tsx`). Bearbeiten und Hard-Delete
-fehlen weiterhin.
+`src/features/events/CancelEventButton.tsx`). Bearbeiten ist lokal
+vollständig umgesetzt, migriert und verifiziert (`update_training()` in
+`supabase/migrations/20260721094219_update_training.sql`,
+`updateTrainingAction()`, Route `.../events/[eventId]/edit/page.tsx`;
+vollständiger Playwright-Lauf 58/58 am 2026-07-21). Hard-Delete fehlt
+weiterhin.
 
 ### `event_attendance`
 

@@ -1,6 +1,6 @@
 # Sicherheitsarchitektur — Vereon
 
-**Stand:** 2026-07-19
+**Stand:** 2026-07-21
 
 **Zweck:** Sicherheitsregeln, bestätigte Schutzmechanismen und offene Risiken.
 **Ist-Status:** Für den implementierten Stand sind `docs/ARCHITECTURE.md` und
@@ -61,6 +61,7 @@ Supabase Cloud. Werte und Schlüssel werden nicht dokumentiert.
 | RSVP | `respond_to_event()` prüft Spieler-/Guardian-Beziehung; entfernte Spieler verlieren künftige RSVP-Berechtigung | `20260704120000_remove_player_from_team.sql` |
 | Spieler entfernen | nur `team_owner` und `head_coach`; Zuweisung wird beendet, vergangene Daten bleiben erhalten | `20260704120000_remove_player_from_team.sql` |
 | Event-Erstellung/Absage | RPCs erlauben `team_owner`, `head_coach` und `assistant_coach`; Absage ist Soft-Cancel und in `src/actions/events.ts` (`cancelEventAction()`) verdrahtet. UI-Sichtbarkeit des Absage-Buttons nutzt eine eigene, von der `team_manager` einschließenden `isTrainer`-Anzeige getrennte Prüfung (`src/lib/permissions.ts`) | `20260629200000_add_events.sql`, `src/actions/events.ts` |
+| Event-Bearbeitung (`FC-TRAINING-003`) | RPC `update_training()` (nur `team_owner`/`head_coach`/`assistant_coach`, nur `event_type='training'`, nur solange weder gespeichertes noch neues `starts_at` erreicht ist, nur solange nicht abgesagt; unveränderliche Felder nicht Teil der Signatur; explizites `REVOKE`/`GRANT EXECUTE` auf `authenticated`) und `updateTrainingAction()` (nutzt ausschließlich die von der RPC zurückgegebene `team_id`, nie einen Client-Wert) sind lokal migriert und im vollständigen Playwright-Lauf verifiziert. Der direkte Anon-RPC-Test bestätigt die `EXECUTE`-Grenze; echter E2E-Rollennachweis besteht für `team_owner`-only. | `supabase/migrations/20260721094219_update_training.sql`, `src/actions/events.ts`, `tests/e2e/core-flow-edit-training.spec.ts` |
 | Eingaben | Server Actions validieren bekannte Formwerte manuell; Supabase Query Builder/RPC-Parameter vermeiden zusammengesetztes SQL aus Nutzereingaben | `src/actions/*.ts` |
 
 Die Tabelle bestätigt nur die genannten Schutzmechanismen. Sie ist kein
@@ -77,7 +78,7 @@ sicherheitskritische Implementierungen gelten zusätzlich:
 |---|---|---|
 | Join-Anfrage annehmen/ablehnen | `team_owner`, `head_coach` | aktive Rolle im betroffenen Team |
 | Einladungscode anzeigen/erneuern/deaktivieren | `team_owner`, `head_coach`, `assistant_coach` | Anzeigen ist für `assistant_coach` in der aktuellen RLS noch nicht freigegeben; erneuern/deaktivieren ist nicht implementiert |
-| Training erstellen/bearbeiten/absagen | `team_owner`, `head_coach`, `assistant_coach` | Bearbeiten ist noch nicht implementiert |
+| Training erstellen/bearbeiten/absagen | `team_owner`, `head_coach`, `assistant_coach` | Bearbeiten (`update_training()`) ist lokal migriert und verifiziert; echte E2E-Rollennachweise für `head_coach`-only und `assistant_coach`-only bleiben offen |
 | Training hart löschen | `team_owner`, `head_coach` | nur vor Beginn, ohne jegliche RSVP; zusätzliche Texteingabe `LÖSCHEN`; noch nicht implementiert |
 | Spieler aus Team entfernen | `team_owner`, `head_coach` | Soft-Delete der Zuweisung, kein Löschen der Person/Historie |
 | Rollen vergeben/entziehen | ausschließlich `team_owner` | vordefinierte Rollen, keine Einzelrechte; noch nicht implementiert |
@@ -135,7 +136,8 @@ Security-Abnahme sind mindestens folgende Punkte relevant:
 | Vollständiges Spielergeburtsdatum fachlich beschlossen, aber Sichtbarkeits-/Consent-Modell nicht implementiert | offen | Feldfluss, RLS/Query-Grenzen und UI-Information gemeinsam umsetzen |
 | Einladungscode ohne dokumentiertes Rate-Limit | offen | Bruteforce-Schutz und Monitoring festlegen |
 | `team_manager` in Teilen der Migrationen/RLS | technische Altlast | vor Rollenänderungen vollständig inventarisieren und kontrolliert entfernen |
-| Event-Bearbeitung und bedingter Hard-Delete fehlen | offen | serverseitige Zeit-, RSVP-, Rollen- und Bestätigungsprüfung |
+| Bedingter Hard-Delete für Trainings fehlt weiterhin | offen | serverseitige Zeit-, RSVP-, Rollen- und Bestätigungsprüfung (`FC-TRAINING-004`) |
+| Standard-`PUBLIC`-Execute auf bestehenden Event-RPCs (`create_event()`, `respond_to_event()`, `cancel_event()` u. a.) | offen, neu identifiziert bei `FC-TRAINING-003` | explizites `REVOKE EXECUTE ... FROM PUBLIC/anon` und `GRANT ... TO authenticated` nachziehen; interne `auth.uid()`-Prüfung bleibt zusätzlich bestehen; die neue `update_training()`-RPC hat dies bereits, die älteren RPCs (noch) nicht — separater Auftrag nötig, kein automatischer Rückbau |
 | Dediziertes Error-Tracking/Monitoring | nicht verifiziert | Konzept und Verantwortlichkeit vor Pilot festlegen |
 | Cloud-Backup/Restore/Rollback | nicht verifiziert, Pilotblocker | Verfahren und Wiederherstellungstest dokumentieren |
 | Rechtstexte enthalten Platzhalter | offen, Pilotblocker | fachanwaltlich prüfen und vor Pilot ersetzen |

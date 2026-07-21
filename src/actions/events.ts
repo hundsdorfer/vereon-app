@@ -3,17 +3,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { viennaLocalToUTC } from '@/lib/datetime'
 
 export type CreateEventState = { error: string } | null
-
-function viennaLocalToISO(localStr: string): string {
-  const tmp = new Date(localStr + ':00Z')
-  const viennaStr = tmp
-    .toLocaleString('sv', { timeZone: 'Europe/Vienna' })
-    .replace(' ', 'T')
-  const offsetMs = new Date(viennaStr + 'Z').getTime() - tmp.getTime()
-  return new Date(tmp.getTime() - offsetMs).toISOString()
-}
 
 export async function createEventAction(
   _prevState: CreateEventState,
@@ -30,11 +22,10 @@ export async function createEventAction(
   if (!title)        return { error: 'Titel ist erforderlich.' }
   if (!startsAtDate) return { error: 'Datum ist erforderlich.' }
   if (!startsAtTime) return { error: 'Uhrzeit ist erforderlich.' }
-  const startsAtRaw = `${startsAtDate}T${startsAtTime}`
 
   let startsAt: string
   try {
-    startsAt = viennaLocalToISO(startsAtRaw)
+    startsAt = viennaLocalToUTC(startsAtDate, startsAtTime)
   } catch {
     return { error: 'Ungültiges Datum oder Uhrzeit.' }
   }
@@ -152,4 +143,58 @@ export async function cancelEventAction(
   revalidatePath(`/teams/${teamId}`)
   revalidatePath(`/dashboard`)
   return { success: true }
+}
+
+export type UpdateTrainingState = { error: string } | null
+
+export async function updateTrainingAction(
+  _prevState: UpdateTrainingState,
+  formData: FormData,
+): Promise<UpdateTrainingState> {
+  const eventId      = (formData.get('event_id')       as string | null)?.trim()
+  const title        = (formData.get('title')          as string | null)?.trim()
+  const startsAtDate = (formData.get('starts_at_date') as string | null)?.trim()
+  const startsAtTime = (formData.get('starts_at_time') as string | null)?.trim()
+  const location     = (formData.get('location')       as string | null)?.trim() || undefined
+  const description  = (formData.get('description')    as string | null)?.trim() || undefined
+
+  if (!eventId || !UUID_RE.test(eventId)) return { error: 'Termin nicht gefunden.' }
+  if (!title)        return { error: 'Titel ist erforderlich.' }
+  if (!startsAtDate) return { error: 'Datum ist erforderlich.' }
+  if (!startsAtTime) return { error: 'Uhrzeit ist erforderlich.' }
+
+  let startsAt: string
+  try {
+    startsAt = viennaLocalToUTC(startsAtDate, startsAtTime)
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Ungültiges Datum oder Uhrzeit.' }
+  }
+
+  const supabase = await createClient()
+  // team_id wird ausschließlich aus dem RPC-Rückgabewert übernommen, nie aus
+  // Client-Eingaben — verhindert eine manipulierte Redirect-/Revalidation-Ziel-ID.
+  const { data: teamId, error } = await supabase.rpc('update_training', {
+    p_event_id:    eventId,
+    p_title:       title,
+    p_starts_at:   startsAt,
+    p_location:    location ?? null,
+    p_description: description ?? null,
+  })
+
+  if (error || !teamId) {
+    const msg = (error?.message ?? '').toLowerCase()
+    if (msg.includes('nicht eingeloggt'))              return { error: 'Bitte melde dich erneut an.' }
+    if (msg.includes('nicht gefunden'))                return { error: 'Termin nicht gefunden.' }
+    if (msg.includes('abgesagt'))                      return { error: 'Dieses Training wurde abgesagt und kann nicht mehr bearbeitet werden.' }
+    if (msg.includes('bereits begonnen'))              return { error: 'Dieses Training hat bereits begonnen und kann nicht mehr bearbeitet werden.' }
+    if (msg.includes('startzeit muss in der zukunft')) return { error: 'Die Startzeit muss in der Zukunft liegen.' }
+    if (msg.includes('titel darf nicht leer'))         return { error: 'Titel darf nicht leer sein.' }
+    return { error: 'Training konnte nicht gespeichert werden. Bitte erneut versuchen.' }
+  }
+
+  revalidatePath(`/teams/${teamId}/events/${eventId}`)
+  revalidatePath(`/teams/${teamId}/events`)
+  revalidatePath(`/teams/${teamId}`)
+  revalidatePath(`/dashboard`)
+  redirect(`/teams/${teamId}/events/${eventId}`)
 }

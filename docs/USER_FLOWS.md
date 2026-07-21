@@ -605,7 +605,7 @@ Unabhängig davon bleibt jederzeit genau ein `team_owner` erhalten.
 ### UF-0B-11 — Training bearbeiten
 
 **Phase:** `MVP-0B`  
-**Flow-Status:** `offen`  
+**Flow-Status:** `umgesetzt` (lokal migriert und im vollständigen Playwright-Lauf verifiziert; bekannte rollenbezogene Testlücken siehe unten)
 **Hauptrollen:** `team_owner`, `head_coach`, `assistant_coach`  
 **Betroffene Feature-IDs:** `FC-TRAINING-003`
 
@@ -614,17 +614,21 @@ Unabhängig davon bleibt jederzeit genau ein `team_owner` erhalten.
 **Grobe Schritte:**
 
 1. Berechtigte Trainerrolle öffnet das Training.
-2. Die Bearbeitungsfunktion wird gewählt.
-3. Erlaubte Felder werden geändert.
-4. Änderungen werden gespeichert.
-5. Relevante Rollen sehen die aktualisierten Trainingsdaten.
+2. Die Bearbeitungsfunktion wird gewählt (nicht sichtbar bei bereits abgesagtem oder bereits begonnenem Training).
+3. Titel, Datum/Uhrzeit, Ort und Beschreibung werden geändert.
+4. Sind bereits Rückmeldungen vorhanden, weist das Formular deutlich darauf hin, dass sie erhalten bleiben und keine automatische Benachrichtigung versendet wird; bei einer tatsächlichen Zeitänderung wird dies zusätzlich bewusst bestätigt.
+5. Änderungen werden gespeichert.
+6. Relevante Rollen sehen die aktualisierten Trainingsdaten auf Detailseite, Trainingsliste, Teamseite und Dashboard.
 
-**Ergebnis:** Fehlerhafte Trainingsdaten können vor dem Training korrigiert werden.
+**Ergebnis:** Fehlerhafte Trainingsdaten können vor dem Training korrigiert werden, ohne bestehende RSVP zu verändern.
 
-**Offene UX-/Produktfragen:**
+**Festgelegt:**
 
-- Welche Kernfelder dürfen ab welchem Zeitpunkt nicht mehr geändert werden?
-- Wie werden bereits abgegebene RSVP bei Änderungen behandelt?
+- Kernfelder (`team_id`, `club_id`, `season_id`, `created_by`, `event_type`, `is_cancelled`, `ends_at`) bleiben immer stabil und sind ab Trainingsbeginn ohnehin nicht mehr erreichbar, da die gesamte Bearbeitung ab Beginn gesperrt ist.
+- Ein bereits abgesagtes Training bleibt unveränderliche Historie und ist nicht mehr bearbeitbar.
+- Bestehende RSVP bleiben bei jeder Bearbeitung, auch bei Terminverschiebung, vollständig erhalten.
+
+**Bekannte Testlücke:** `head_coach`-only und `assistant_coach`-only sind mangels legitimem App-/RPC-Weg für isolierte Testkonten nicht end-to-end verifizierbar (wie bei `FC-TRAINING-005`, abhängig von `FC-ROLE-002`).
 
 ---
 

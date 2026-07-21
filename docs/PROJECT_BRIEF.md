@@ -1,6 +1,6 @@
 # Vereon — Project Brief
 
-**Stand:** 2026-07-19
+**Stand:** 2026-07-21
 
 Kompakter Einstieg für neue Entwicklungs- und Review-Sitzungen. Details nicht aus dieser Datei ableiten, sondern in den jeweils genannten Quellen prüfen.
 
@@ -28,11 +28,15 @@ Technische Details: `docs/ARCHITECTURE.md`, `docs/TECH_STACK.md`, `docs/SUPABASE
 - Self-Player- und Guardian/Kind-Beitrittsanfrage
 - Anfrage annehmen oder ablehnen
 - Spieler per Soft-Delete aus Team entfernen
-- Training erstellen und anzeigen
+- Training erstellen, anzeigen, bearbeiten und absagen
 - Spieler-/Guardian-RSVP
 - Trainerübersicht über Spieler-RSVP
 
-Nicht vollständig implementiert sind unter anderem E-Mail-Verifizierung, Passwort-Reset, Rollenverwaltung, Owner-Transfer, Einladungscode-Erneuerung, Training bearbeiten/löschen, App-Flow für Absage, RSVP-Deadline, Trainer-RSVP, Anwesenheitsabschluss und Teamarchivierung.
+Training bearbeiten (`FC-TRAINING-003`) ist lokal implementiert, migriert und
+im vollständigen Playwright-Lauf verifiziert (58/58 am 2026-07-21; bekannte
+rollenbezogene Testlücken siehe `docs/STATUS.md`).
+
+Nicht vollständig implementiert sind unter anderem E-Mail-Verifizierung, Passwort-Reset, Rollenverwaltung, Owner-Transfer, Einladungscode-Erneuerung, Training löschen, RSVP-Deadline, Trainer-RSVP, Anwesenheitsabschluss und Teamarchivierung.
 
 ## Zielrollen
 

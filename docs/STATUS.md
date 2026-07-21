@@ -1,7 +1,7 @@
 # Status — technisches Audit
 
-**Stand:** 2026-07-19
-**Geprüfter Stand:** `main` / `5caf3b7`, einschließlich lokaler Dokumentations-, Code- und Teständerungen (FC-TRAINING-005).
+**Stand:** 2026-07-21
+**Geprüfter Stand:** `main` / `e3a0698` (enthält bereits committet `FC-TRAINING-005`), einschließlich lokaler, noch nicht committeter Code- und Migrationsänderungen für `FC-TRAINING-003` (Details: `docs/CURRENT_TASK.md`).
 
 Dieses Dokument ist die verbindliche lebende Übersicht für belegte technische Abweichungen, Risiken und Übergabepunkte. Technischer Ist-Zustand: `docs/ARCHITECTURE.md`. Fachliches Ziel: `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`.
 
@@ -39,8 +39,8 @@ Am 2026-07-18 wurden ohne Codeänderung erfolgreich ausgeführt:
 
 E2E wurde in diesem Audit nicht ausgeführt. Der Workflow `.github/workflows/e2e.yml` ist nur manuell startbar.
 
-**Am 2026-07-19, nach Implementierung von FC-TRAINING-005 (lokale Änderungen,
-kein Commit), zusätzlich erfolgreich ausgeführt:** `npx tsc --noEmit`,
+**Am 2026-07-19, nach Implementierung von FC-TRAINING-005 (inzwischen
+committet als `e3a0698`), erfolgreich ausgeführt:** `npx tsc --noEmit`,
 `npm run lint`, `npm run build` und der vollständige `npx playwright test`-Lauf
 gegen den lokalen Supabase-Docker-Stack: **40/40 Tests bestanden**, darin
 enthalten die drei neuen Specs (`core-flow-cancel-training.spec.ts`,
@@ -48,6 +48,16 @@ enthalten die drei neuen Specs (`core-flow-cancel-training.spec.ts`,
 sowie Regression der bestehenden Specs
 (`core-flow-self-player.spec.ts`, `core-flow-guardian.spec.ts`,
 `smoke.spec.ts`, `internal-access*.spec.ts`).
+
+**Am 2026-07-21, nach Implementierung von FC-TRAINING-003 (lokale, noch
+nicht committete Änderungen), erfolgreich ausgeführt:** Migration
+`20260721094219_update_training.sql` mit `supabase migration up --local`,
+Bestätigung über `supabase migration list --local`, gezielter Lauf von
+`core-flow-edit-training.spec.ts`, vollständiger `npx playwright test`-Lauf
+mit **58/58 bestandenen Tests**, `npx tsc --noEmit`, `npm run lint`,
+`npm run build` und `git diff --check`. `supabase db lint --local` und
+`supabase db advisors --local` lieferten keinen neuen Befund zu
+`update_training()`; vorhandene Hinweise betreffen bestehenden Bestand.
 
 Lokale Supabase-Prüfung:
 
@@ -89,9 +99,14 @@ separater, nicht-P0-Zieltest (siehe `docs/MVP_TEST_CHECKLIST.md`).
 
 ## 5. Priorität 1 — beschlossene MVP-0B-Kernlücken
 
+**Lokal verifiziert abgeschlossen (2026-07-21):** Training bearbeiten
+(`FC-TRAINING-003`) ist implementiert, lokal migriert und im vollständigen
+Playwright-Lauf verifiziert. Der echte E2E-Nachweis umfasst `team_owner`-only;
+`head_coach`-only und `assistant_coach`-only bleiben mangels legitimem
+Testkonto-Weg als Integrationslücke offen (`FC-ROLE-002`).
+
 | Ziel | Ist-Zustand |
 |---|---|
-| Training bearbeiten | keine Action, RPC oder UI |
 | Training absagen | umgesetzt und verifiziert (siehe Abschnitt 2); bekannte Testlücke: keine legitime `head_coach`-only-/`assistant_coach`-only-E2E-Verifikation ohne Service-Role oder neue Migration — kein `GRANT INSERT`/`DELETE` auf `team_member_roles` für `authenticated`, keine Co-Trainer-RPC (`FC-ROLE-002` noch `planned_mvp`). Isolierte Rollen-Fixture-Provisionierung für Tests ist als separater Folgebedarf offen, eigene Freigabe nötig. |
 | Training bedingt hart löschen | keine RPC/UI; Regeln in `docs/DATABASE_MODEL.md` |
 | RSVP nur bis Terminbeginn | `respond_to_event()` prüft keine `starts_at`-Deadline |
@@ -112,8 +127,9 @@ separater, nicht-P0-Zieltest (siehe `docs/MVP_TEST_CHECKLIST.md`).
 | Punkt | Beleg |
 |---|---|
 | `team_manager` lebt technisch weiter, obwohl fachlich entfernt | Rollenseed und Prüfungen in Team-/Event-Seiten und RLS |
+| Bestehende Event-RPCs (`create_event()`, `respond_to_event()`, `cancel_event()` u. a.) haben kein `REVOKE`/`GRANT EXECUTE` und laufen mit Standard-`PUBLIC`-Execute | bei `FC-TRAINING-003` identifiziert; neue `update_training()`-RPC hat bereits explizites `REVOKE`/`GRANT`, ältere RPCs (noch) nicht; siehe `docs/SECURITY.md` Abschnitt 6 |
 | Supabase-Typen fehlen | `src/types/database.types.ts` enthält nur `Json` |
-| keine Unit-/Integrationstests | kein `test`-Script, keine Tests unter `src/` |
+| kein separater Unit-Test-Runner, kein eigenes Unit-Test-Script | kein `test`-Script in `package.json`; reine, unit-artige Tests (`tests/e2e/datetime.spec.ts`, `tests/e2e/trainingCancelRoleContract.spec.ts`, `tests/e2e/trainingEditRoleContract.spec.ts`) laufen stattdessen ohne Browser-Fixture über den vorhandenen Playwright-Runner (`npx playwright test`) |
 | E2E kein automatisches Merge-Gate | `.github/workflows/e2e.yml`: nur `workflow_dispatch` |
 | Trainer-Erkennung dupliziert | unabhängige Rollenlisten in Dashboard, Teams und Detailseiten |
 | `ThemeDebug` ist noch enthalten | `src/components/layout/ThemeProvider.tsx` |
@@ -122,7 +138,10 @@ separater, nicht-P0-Zieltest (siehe `docs/MVP_TEST_CHECKLIST.md`).
 
 ## 7. Datenbank- und Betriebsgrenzen
 
-- Das Repository enthält 13 additive Migrationen.
+- Das Repository enthält 14 additive Migrationen; die letzte,
+  `20260721094219_update_training.sql`, ist gegen den lokalen
+  Supabase-Docker-Stack angewendet und in der lokalen Migrationsliste
+  bestätigt.
 - Der Remote-Migrationsstand wurde in diesem Audit nicht abgefragt.
 - Laut Nutzer wurden Cloud-Migrationen bisher durch Claude Code angewendet.
 - Jede künftige Remote-Migration braucht eine separate ausdrückliche Freigabe.

@@ -222,8 +222,43 @@ Anforderung festgeschrieben.
 
 ## 10. Zieltest — Training bearbeiten, löschen und Trainer-RSVP
 
-- [ ] Alle drei Trainerrollen dürfen ein Training bearbeiten. (Bearbeiten ist
-  weiterhin nicht implementiert.)
+### Training bearbeiten (`FC-TRAINING-003`)
+
+- [ ] Alle drei Trainerrollen dürfen ein Training bearbeiten. Implementierung
+  und statischer Rollenvertrag vorhanden; echte E2E-Verifikation für zwei
+  Rollen bleibt wie unten beschrieben offen.
+- [x] `team_owner`-only: End-to-End-Test bestanden
+  (`tests/e2e/core-flow-edit-training.spec.ts`, vollständiger Lauf 58/58 am
+  2026-07-21).
+- [ ] `head_coach`-only: End-to-End-Test offen/blockiert (kein legitimer
+  App-/RPC-Weg für ein isoliertes Testkonto, siehe `docs/STATUS.md`,
+  verknüpft mit `FC-ROLE-002`).
+- [ ] `assistant_coach`-only: End-to-End-Test offen/blockiert (dito).
+- [x] Statischer Rollenvertrag (`TRAINING_EDIT_ROLES`,
+  `tests/e2e/trainingEditRoleContract.spec.ts`) bestanden — ersetzt NICHT die
+  beiden offenen Integrationsfälle oben.
+- [x] Bearbeitung ist nur vor Trainingsbeginn möglich (serverseitig geprüft
+  gegen `clock_timestamp()`, nicht nur UI-Gating).
+- [x] Ein bereits abgesagtes Training kann nicht mehr bearbeitet werden.
+- [x] Verschieben auf eine vergangene Startzeit wird serverseitig abgelehnt.
+- [x] `team_id`, `club_id`, `season_id`, `created_by`, `event_type`,
+  `is_cancelled` und `ends_at` bleiben bei jeder Bearbeitung unverändert
+  (strukturell durch die Funktionssignatur ausgeschlossen).
+- [x] Bestehende RSVP/Attendance-Zeilen bleiben nach Bearbeitung vollständig
+  erhalten, auch bei Terminverschiebung.
+- [x] Sind Rückmeldungen vorhanden, zeigt das Formular einen dauerhaften
+  Hinweis; bei tatsächlicher Zeitänderung ist zusätzlich eine bewusste
+  Bestätigung erforderlich.
+- [x] Änderungen sind auf Detailseite, Trainingsliste, Teamseite und
+  Dashboard sichtbar.
+- [x] Match-/Nicht-Training-Events werden von der RPC direkt abgewiesen
+  (nicht nur über Seiten-`notFound()`).
+- [x] Anonyme Aufrufer können `update_training()` wegen explizitem
+  `REVOKE EXECUTE` nicht ausführen; der direkte lokale RPC-Test bestätigt,
+  dass die Funktion für `anon` nicht bis zur internen Login-Prüfung gelangt.
+
+### Training absagen (`FC-TRAINING-005`, bestehend)
+
 - [x] `team_owner`-only: echter End-to-End-Test bestanden
   (`tests/e2e/core-flow-cancel-training.spec.ts`).
 - [ ] `head_coach`-only: End-to-End-Test offen/blockiert (kein legitimer
