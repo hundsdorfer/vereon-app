@@ -1,8 +1,8 @@
 # Current Task
 
-**Stand:** 2026-07-21
+**Stand:** 2026-07-22
 
-## Aktuell: FC-TRAINING-004 „Training löschen" — lokal implementiert, verifiziert und committet
+## Aktuell: FC-TRAINING-004 „Training löschen" — implementiert, committet, remote migriert und deployed
 
 Die bereits fachlich festgelegte bedingte Hard-Delete-Funktion ist lokal
 umgesetzt. `delete_training()` in
@@ -42,11 +42,29 @@ P2-Befund (veralteter, widersprüchlicher Statussatz in
 `docs/DATABASE_MODEL.md` Zeile 300–301 gegenüber der bereits korrekten
 Statuszeile in Abschnitt 12) wurde behoben.
 
-**Freigabestand:** Lokal implementiert, migriert, getestet, reviewt und als
-Commit `71771bd` auf `main` committet (`git status` sauber). Lokaler `main`
-liegt damit 2 Commits vor `origin/main` (`44250f0`, `71771bd`). Noch offen,
-jeweils mit eigener ausdrücklicher Freigabe: Remote-Migration/`db push`,
-Push nach `origin/main`, Deployment und dessen externe Verifikation.
+**Freigabestand (Stand 2026-07-22):** Lokal implementiert, migriert,
+getestet, reviewt und als Commit `71771bd` (Anwendungscode) sowie `a75df7d`
+(Doku-Nachtrag) auf `main` committet. `main` wurde per `git push` auf
+`origin/main` veröffentlicht (`origin/main` = `a75df7d`, lokal und remote
+identisch). Alle 15 lokalen Migrationen — inklusive
+`20260704120000_remove_player_from_team.sql`,
+`20260721094219_update_training.sql` und
+`20260721114453_delete_training.sql`, die zuvor remote fehlten — wurden per
+`supabase db push` gegen die Supabase-Cloud-Produktionsdatenbank angewendet
+und per `supabase migration list` bestätigt (Local == Remote für alle
+Einträge).
+
+Vercel-Deployment `dpl_CYKavARpN1woWMtD4hB34mAYAqX8` für exakt Commit
+`a75df7d` ist `READY` auf `production` (Aliase `vereon.app`/`www.vereon.app`).
+Nicht-mutierende externe HTTP-Prüfung ohne interne Zugangsdaten bestätigt das
+bekannte Basic-Auth-Verhalten (`/manifest.webmanifest` und `/dashboard` →
+`401` mit `WWW-Authenticate: Basic realm="Vereon Internal Access"`).
+
+**Noch offen:** Eine funktionale Ende-zu-Ende-Verifikation des tatsächlichen
+Lösch-Flows in Produktion (echter `team_owner`-Login, Training anlegen,
+löschen, Bestätigungstext prüfen) wurde bewusst **nicht** durchgeführt, da
+sie Produktionsdaten verändern würde; das braucht ein geeignetes
+Produktions-Testkonto und eine eigene, separate Freigabe.
 
 ## Vorangegangene Aufgabe: FC-TRAINING-003 „Training bearbeiten" — lokal implementiert und verifiziert
 

@@ -1,7 +1,7 @@
 # Status — technisches Audit
 
-**Stand:** 2026-07-21
-**Geprüfter Stand:** `main` / `71771bd` (enthält committet `FC-TRAINING-005`, `FC-TRAINING-003` und `FC-TRAINING-004`); lokaler `main` liegt 2 Commits vor `origin/main` (`e3a0698`) — noch kein Push, keine Remote-Migration, kein Deployment für `FC-TRAINING-003`/`FC-TRAINING-004` (Details: `docs/CURRENT_TASK.md`).
+**Stand:** 2026-07-22
+**Geprüfter Stand:** `main` / `a75df7d` (enthält committet `FC-TRAINING-005`, `FC-TRAINING-003` und `FC-TRAINING-004`), gepusht und identisch mit `origin/main`. Alle 15 lokalen Migrationen sind remote angewendet (`supabase migration list` bestätigt Local == Remote). Vercel-Production-Deployment `dpl_CYKavARpN1woWMtD4hB34mAYAqX8` für diesen Commit ist `READY`. Offene funktionale Ende-zu-Ende-Verifikation des Lösch-Flows in Produktion: Details `docs/CURRENT_TASK.md`.
 
 Dieses Dokument ist die verbindliche lebende Übersicht für belegte technische Abweichungen, Risiken und Übergabepunkte. Technischer Ist-Zustand: `docs/ARCHITECTURE.md`. Fachliches Ziel: `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`.
 
@@ -149,13 +149,18 @@ Testkonto-Weg als Integrationslücke offen (`FC-ROLE-002`).
 ## 7. Datenbank- und Betriebsgrenzen
 
 - Das Repository enthält 15 additive Migrationen; die letzte,
-  `20260721114453_delete_training.sql`, ist gegen den lokalen
-  Supabase-Docker-Stack angewendet und in der lokalen Migrationsliste
-  bestätigt.
-- Der Remote-Migrationsstand wurde in diesem Audit nicht abgefragt.
-- Laut Nutzer wurden Cloud-Migrationen bisher durch Claude Code angewendet.
-- Jede künftige Remote-Migration braucht eine separate ausdrückliche Freigabe.
-- Es wurde kein `db push`, `db reset` oder Remote-Zugriff ausgeführt.
+  `20260721114453_delete_training.sql`, ist sowohl gegen den lokalen
+  Supabase-Docker-Stack als auch gegen die Supabase-Cloud-Produktionsdatenbank
+  angewendet.
+- Remote-Migrationsstand am 2026-07-22 per `supabase migration list`
+  bestätigt: alle 15 Migrationen Local == Remote, inklusive der zuvor remote
+  fehlenden `20260704120000_remove_player_from_team.sql`,
+  `20260721094219_update_training.sql` und
+  `20260721114453_delete_training.sql` (mit ausdrücklicher Freigabe per
+  `supabase db push` angewendet).
+- Jede künftige Remote-Migration braucht weiterhin eine separate
+  ausdrückliche Freigabe.
+- Kein `db reset` ausgeführt.
 - Die gehostete Instanz verwendet laut Nutzer Supabase Cloud; lokale Entwicklung verwendet den Docker-Stack.
 
 ## 8. Übergaberisiken im Arbeitsbaum
@@ -179,4 +184,6 @@ Testkonto-Weg als Integrationslücke offen (`FC-ROLE-002`).
 - dediziertes Monitoring,
 - Barrierefreiheit,
 - mobile PWA-Installierbarkeit nach Manifest-Fix,
-- tatsächlicher Remote-Migrationsgleichstand.
+- funktionale Ende-zu-Ende-Verifikation des `delete_training()`-Lösch-Flows
+  in Produktion (echter `team_owner`-Login, Training anlegen/löschen); nicht
+  durchgeführt, da produktionsdatenverändernd (Details `docs/CURRENT_TASK.md`).
