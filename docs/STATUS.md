@@ -1,7 +1,7 @@
 # Status — technisches Audit
 
 **Stand:** 2026-07-21
-**Geprüfter Stand:** `main` / `e3a0698` (enthält bereits committet `FC-TRAINING-005`), einschließlich lokaler, noch nicht committeter Code- und Migrationsänderungen für `FC-TRAINING-003` (Details: `docs/CURRENT_TASK.md`).
+**Geprüfter Stand:** `main` / `71771bd` (enthält committet `FC-TRAINING-005`, `FC-TRAINING-003` und `FC-TRAINING-004`); lokaler `main` liegt 2 Commits vor `origin/main` (`e3a0698`) — noch kein Push, keine Remote-Migration, kein Deployment für `FC-TRAINING-003`/`FC-TRAINING-004` (Details: `docs/CURRENT_TASK.md`).
 
 Dieses Dokument ist die verbindliche lebende Übersicht für belegte technische Abweichungen, Risiken und Übergabepunkte. Technischer Ist-Zustand: `docs/ARCHITECTURE.md`. Fachliches Ziel: `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`.
 

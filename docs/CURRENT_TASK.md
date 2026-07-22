@@ -2,7 +2,7 @@
 
 **Stand:** 2026-07-21
 
-## Aktuell: FC-TRAINING-004 „Training löschen" — lokal implementiert und verifiziert
+## Aktuell: FC-TRAINING-004 „Training löschen" — lokal implementiert, verifiziert und committet
 
 Die bereits fachlich festgelegte bedingte Hard-Delete-Funktion ist lokal
 umgesetzt. `delete_training()` in
@@ -33,8 +33,20 @@ anderer Funktionen/Policies bleiben getrennt offen.
 Trainer-RSVP eingeführt wird, muss `delete_training()` in derselben Umsetzung
 um die atomare Trainer-RSVP-Sperre ergänzt werden. `head_coach`-only bleibt
 mangels legitimem Testkonto-Weg nicht end-to-end verifiziert; `team_owner`-only
-ist echt E2E geprüft. Keine Remote-Migration, kein Commit, kein Push und kein
-Deployment für `FC-TRAINING-004`.
+ist echt E2E geprüft.
+
+**Unabhängiger Codex-Review (Stand 2026-07-22):** Review gegen Auftrag,
+Repository und zuständige Dokumente durchgeführt. Ergebnis: RPC-Logik,
+Autorisierung und Nebenläufigkeit korrekt, keine funktionalen Befunde. Ein
+P2-Befund (veralteter, widersprüchlicher Statussatz in
+`docs/DATABASE_MODEL.md` Zeile 300–301 gegenüber der bereits korrekten
+Statuszeile in Abschnitt 12) wurde behoben.
+
+**Freigabestand:** Lokal implementiert, migriert, getestet, reviewt und als
+Commit `71771bd` auf `main` committet (`git status` sauber). Lokaler `main`
+liegt damit 2 Commits vor `origin/main` (`44250f0`, `71771bd`). Noch offen,
+jeweils mit eigener ausdrücklicher Freigabe: Remote-Migration/`db push`,
+Push nach `origin/main`, Deployment und dessen externe Verifikation.
 
 ## Vorangegangene Aufgabe: FC-TRAINING-003 „Training bearbeiten" — lokal implementiert und verifiziert
 
