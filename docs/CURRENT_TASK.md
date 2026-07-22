@@ -2,7 +2,41 @@
 
 **Stand:** 2026-07-21
 
-## Aktuell: FC-TRAINING-003 „Training bearbeiten" — lokal implementiert und verifiziert
+## Aktuell: FC-TRAINING-004 „Training löschen" — lokal implementiert und verifiziert
+
+Die bereits fachlich festgelegte bedingte Hard-Delete-Funktion ist lokal
+umgesetzt. `delete_training()` in
+`supabase/migrations/20260721114453_delete_training.sql` erlaubt das Löschen
+ausschließlich `team_owner` und `head_coach`, ausschließlich vor Beginn,
+ausschließlich bei exakt eingegebenem Bestätigungstext `LÖSCHEN` und nur,
+wenn keine Spieler-RSVP abgegeben wurde. Automatisch angelegte
+`event_attendance`-Zeilen mit `rsvp_status IS NULL` blockieren nicht. Abgesagte
+Trainings bleiben als Historie erhalten und können nicht gelöscht werden.
+
+Die Detailseite zeigt das Löschformular nur, wenn die lokal ermittelten
+Voraussetzungen erfüllt sind; bei nicht erfüllten Voraussetzungen bleibt die
+Absage der vorgesehene UI-Weg. Sämtliche Regeln werden zusätzlich atomar in der
+RPC geprüft. Neue Dateien: `src/features/events/DeleteTrainingForm.tsx`,
+`tests/e2e/core-flow-delete-training.spec.ts` und
+`tests/e2e/trainingDeleteRoleContract.spec.ts`; geändert wurden
+`src/actions/events.ts`, die Event-Detailseite und `src/lib/permissions.ts`.
+
+**Lokal geprüft:** Migration `20260721114453_delete_training.sql` angewendet
+und per `supabase migration list --local` bestätigt; gezielte Tests 2/2 und
+vollständiger Playwright-Lauf **60/60** grün. Außerdem erfolgreich:
+`npx tsc --noEmit`, `npm run lint`, `npm run build`, `git diff --check`,
+`supabase db lint --local` und `supabase db advisors --local`. Die DB-Prüfungen
+meldeten keinen neuen Befund zu `delete_training()`; bestehende Hinweise
+anderer Funktionen/Policies bleiben getrennt offen.
+
+**Bekannte Grenze:** `event_staff_rsvps` ist noch nicht implementiert. Sobald
+Trainer-RSVP eingeführt wird, muss `delete_training()` in derselben Umsetzung
+um die atomare Trainer-RSVP-Sperre ergänzt werden. `head_coach`-only bleibt
+mangels legitimem Testkonto-Weg nicht end-to-end verifiziert; `team_owner`-only
+ist echt E2E geprüft. Keine Remote-Migration, kein Commit, kein Push und kein
+Deployment für `FC-TRAINING-004`.
+
+## Vorangegangene Aufgabe: FC-TRAINING-003 „Training bearbeiten" — lokal implementiert und verifiziert
 
 **Stand:** 2026-07-21. Ausgangslage: `main` / `e3a0698` (enthält bereits
 committet und auf `origin/main` gepusht `FC-TRAINING-005` „Training absagen";
@@ -92,11 +126,12 @@ ohne eigenen Auftrag.
 **Getrennte Freigabepunkte (aus dem Planungsblock übernommen, jeweils
 einzeln einzuholen, keine Kettenfreigabe):** Implementierung (**erteilt und
 umgesetzt**) → lokale Migration und lokale Tests (**erteilt, umgesetzt und
-58/58 grün**) → Remote-Migration/`db push` (**offen**) → Commit (**offen**)
+58/58 grün**) → Remote-Migration/`db push` (**offen**) → Commit
+(**umgesetzt: `44250f0`**)
 → Push (**offen**) → Deployment (**offen**).
 
-Diese Umsetzung ist **lokal implementiert, migriert und getestet**; kein
-Commit, kein Push, kein Deployment und keine Remote-Datenbankaktion für
+Diese Umsetzung ist **lokal implementiert, migriert, getestet und committet**;
+kein Push, kein Deployment und keine Remote-Datenbankaktion für
 `FC-TRAINING-003`.
 
 ## Aufgabe abgeschlossen: /manifest.webmanifest ohne Login-Weiterleitung

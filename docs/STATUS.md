@@ -23,6 +23,7 @@ Die App ist intern gehostet, aber nicht pilotbereit. Der Zugriff auf die gehoste
 | Spieler per Soft-Delete entfernen | `src/actions/players.ts`, Migration `20260704120000_remove_player_from_team.sql` |
 | Trainings erstellen und anzeigen | `src/actions/events.ts`, `src/app/(app)/teams/[teamId]/events/*` |
 | Training absagen (`team_owner`, `head_coach`, `assistant_coach` laut RPC-Rechteprüfung) | `cancelEventAction()` in `src/actions/events.ts`, `cancel_event()` in `20260629200000_add_events.sql`, UI in `src/features/events/CancelEventButton.tsx` und `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx`; abgesagte Trainings bleiben in allen Übersichten (Liste, Team, Dashboard) sichtbar und markiert; neue/geänderte RSVP nach Absage serverseitig gesperrt; wiederholte Absage bleibt konsistent (zustands-idempotent). End-to-end verifiziert nur für `team_owner`-only (`tests/e2e/core-flow-cancel-training.spec.ts`); `head_coach`-only/`assistant_coach`-only sind **weiterhin nicht end-to-end verifiziert** (Begründung: Abschnitt 5) und stattdessen nur über RPC-Code-Review sowie einen statischen Rollenvertrags-Test für `TRAINING_CANCEL_ROLES` (`tests/e2e/trainingCancelRoleContract.spec.ts`) abgedeckt — kein Ersatz für die offenen Integrationsfälle. |
+| Training bedingt hart löschen | `delete_training()` in `20260721114453_delete_training.sql`, `deleteTrainingAction()`, `DeleteTrainingForm` und Event-Detailseite; lokal migriert und in `tests/e2e/core-flow-delete-training.spec.ts` für `team_owner`-only verifiziert. Serverseitig geprüft: exaktes `LÖSCHEN`, zukünftiger Beginn, nicht abgesagt, keine abgegebene Spieler-RSVP, kein `assistant_coach`/`team_manager`, explizites `REVOKE` für `PUBLIC`/`anon`. `head_coach`-only bleibt wegen fehlendem legitimen Testkonto-Weg offen; Trainer-RSVP ist noch nicht implementiert und muss bei Einführung von `event_staff_rsvps` ergänzt werden. |
 | Spieler-/Guardian-RSVP und Trainerübersicht | `respond_to_event()`, `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx` |
 | RLS auf allen 18 öffentlichen Tabellen | `supabase/migrations/*` |
 | CI für Lint und Build | `.github/workflows/ci.yml` |
@@ -49,8 +50,8 @@ sowie Regression der bestehenden Specs
 (`core-flow-self-player.spec.ts`, `core-flow-guardian.spec.ts`,
 `smoke.spec.ts`, `internal-access*.spec.ts`).
 
-**Am 2026-07-21, nach Implementierung von FC-TRAINING-003 (lokale, noch
-nicht committete Änderungen), erfolgreich ausgeführt:** Migration
+**Am 2026-07-21, nach Implementierung von FC-TRAINING-003 (inzwischen lokal
+committet als `44250f0`), erfolgreich ausgeführt:** Migration
 `20260721094219_update_training.sql` mit `supabase migration up --local`,
 Bestätigung über `supabase migration list --local`, gezielter Lauf von
 `core-flow-edit-training.spec.ts`, vollständiger `npx playwright test`-Lauf
@@ -58,6 +59,14 @@ mit **58/58 bestandenen Tests**, `npx tsc --noEmit`, `npm run lint`,
 `npm run build` und `git diff --check`. `supabase db lint --local` und
 `supabase db advisors --local` lieferten keinen neuen Befund zu
 `update_training()`; vorhandene Hinweise betreffen bestehenden Bestand.
+
+**Am 2026-07-21, nach Implementierung von FC-TRAINING-004 (lokale, noch nicht
+committete Änderungen), erfolgreich ausgeführt:** Migration
+`20260721114453_delete_training.sql` lokal angewendet und bestätigt, gezielte
+Tests 2/2, vollständiger Playwright-Lauf **60/60**, `npx tsc --noEmit`,
+`npm run lint`, `npm run build`, `git diff --check`, `supabase db lint --local`
+und `supabase db advisors --local`. Kein neuer DB-Lint-/Advisor-Befund zu
+`delete_training()`.
 
 Lokale Supabase-Prüfung:
 
@@ -100,15 +109,16 @@ separater, nicht-P0-Zieltest (siehe `docs/MVP_TEST_CHECKLIST.md`).
 ## 5. Priorität 1 — beschlossene MVP-0B-Kernlücken
 
 **Lokal verifiziert abgeschlossen (2026-07-21):** Training bearbeiten
-(`FC-TRAINING-003`) ist implementiert, lokal migriert und im vollständigen
-Playwright-Lauf verifiziert. Der echte E2E-Nachweis umfasst `team_owner`-only;
-`head_coach`-only und `assistant_coach`-only bleiben mangels legitimem
+(`FC-TRAINING-003`) und bedingt hart löschen (`FC-TRAINING-004`) sind
+implementiert, lokal migriert und im vollständigen Playwright-Lauf verifiziert.
+Der echte E2E-Nachweis umfasst jeweils `team_owner`-only; `head_coach`-only und
+für Bearbeiten zusätzlich `assistant_coach`-only bleiben mangels legitimem
 Testkonto-Weg als Integrationslücke offen (`FC-ROLE-002`).
 
 | Ziel | Ist-Zustand |
 |---|---|
 | Training absagen | umgesetzt und verifiziert (siehe Abschnitt 2); bekannte Testlücke: keine legitime `head_coach`-only-/`assistant_coach`-only-E2E-Verifikation ohne Service-Role oder neue Migration — kein `GRANT INSERT`/`DELETE` auf `team_member_roles` für `authenticated`, keine Co-Trainer-RPC (`FC-ROLE-002` noch `planned_mvp`). Isolierte Rollen-Fixture-Provisionierung für Tests ist als separater Folgebedarf offen, eigene Freigabe nötig. |
-| Training bedingt hart löschen | keine RPC/UI; Regeln in `docs/DATABASE_MODEL.md` |
+| Training bedingt hart löschen | lokal umgesetzt und verifiziert; echte E2E-Abdeckung für `team_owner`-only, `head_coach`-only offen; Trainer-RSVP-Sperre folgt erst mit der noch nicht vorhandenen `event_staff_rsvps`-Tabelle |
 | RSVP nur bis Terminbeginn | `respond_to_event()` prüft keine `starts_at`-Deadline |
 | Trainer-RSVP | keine `event_staff_rsvps`-Tabelle und kein Flow |
 | Einladungscode erneuern/deaktivieren | ältere Revoke-RPC vorhanden, aber kein vollständiger `public_code`-Flow |
@@ -138,8 +148,8 @@ Testkonto-Weg als Integrationslücke offen (`FC-ROLE-002`).
 
 ## 7. Datenbank- und Betriebsgrenzen
 
-- Das Repository enthält 14 additive Migrationen; die letzte,
-  `20260721094219_update_training.sql`, ist gegen den lokalen
+- Das Repository enthält 15 additive Migrationen; die letzte,
+  `20260721114453_delete_training.sql`, ist gegen den lokalen
   Supabase-Docker-Stack angewendet und in der lokalen Migrationsliste
   bestätigt.
 - Der Remote-Migrationsstand wurde in diesem Audit nicht abgefragt.

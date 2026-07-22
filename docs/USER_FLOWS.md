@@ -635,7 +635,7 @@ Unabhängig davon bleibt jederzeit genau ein `team_owner` erhalten.
 ### UF-0B-12 — Training löschen
 
 **Phase:** `MVP-0B`  
-**Flow-Status:** `offen`  
+**Flow-Status:** `bestehend`<br>
 **Hauptrollen:** `team_owner`, `head_coach`  
 **Betroffene Feature-IDs:** `FC-TRAINING-004`
 
@@ -655,6 +655,13 @@ Unabhängig davon bleibt jederzeit genau ein `team_owner` erhalten.
 
 - Löschen darf nicht als Ersatz für Absagen verwendet werden.
 - `assistant_coach` darf absagen, aber nicht hart löschen.
+
+**Technischer Nachweis (2026-07-21):** Lokal implementiert, migriert und im
+vollständigen Playwright-Lauf 60/60 verifiziert. Der echte Rollen-E2E-Nachweis
+besteht für `team_owner`-only; `head_coach`-only bleibt mangels legitimem
+Testkonto-Weg offen. Die vorhandene RPC prüft Spieler-RSVP. Die noch nicht
+implementierte Trainer-RSVP muss bei Einführung von `event_staff_rsvps`
+zusätzlich atomar geprüft werden.
 
 ---
 

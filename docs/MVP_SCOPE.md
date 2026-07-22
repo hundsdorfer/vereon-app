@@ -215,7 +215,7 @@ Diese Reihenfolge ist keine detaillierte Aufgabenplanung. Sie beschreibt nur Sco
 | `TEAM` | `FC-TEAM-003` | `planned_mvp` | Mannschaftsgrunddaten müssen korrigierbar sein. |
 | `ROLE` | `FC-ROLE-002`, `FC-ROLE-003` | `planned_mvp` | Ausschließlich der `team_owner` vergibt oder entzieht die vordefinierte Co-Trainer-Rolle; granulare Einzelrechte sind nicht Teil des MVP. |
 | `INVITE` | `FC-INVITE-007`, `FC-INVITE-008`, `FC-INVITE-009` | `partial` / `planned_mvp` | `team_owner` und `head_coach` entscheiden Beitrittsanfragen; alle drei Trainerrollen kontrollieren Einladungscodes; alte Anfragen müssen vor Pilotbetrieb automatisiert bereinigt werden. |
-| `TRAINING` | `FC-TRAINING-003`, `FC-TRAINING-004`, `FC-TRAINING-005` | `implemented` / `planned_mvp` | Bearbeiten und Absagen sind umgesetzt; der bedingte Hard-Delete bleibt als Kernlücke offen. |
+| `TRAINING` | `FC-TRAINING-003`, `FC-TRAINING-004`, `FC-TRAINING-005` | `implemented` | Bearbeiten, bedingter Hard-Delete und Absagen sind lokal umgesetzt; bekannte Rollen- und Trainer-RSVP-Testgrenzen stehen in `STATUS.md`. |
 | `RSVP` | `FC-RSVP-003` | `planned_mvp` | Trainer und Co-Trainer müssen eigene Teilnahme rückmelden können. |
 | `LEGAL` | `FC-LEGAL-001`, `FC-LEGAL-002`, `FC-LEGAL-003`, `FC-LEGAL-004`, `FC-LEGAL-008` | `partial` / `planned_mvp` | Impressum, Datenschutz, Join-Hinweise sowie versionierte Nachweise für Guardian-Erklärung und Dokumentenannahme sind vor externer Nutzung erforderlich. |
 

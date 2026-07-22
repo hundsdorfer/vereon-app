@@ -7,7 +7,12 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { RsvpForm } from '@/features/events/RsvpForm'
 import { CancelEventButton } from '@/features/events/CancelEventButton'
-import { TRAINING_CANCEL_ROLES, TRAINING_EDIT_ROLES } from '@/lib/permissions'
+import { DeleteTrainingForm } from '@/features/events/DeleteTrainingForm'
+import {
+  TRAINING_CANCEL_ROLES,
+  TRAINING_DELETE_ROLES,
+  TRAINING_EDIT_ROLES,
+} from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +38,14 @@ export default async function EventDetailPage({
   } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: team }, { data: event }, { data: isTrainer }, { data: canCancel }, { data: canEdit }] = await Promise.all([
+  const [
+    { data: team },
+    { data: event },
+    { data: isTrainer },
+    { data: canCancel },
+    { data: canEdit },
+    { data: canDelete },
+  ] = await Promise.all([
     supabase
       .from('teams')
       .select('id, name')
@@ -57,6 +69,10 @@ export default async function EventDetailPage({
     supabase.rpc('has_team_role', {
       p_team_id: teamId,
       p_role_keys: TRAINING_EDIT_ROLES,
+    }),
+    supabase.rpc('has_team_role', {
+      p_team_id: teamId,
+      p_role_keys: TRAINING_DELETE_ROLES,
     }),
   ])
 
@@ -105,6 +121,13 @@ export default async function EventDetailPage({
   const declined  = attendance.filter((a) => a.rsvp_status === 'declined')
   const maybe     = attendance.filter((a) => a.rsvp_status === 'maybe')
   const noAnswer  = attendance.filter((a) => !a.rsvp_status)
+  const hasSubmittedRsvp = attendance.some((a) => a.rsvp_status !== null)
+  const canHardDelete =
+    !!canDelete &&
+    !event.is_cancelled &&
+    !hasStarted &&
+    !attendanceError &&
+    !hasSubmittedRsvp
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -175,6 +198,21 @@ export default async function EventDetailPage({
               <div className="mt-4">
                 <CancelEventButton eventId={eventId} />
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {canHardDelete && (
+          <Card>
+            <CardHeader>
+              <h2 className="text-sm font-semibold text-danger">Training endgültig löschen</h2>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Nur für irrtümlich angelegte Trainings. Diese Aktion entfernt den Termin
+                unwiderruflich. Für ein nicht stattfindendes Training nutze stattdessen die Absage.
+              </p>
+              <DeleteTrainingForm eventId={eventId} />
             </CardContent>
           </Card>
         )}

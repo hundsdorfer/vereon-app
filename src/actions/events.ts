@@ -198,3 +198,41 @@ export async function updateTrainingAction(
   revalidatePath(`/dashboard`)
   redirect(`/teams/${teamId}/events/${eventId}`)
 }
+
+export type DeleteTrainingState = { error: string } | null
+
+export async function deleteTrainingAction(
+  _prevState: DeleteTrainingState,
+  formData: FormData,
+): Promise<DeleteTrainingState> {
+  const eventId = (formData.get('event_id') as string | null)?.trim()
+  const confirmation = formData.get('confirmation') as string | null
+
+  if (!eventId || !UUID_RE.test(eventId)) return { error: 'Termin nicht gefunden.' }
+  if (confirmation !== 'LÖSCHEN') {
+    return { error: 'Gib zum Löschen exakt LÖSCHEN ein.' }
+  }
+
+  const supabase = await createClient()
+  // team_id kommt ausschließlich aus der erfolgreich autorisierten RPC.
+  const { data: teamId, error } = await supabase.rpc('delete_training', {
+    p_event_id: eventId,
+    p_confirmation: confirmation,
+  })
+
+  if (error || !teamId) {
+    const msg = (error?.message ?? '').toLowerCase()
+    if (msg.includes('nicht eingeloggt')) return { error: 'Bitte melde dich erneut an.' }
+    if (msg.includes('nicht gefunden')) return { error: 'Termin nicht gefunden.' }
+    if (msg.includes('bestätigungstext')) return { error: 'Gib zum Löschen exakt LÖSCHEN ein.' }
+    if (msg.includes('abgesagt')) return { error: 'Abgesagte Trainings bleiben als Historie erhalten.' }
+    if (msg.includes('bereits begonnen')) return { error: 'Begonnene Trainings können nicht gelöscht werden.' }
+    if (msg.includes('rückmeldungen')) return { error: 'Dieses Training hat bereits Rückmeldungen und kann nur abgesagt werden.' }
+    return { error: 'Training konnte nicht gelöscht werden. Bitte erneut versuchen.' }
+  }
+
+  revalidatePath(`/teams/${teamId}/events`)
+  revalidatePath(`/teams/${teamId}`)
+  revalidatePath('/dashboard')
+  redirect(`/teams/${teamId}/events`)
+}

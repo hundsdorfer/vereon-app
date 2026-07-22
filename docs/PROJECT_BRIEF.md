@@ -32,11 +32,12 @@ Technische Details: `docs/ARCHITECTURE.md`, `docs/TECH_STACK.md`, `docs/SUPABASE
 - Spieler-/Guardian-RSVP
 - Trainerübersicht über Spieler-RSVP
 
-Training bearbeiten (`FC-TRAINING-003`) ist lokal implementiert, migriert und
-im vollständigen Playwright-Lauf verifiziert (58/58 am 2026-07-21; bekannte
-rollenbezogene Testlücken siehe `docs/STATUS.md`).
+Training bearbeiten (`FC-TRAINING-003`) und der bedingte Hard-Delete
+(`FC-TRAINING-004`) sind lokal implementiert, migriert und im vollständigen
+Playwright-Lauf verifiziert (60/60 am 2026-07-21; bekannte rollen- und
+Trainer-RSVP-bezogene Testlücken siehe `docs/STATUS.md`).
 
-Nicht vollständig implementiert sind unter anderem E-Mail-Verifizierung, Passwort-Reset, Rollenverwaltung, Owner-Transfer, Einladungscode-Erneuerung, Training löschen, RSVP-Deadline, Trainer-RSVP, Anwesenheitsabschluss und Teamarchivierung.
+Nicht vollständig implementiert sind unter anderem E-Mail-Verifizierung, Passwort-Reset, Rollenverwaltung, Owner-Transfer, Einladungscode-Erneuerung, RSVP-Deadline, Trainer-RSVP, Anwesenheitsabschluss und Teamarchivierung.
 
 ## Zielrollen
 

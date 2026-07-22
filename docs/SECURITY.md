@@ -136,7 +136,7 @@ Security-Abnahme sind mindestens folgende Punkte relevant:
 | Vollständiges Spielergeburtsdatum fachlich beschlossen, aber Sichtbarkeits-/Consent-Modell nicht implementiert | offen | Feldfluss, RLS/Query-Grenzen und UI-Information gemeinsam umsetzen |
 | Einladungscode ohne dokumentiertes Rate-Limit | offen | Bruteforce-Schutz und Monitoring festlegen |
 | `team_manager` in Teilen der Migrationen/RLS | technische Altlast | vor Rollenänderungen vollständig inventarisieren und kontrolliert entfernen |
-| Bedingter Hard-Delete für Trainings fehlt weiterhin | offen | serverseitige Zeit-, RSVP-, Rollen- und Bestätigungsprüfung (`FC-TRAINING-004`) |
+| Bedingter Hard-Delete für Trainings | lokal umgesetzt und verifiziert | `delete_training()` prüft serverseitig Rolle, Zeit, Absagestatus, exaktes `LÖSCHEN` und vorhandene Spieler-RSVP; Trainer-RSVP muss bei Einführung von `event_staff_rsvps` ergänzt werden |
 | Standard-`PUBLIC`-Execute auf bestehenden Event-RPCs (`create_event()`, `respond_to_event()`, `cancel_event()` u. a.) | offen, neu identifiziert bei `FC-TRAINING-003` | explizites `REVOKE EXECUTE ... FROM PUBLIC/anon` und `GRANT ... TO authenticated` nachziehen; interne `auth.uid()`-Prüfung bleibt zusätzlich bestehen; die neue `update_training()`-RPC hat dies bereits, die älteren RPCs (noch) nicht — separater Auftrag nötig, kein automatischer Rückbau |
 | Dediziertes Error-Tracking/Monitoring | nicht verifiziert | Konzept und Verantwortlichkeit vor Pilot festlegen |
 | Cloud-Backup/Restore/Rollback | nicht verifiziert, Pilotblocker | Verfahren und Wiederherstellungstest dokumentieren |

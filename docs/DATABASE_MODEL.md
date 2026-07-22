@@ -297,8 +297,12 @@ UI in `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx` und
 vollständig umgesetzt, migriert und verifiziert (`update_training()` in
 `supabase/migrations/20260721094219_update_training.sql`,
 `updateTrainingAction()`, Route `.../events/[eventId]/edit/page.tsx`;
-vollständiger Playwright-Lauf 58/58 am 2026-07-21). Hard-Delete fehlt
-weiterhin.
+vollständiger Playwright-Lauf 58/58 am 2026-07-21). Bedingter Hard-Delete
+ist lokal implementiert, migriert und verifiziert (`delete_training()` in
+`supabase/migrations/20260721114453_delete_training.sql`,
+`deleteTrainingAction()`, `src/features/events/DeleteTrainingForm.tsx`;
+vollständiger Playwright-Lauf 60/60 am 2026-07-21; siehe Abschnitt 12 und
+`docs/STATUS.md` für Details und offene Testlücken).
 
 ### `event_attendance`
 
@@ -361,8 +365,8 @@ Für Eigentumsübertragung, Rollenänderungen, Einladungswechsel und sensible L�
 |---|---|---|
 | Spieler aus Team | Soft-Delete der Zuordnung, Historie bleibt | implementiert |
 | Team | Archivierung durch Owner statt normalem Hard-Delete | beschlossen, nicht implementiert |
-| Training ohne abgegebene RSVP vor Beginn | Hard-Delete durch Owner/Head mit Texteingabe | beschlossen, nicht implementiert |
-| Training mit abgegebener RSVP oder nach Beginn | kein Hard-Delete, nur Absage/Historie | beschlossen, teilweise implementiert |
+| Training ohne abgegebene RSVP vor Beginn | Hard-Delete durch Owner/Head mit exakter Texteingabe `LÖSCHEN` | lokal implementiert und verifiziert; Trainer-RSVP-Tabelle noch nicht vorhanden |
+| Training mit abgegebener RSVP, nach Beginn oder nach Absage | kein Hard-Delete, nur Absage/Historie | für Spieler-RSVP lokal implementiert und verifiziert; Trainer-RSVP folgt mit `event_staff_rsvps` |
 | abgelehnte/zurückgezogene Join-Anfrage | automatische Bereinigung nach 90 Tagen | Funktion vorhanden, Scheduling fehlt |
 | Account-Löschung | derzeit kein Self-Service; rechtlicher Prozess offen | offen |
 

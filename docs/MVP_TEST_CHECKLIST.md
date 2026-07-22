@@ -281,15 +281,19 @@ Anforderung festgeschrieben.
   serverseitig verifiziert).
 - [x] Wiederholtes Absagen eines bereits abgesagten Trainings bleibt
   konsistent (zustands-idempotent, kein Fehler).
-- [ ] Nur `team_owner` und `head_coach` sehen/verwenden Hard-Delete.
-- [ ] Hard-Delete ist ausschließlich vor Terminbeginn möglich.
-- [ ] Sobald irgendein RSVP vorhanden ist, ist Hard-Delete gesperrt.
-- [ ] Nach Terminbeginn ist Hard-Delete gesperrt.
-- [ ] Vor Hard-Delete muss exakt die festgelegte Bestätigung, z. B. `LÖSCHEN`,
-  eingegeben werden.
-- [ ] Wenn Löschen gesperrt ist, führt die UI zur Absage statt zu einem
-  funktionslosen Button.
-- [ ] Änderung/Absage/Löschung wird serverseitig geprüft, nicht nur über UI.
+- [ ] Nur `team_owner` und `head_coach` sehen/verwenden Hard-Delete. Lokal echt
+  E2E-verifiziert für `team_owner`-only; `head_coach`-only bleibt mangels
+  legitimem Testkonto-Weg offen. Rollenvertrag und RPC schließen
+  `assistant_coach`/`team_manager` aus.
+- [x] Hard-Delete ist ausschließlich vor Terminbeginn möglich.
+- [x] Sobald eine Spieler-RSVP vorhanden ist, ist Hard-Delete gesperrt.
+  Trainer-RSVP ist noch nicht implementiert und daher noch nicht testbar.
+- [x] Nach Terminbeginn ist Hard-Delete gesperrt.
+- [x] Vor Hard-Delete muss exakt `LÖSCHEN` eingegeben werden; UI und RPC prüfen
+  dies unabhängig voneinander.
+- [x] Wenn Löschen wegen Spieler-RSVP gesperrt ist, zeigt die UI weiterhin die
+  Absage statt eines funktionslosen Löschbuttons.
+- [x] Änderung/Absage/Löschung wird serverseitig geprüft, nicht nur über UI.
 - [ ] Spieler, Guardians und Trainer können RSVP bis zum Terminbeginn ändern,
   danach nicht mehr.
 - [ ] Trainer-RSVP liegt getrennt von Spieler-RSVP, z. B. in
