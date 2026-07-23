@@ -1,7 +1,7 @@
 # Status — technisches Audit
 
 **Stand:** 2026-07-22
-**Geprüfter Stand:** `main` / `a75df7d` (enthält committet `FC-TRAINING-005`, `FC-TRAINING-003` und `FC-TRAINING-004`) zuzüglich lokaler, noch nicht committeter Änderungen für `FC-RSVP-003`. Die ersten 15 Migrationen sind remote angewendet; `20260722090000_add_staff_rsvp.sql` ist lokal angewendet und vollständig verifiziert (66/66 Playwright-Tests), aber noch nicht remote migriert. Details und aktueller Prüfstand: `docs/CURRENT_TASK.md`.
+**Geprüfter Stand:** `main` / `f89a8ae` (enthält committet `FC-TRAINING-005`, `FC-TRAINING-003`, `FC-TRAINING-004` und `FC-RSVP-003`, lokal committet, noch nicht auf `origin/main` gepusht). Die ersten 15 Migrationen sind remote angewendet; `20260722090000_add_staff_rsvp.sql` ist lokal angewendet und vollständig verifiziert (66/66 Playwright-Tests), aber noch nicht remote migriert. Details und aktueller Prüfstand: `docs/CURRENT_TASK.md`.
 
 Dieses Dokument ist die verbindliche lebende Übersicht für belegte technische Abweichungen, Risiken und Übergabepunkte. Technischer Ist-Zustand: `docs/ARCHITECTURE.md`. Fachliches Ziel: `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`.
 
@@ -24,7 +24,7 @@ Die App ist intern gehostet, aber nicht pilotbereit. Der Zugriff auf die gehoste
 | Trainings erstellen und anzeigen | `src/actions/events.ts`, `src/app/(app)/teams/[teamId]/events/*` |
 | Training absagen (`team_owner`, `head_coach`, `assistant_coach` laut RPC-Rechteprüfung) | `cancelEventAction()` in `src/actions/events.ts`, `cancel_event()` in `20260629200000_add_events.sql`, UI in `src/features/events/CancelEventButton.tsx` und `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx`; abgesagte Trainings bleiben in allen Übersichten (Liste, Team, Dashboard) sichtbar und markiert; neue/geänderte RSVP nach Absage serverseitig gesperrt; wiederholte Absage bleibt konsistent (zustands-idempotent). End-to-end verifiziert nur für `team_owner`-only (`tests/e2e/core-flow-cancel-training.spec.ts`); `head_coach`-only/`assistant_coach`-only sind **weiterhin nicht end-to-end verifiziert** (Begründung: Abschnitt 5) und stattdessen nur über RPC-Code-Review sowie einen statischen Rollenvertrags-Test für `TRAINING_CANCEL_ROLES` (`tests/e2e/trainingCancelRoleContract.spec.ts`) abgedeckt — kein Ersatz für die offenen Integrationsfälle. |
 | Training bedingt hart löschen | `delete_training()` in `20260721114453_delete_training.sql`, `deleteTrainingAction()`, `DeleteTrainingForm` und Event-Detailseite; für Spieler-RSVP lokal migriert und in `tests/e2e/core-flow-delete-training.spec.ts` für `team_owner`-only verifiziert. Die lokale Migration `20260722090000_add_staff_rsvp.sql` erweitert die RPC atomar um eine Trainer-RSVP-Sperre; für `team_owner`-only end-to-end verifiziert (Parallel-Race-Test gegen `respond_to_event_as_staff()` eingeschlossen). `head_coach`-only bleibt wegen fehlendem legitimen Testkonto-Weg offen. |
-| Trainer-RSVP abgeben (`FC-RSVP-003`) | `respond_to_event_as_staff()`, `list_staff_rsvps_for_event()` und `event_staff_rsvps` in `20260722090000_add_staff_rsvp.sql`; `respondToEventAsStaffAction()`, `StaffRsvpForm.tsx`, getrennte Card „Trainer-Rückmeldungen" auf der Event-Detailseite. Lokal migriert und in `tests/e2e/core-flow-staff-rsvp.spec.ts` für `team_owner`-only verifiziert (UPSERT, Deadline-Grenze, Absage, Enumerationsschutz, dedizierte Listen-RPC inkl. Rollenwechsel-Historie). `head_coach`-/`assistant_coach`-only bleiben wegen fehlendem legitimen Testkonto-Weg offen, abgedeckt über `tests/e2e/trainingStaffRsvpRoleContract.spec.ts`. |
+| Trainer-RSVP abgeben (`FC-RSVP-003`) | `respond_to_event_as_staff()`, `list_staff_rsvps_for_event()` und `event_staff_rsvps` in `20260722090000_add_staff_rsvp.sql`; `respondToEventAsStaffAction()`, `StaffRsvpForm.tsx`, getrennte Card „Trainer-Rückmeldungen" auf der Event-Detailseite. Lokal migriert und in `tests/e2e/core-flow-staff-rsvp.spec.ts` für `team_owner`-only verifiziert (UPSERT, Deadline-Grenze, Absage, Enumerationsschutz, dedizierte Listen-RPC). Die Rollenwechsel-Historie (`is_active_trainer = false` für inzwischen nicht mehr aktive Trainer) ist mangels legitimem Weg, einen solchen Datensatz zu erzeugen, **nicht** im Playwright-Lauf, sondern nur statisch über `tests/e2e/trainingStaffRsvpRoleContract.spec.ts` abgedeckt. `head_coach`-/`assistant_coach`-only bleiben ebenfalls wegen fehlendem legitimen Testkonto-Weg offen und sind über denselben statischen Rollenvertrag abgedeckt. |
 | Spieler-/Guardian-RSVP und Trainerübersicht | `respond_to_event()`, `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx` |
 | RLS auf allen 19 lokal angewendeten öffentlichen Tabellen | `supabase/migrations/*`, inklusive der neuen Tabelle `event_staff_rsvps` |
 | CI für Lint und Build | `.github/workflows/ci.yml` |
@@ -69,8 +69,9 @@ Tests 2/2, vollständiger Playwright-Lauf **60/60**, `npx tsc --noEmit`,
 und `supabase db advisors --local`. Kein neuer DB-Lint-/Advisor-Befund zu
 `delete_training()`.
 
-**Am 2026-07-22, nach Implementierung von FC-RSVP-003 (lokale, noch nicht
-committete Änderungen), erfolgreich ausgeführt:** Migration
+**Am 2026-07-22, nach Implementierung von FC-RSVP-003 (inzwischen lokal
+committet als `f89a8ae`, noch nicht auf `origin/main` gepusht), erfolgreich
+ausgeführt:** Migration
 `20260722090000_add_staff_rsvp.sql` mit `supabase migration up --local`
 angewendet und über `supabase migration list --local` bestätigt;
 vollständiger `npx playwright test`-Lauf **66/66 Tests bestanden**;
@@ -90,6 +91,23 @@ für den abgesagten Zustand denselben Text wie ein bereits bestehendes,
 seitenweites Absage-Banner, was `core-flow-cancel-training.spec.ts` durch
 doppelten Text brach (Strict-Mode-Konflikt) — nach Textanpassung erneut
 vollständig grün verifiziert.
+
+**Unabhängiger Codex-Review (Stand 2026-07-23) des Commits `f89a8ae`:** Keine
+P0-/P1-Befunde. RPC-Autorisierung, `REVOKE`/`GRANT EXECUTE`, RLS und das
+Race-Handling zwischen `respond_to_event_as_staff()` und `delete_training()`
+(beide sperren dieselbe Event-Zeile per `FOR UPDATE`) wurden als korrekt
+bestätigt; kein direkter Tabellen-Bypass der Rollenprüfung möglich. Befunde
+betrafen ausschließlich Testabdeckung und Dokumentation: der statische
+Rollenvertrag prüfte ursprünglich nur `list_staff_rsvps_for_event()`, nicht
+auch `respond_to_event_as_staff()` und `is_staff_rsvp_trainer_for_event()`
+(behoben, s. `tests/e2e/trainingStaffRsvpRoleContract.spec.ts`); außerdem
+mehrere widersprüchliche beziehungsweise veraltete Aussagen in diesem
+Dokument, `docs/USER_FLOWS.md`, `docs/ARCHITECTURE.md` und
+`docs/CURRENT_TASK.md` (korrigiert). Ein P3-Hinweis bleibt offen: Der
+Parallel-Race-Test (`tests/e2e/core-flow-staff-rsvp.spec.ts`) beobachtet pro
+Lauf nur eine der beiden möglichen Sperrreihenfolgen, nicht beide
+deterministisch erzwungen — laut Codex durch die RPC-seitige SQL-Analyse
+dennoch abgedeckt, kein funktionaler Bypass.
 
 Lokale Supabase-Prüfung:
 
@@ -174,8 +192,10 @@ Testkonto-Weg als Integrationslücke offen (`FC-ROLE-002`).
 - Das Repository enthält 16 additive Migrationen. Die ersten 15 bis
   `20260721114453_delete_training.sql` sind gegen den lokalen Supabase-Docker-
   Stack und die Supabase-Cloud-Produktionsdatenbank angewendet. Die neue
-  `20260722090000_add_staff_rsvp.sql` liegt nur lokal im Arbeitsbaum und ist
-  wegen des nicht laufenden Docker-Daemons noch nicht lokal angewendet.
+  `20260722090000_add_staff_rsvp.sql` ist mit `supabase migration up --local`
+  gegen den lokalen Supabase-Docker-Stack angewendet und über
+  `supabase migration list --local` bestätigt (Details: `docs/CURRENT_TASK.md`),
+  aber noch nicht remote migriert.
 - Remote-Migrationsstand am 2026-07-22 per `supabase migration list`
   bestätigt: alle 15 Migrationen Local == Remote, inklusive der zuvor remote
   fehlenden `20260704120000_remove_player_from_team.sql`,

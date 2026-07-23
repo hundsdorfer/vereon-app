@@ -311,9 +311,12 @@ Anforderung festgeschrieben.
   Rollen bleiben mangels legitimer Provisionierung mit `FC-ROLE-002` offen,
   abgedeckt über den statischen Rollenvertrag.
 - [x] `list_staff_rsvps_for_event()` schützt vor Enumeration, liefert aktive
-  Trainer auch ohne Antwort, historische Antworten mit
-  `is_active_trainer = false`, Namen trotz fehlender Fremd-`profiles`-SELECT-
-  Policy und dedupliziert Mehrfachrollen. Im Playwright-Lauf verifiziert.
+  Trainer auch ohne Antwort, Namen trotz fehlender Fremd-`profiles`-SELECT-
+  Policy und dedupliziert Mehrfachrollen. Im Playwright-Lauf verifiziert. Der
+  Historienzweig (`is_active_trainer = false` für inzwischen nicht mehr aktive
+  Trainer) ist mangels legitimem Weg, einen solchen Datensatz zu erzeugen,
+  **nicht** im Playwright-Lauf, sondern nur statisch über
+  `tests/e2e/trainingStaffRsvpRoleContract.spec.ts` abgedeckt.
 - [x] Gleichzeitige Aufrufe von `respond_to_event_as_staff()` und
   `delete_training()` lassen höchstens eine Operation erfolgreich enden und
   hinterlassen einen konsistenten Zustand. Paralleltest grün.

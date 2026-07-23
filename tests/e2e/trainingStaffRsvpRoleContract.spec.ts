@@ -3,15 +3,34 @@ import { resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { TRAINING_STAFF_RSVP_ROLES } from '../../src/lib/permissions'
 
-function listFunctionSql(): string {
-  const migration = readFileSync(
+function migrationSql(): string {
+  return readFileSync(
     resolve(process.cwd(), 'supabase/migrations/20260722090000_add_staff_rsvp.sql'),
     'utf8',
   )
+}
+
+function listFunctionSql(): string {
   return (
-    migration
+    migrationSql()
       .split('CREATE OR REPLACE FUNCTION public.list_staff_rsvps_for_event')[1]
       ?.split('REVOKE EXECUTE ON FUNCTION public.list_staff_rsvps_for_event')[0] ?? ''
+  )
+}
+
+function respondFunctionSql(): string {
+  return (
+    migrationSql()
+      .split('CREATE OR REPLACE FUNCTION public.respond_to_event_as_staff')[1]
+      ?.split('REVOKE EXECUTE ON FUNCTION public.respond_to_event_as_staff')[0] ?? ''
+  )
+}
+
+function isTrainerFunctionSql(): string {
+  return (
+    migrationSql()
+      .split('CREATE OR REPLACE FUNCTION public.is_staff_rsvp_trainer_for_event')[1]
+      ?.split('REVOKE EXECUTE ON FUNCTION public.is_staff_rsvp_trainer_for_event')[0] ?? ''
   )
 }
 
@@ -56,5 +75,21 @@ test.describe('TRAINING_STAFF_RSVP_ROLES (statischer Rollenvertrag)', () => {
     expect(listFunction).toContain('false AS is_active_trainer')
     expect(listFunction).toContain('LEFT JOIN public.event_staff_rsvps esr')
     expect(listFunction).toContain('AND NOT EXISTS (')
+  })
+
+  test('die Schreib-RPC respond_to_event_as_staff() prüft nur die drei Trainerrollen', () => {
+    const respondFunction = respondFunctionSql()
+
+    expect(respondFunction).toBeTruthy()
+    expect(respondFunction).toContain("'team_owner', 'head_coach', 'assistant_coach'")
+    expect(respondFunction).not.toContain('team_manager')
+  })
+
+  test('die RLS-Hilfsfunktion is_staff_rsvp_trainer_for_event() prüft nur die drei Trainerrollen', () => {
+    const isTrainerFunction = isTrainerFunctionSql()
+
+    expect(isTrainerFunction).toBeTruthy()
+    expect(isTrainerFunction).toContain("'team_owner', 'head_coach', 'assistant_coach'")
+    expect(isTrainerFunction).not.toContain('team_manager')
   })
 })

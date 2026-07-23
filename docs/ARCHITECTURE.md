@@ -2,8 +2,8 @@
 
 **Stand:** 2026-07-22
 **Dokumenttyp:** code-verifizierte technische Ist-Dokumentation
-**Geprüfter Stand:** `main` / `a75df7d`, einschließlich lokaler, noch nicht
-committeter Code- und Migrationsänderungen für `FC-RSVP-003` (Details:
+**Geprüfter Stand:** `main` / `f89a8ae`, einschließlich `FC-RSVP-003`
+(lokal committet, noch nicht auf `origin/main` gepusht; Details:
 `docs/CURRENT_TASK.md`).
 
 Dieses Dokument beschreibt ausschließlich den im Repository belegbaren Ist-Zustand. Fachliche Zielentscheidungen stehen in `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`. Abweichungen zwischen Ist und Ziel werden in `docs/STATUS.md` geführt.

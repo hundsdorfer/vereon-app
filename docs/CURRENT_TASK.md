@@ -1,8 +1,8 @@
 # Current Task
 
-**Stand:** 2026-07-22
+**Stand:** 2026-07-23
 
-## Aktuell: FC-RSVP-003 „Trainer-RSVP abgeben" — lokal implementiert und verifiziert
+## Aktuell: FC-RSVP-003 „Trainer-RSVP abgeben" — lokal implementiert, verifiziert, committet und Codex-reviewt
 
 Die additive Migration `20260722090000_add_staff_rsvp.sql` ergänzt die von
 Spieler-RSVP getrennte Tabelle `event_staff_rsvps`, die RLS-Hilfsfunktion und
@@ -61,7 +61,19 @@ Dev-Server-Kaltstart-Kompilierung beim allerersten Testaufruf der Sitzung) war
 beim Wiederholungslauf mit warmem Server reproduzierbar nicht mehr vorhanden —
 kein Logikfehler.
 
-Keine Remote-Datenbankaktion, kein `db push`, kein Commit und kein Push für
+**Commit und Codex-Review (Stand 2026-07-23):** Lokal als Commit `f89a8ae`
+committet. Unabhängiger Codex-Review gegen Auftrag, Repository und
+zuständige Dokumente durchgeführt: keine P0-/P1-Befunde; RPC-Autorisierung,
+RLS und das Race-Handling zwischen `respond_to_event_as_staff()` und
+`delete_training()` wurden als korrekt bestätigt. Die gemeldeten P2-Befunde
+(Rollenvertrag deckte nur die Listen-RPC ab, mehrere widersprüchliche/
+veraltete Doku-Aussagen zu Migrationsstand, Commit-Stand und
+Rollenwechsel-Historie) wurden behoben — siehe `docs/STATUS.md` für den
+vollständigen Review-Nachtrag. Ein P3-Hinweis (Race-Test erzwingt pro Lauf
+nur eine Sperrreihenfolge) bleibt offen, laut Codex ohne erkennbaren
+funktionalen Bypass.
+
+Keine Remote-Datenbankaktion, kein `db push` und kein Push für
 `FC-RSVP-003`.
 
 **Bekannte Testgrenze:** Echte E2E-Konten nur mit `head_coach` oder

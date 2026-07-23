@@ -656,12 +656,15 @@ Unabhängig davon bleibt jederzeit genau ein `team_owner` erhalten.
 - Löschen darf nicht als Ersatz für Absagen verwendet werden.
 - `assistant_coach` darf absagen, aber nicht hart löschen.
 
-**Technischer Nachweis (2026-07-21):** Lokal implementiert, migriert und im
-vollständigen Playwright-Lauf 60/60 verifiziert. Der echte Rollen-E2E-Nachweis
-besteht für `team_owner`-only; `head_coach`-only bleibt mangels legitimem
-Testkonto-Weg offen. Die vorhandene RPC prüft Spieler-RSVP. Die noch nicht
-implementierte Trainer-RSVP muss bei Einführung von `event_staff_rsvps`
-zusätzlich atomar geprüft werden.
+**Technischer Nachweis (2026-07-21, Trainer-RSVP-Sperre ergänzt am
+2026-07-22):** Lokal implementiert, migriert und im vollständigen
+Playwright-Lauf verifiziert (60/60 am 2026-07-21, danach 66/66 nach
+Einführung von `event_staff_rsvps`). Der echte Rollen-E2E-Nachweis besteht für
+`team_owner`-only; `head_coach`-only bleibt mangels legitimem Testkonto-Weg
+offen. Die RPC prüft Spieler-RSVP; seit `20260722090000_add_staff_rsvp.sql`
+(siehe UF-0B-14) sperrt dieselbe RPC zusätzlich atomar bei vorhandener
+Trainer-RSVP (Parallel-Race-Test mit `respond_to_event_as_staff()`
+eingeschlossen).
 
 ---
 
