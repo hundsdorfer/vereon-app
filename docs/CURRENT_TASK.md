@@ -73,8 +73,12 @@ vollständigen Review-Nachtrag. Ein P3-Hinweis (Race-Test erzwingt pro Lauf
 nur eine Sperrreihenfolge) bleibt offen, laut Codex ohne erkennbaren
 funktionalen Bypass.
 
-Keine Remote-Datenbankaktion, kein `db push` und kein Push für
-`FC-RSVP-003`.
+**Remote-Migration und Push (Stand 2026-07-23, mit ausdrücklicher Freigabe):**
+`supabase db push` gegen die Supabase-Cloud-Produktionsdatenbank ausgeführt;
+`supabase migration list` bestätigt alle 16 Migrationen als Local == Remote,
+inklusive `20260722090000_add_staff_rsvp.sql`. Anschließend `git push` auf
+`origin/main`: `main` und `origin/main` sind identisch (`d1d89dc`). Kein
+Deployment für diesen Stand bislang angestoßen oder verifiziert.
 
 **Bekannte Testgrenze:** Echte E2E-Konten nur mit `head_coach` oder
 `assistant_coach` können weiterhin nicht legitim provisioniert werden;
