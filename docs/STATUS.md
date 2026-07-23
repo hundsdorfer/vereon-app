@@ -1,7 +1,13 @@
 # Status — technisches Audit
 
 **Stand:** 2026-07-23
-**Geprüfter Stand:** `main` / `78cb449` (lokal committet, noch nicht auf `origin/main` gepusht: `FC-ROLE-002`/`FC-ROLE-003`; davor `fdd6fcd` committet, gepusht und deployed: `FC-TRAINING-005`, `FC-TRAINING-003`, `FC-TRAINING-004`, `FC-RSVP-003`). Alle 16 zuvor bestehenden Migrationen sind remote angewendet; die neue `20260723100000_add_role_management.sql` ist lokal angewendet und vollständig verifiziert (80/80 Playwright-Tests plus ein zusätzlicher, nach Codex-Review ergänzter Test), aber noch nicht remote migriert. Details und aktueller Prüfstand: `docs/CURRENT_TASK.md`.
+**Geprüfter Stand:** `main` / `0db9116` (committet und auf `origin/main`
+gepusht: `FC-ROLE-002`/`FC-ROLE-003`, inklusive Codex-Review-Korrekturen).
+Alle 17 Migrationen sind remote angewendet (inklusive
+`20260723100000_add_role_management.sql`, mit ausdrücklicher Freigabe per
+`supabase db push`) und lokal vollständig verifiziert (81/81
+Playwright-Tests). Kein Deployment für diesen Stand bislang angestoßen oder
+verifiziert. Details und aktueller Prüfstand: `docs/CURRENT_TASK.md`.
 
 Dieses Dokument ist die verbindliche lebende Übersicht für belegte technische Abweichungen, Risiken und Übergabepunkte. Technischer Ist-Zustand: `docs/ARCHITECTURE.md`. Fachliches Ziel: `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`.
 
@@ -242,18 +248,14 @@ Testkonto-Weg als Integrationslücke offen (`FC-ROLE-002`).
 
 ## 7. Datenbank- und Betriebsgrenzen
 
-- Das Repository enthält 17 additive Migrationen. Die ersten 16 sind gegen
-  den lokalen Supabase-Docker-Stack und die Supabase-Cloud-Produktionsdatenbank
-  angewendet. Die neue `20260723100000_add_role_management.sql` ist mit
-  `supabase migration up --local` gegen den lokalen Supabase-Docker-Stack
-  angewendet und über `supabase migration list --local` bestätigt, aber noch
-  nicht remote migriert.
+- Das Repository enthält 17 additive Migrationen, alle gegen den lokalen
+  Supabase-Docker-Stack und die Supabase-Cloud-Produktionsdatenbank angewendet.
 - Remote-Migrationsstand am 2026-07-23 per `supabase migration list`
-  bestätigt: alle 16 zuvor bestehenden Migrationen Local == Remote, inklusive
-  der zuvor remote fehlenden `20260704120000_remove_player_from_team.sql`,
-  `20260721094219_update_training.sql`, `20260721114453_delete_training.sql`
-  und `20260722090000_add_staff_rsvp.sql` (jeweils mit ausdrücklicher
-  Freigabe per `supabase db push` angewendet).
+  bestätigt: alle 17 Migrationen Local == Remote, inklusive der zuvor remote
+  fehlenden `20260704120000_remove_player_from_team.sql`,
+  `20260721094219_update_training.sql`, `20260721114453_delete_training.sql`,
+  `20260722090000_add_staff_rsvp.sql` und `20260723100000_add_role_management.sql`
+  (jeweils mit ausdrücklicher Freigabe per `supabase db push` angewendet).
 - Jede künftige Remote-Migration braucht weiterhin eine separate
   ausdrückliche Freigabe.
 - Kein `db reset` ausgeführt.

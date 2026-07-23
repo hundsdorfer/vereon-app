@@ -97,8 +97,13 @@ plus 1 neuer, gezielter Test für das P1-/P2-Szenario, sowie 4 zusätzliche
 Assertions im bestehenden Kernflow-Test für UPDATE/DELETE-Ablehnung auf
 `team_role_audit_log`).
 
-Keine Remote-Datenbankaktion, kein `db push` und kein Push für
-`FC-ROLE-002`/`FC-ROLE-003`.
+**Remote-Migration und Push (Stand 2026-07-23, mit ausdrücklicher
+Freigabe):** `supabase db push` gegen die Supabase-Cloud-Produktionsdatenbank
+ausgeführt; `supabase migration list` bestätigt alle 17 Migrationen als
+Local == Remote, inklusive `20260723100000_add_role_management.sql`.
+Anschließend `git push` auf `origin/main`: `main` und `origin/main` sind
+identisch (`0db9116`). Kein Deployment für diesen Stand bislang angestoßen
+oder verifiziert.
 
 ## Vorangegangene Aufgabe: FC-RSVP-003 „Trainer-RSVP abgeben" — lokal implementiert, verifiziert, committet und Codex-reviewt
 
