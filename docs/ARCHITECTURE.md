@@ -1,8 +1,10 @@
 # Architektur — Vereon
 
-**Stand:** 2026-07-21
+**Stand:** 2026-07-22
 **Dokumenttyp:** code-verifizierte technische Ist-Dokumentation
-**Geprüfter Stand:** `main` / `e3a0698`, einschließlich lokaler, noch nicht committeter Code- und Migrationsänderungen für `FC-TRAINING-003` (Details: `docs/CURRENT_TASK.md`).
+**Geprüfter Stand:** `main` / `a75df7d`, einschließlich lokaler, noch nicht
+committeter Code- und Migrationsänderungen für `FC-RSVP-003` (Details:
+`docs/CURRENT_TASK.md`).
 
 Dieses Dokument beschreibt ausschließlich den im Repository belegbaren Ist-Zustand. Fachliche Zielentscheidungen stehen in `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`. Abweichungen zwischen Ist und Ziel werden in `docs/STATUS.md` geführt.
 
@@ -17,9 +19,9 @@ Vereon ist eine deutschsprachige Webanwendung für die Organisation einzelner Fu
 - Anzeige und Soft-Entfernung von Spielern,
 - Erstellen und Anzeigen von Trainings,
 - Spieler- und Guardian-RSVP,
-- RSVP-Übersicht für Trainerrollen.
+- getrennte Spieler-/Guardian- und Trainer-RSVP-Übersichten für Trainerrollen.
 
-Club-/Mehrteam-Verwaltung ist im Schema vorbereitet, besitzt aber keinen vollständigen App-Flow. Match, Trainer-RSVP, Anwesenheitsabschluss und Rollenverwaltung sind nicht implementiert. Training bearbeiten und der bedingte Hard-Delete sind lokal vollständig umgesetzt, migriert und im vollständigen Playwright-Lauf verifiziert (Stand 2026-07-21, siehe `docs/CURRENT_TASK.md`).
+Club-/Mehrteam-Verwaltung ist im Schema vorbereitet, besitzt aber keinen vollständigen App-Flow. Match, Anwesenheitsabschluss und Rollenverwaltung sind nicht implementiert. Training bearbeiten, der bedingte Hard-Delete und Trainer-RSVP sind lokal umgesetzt; Prüfnachweise und bekannte Grenzen stehen in `docs/CURRENT_TASK.md`.
 
 ## 2. Laufzeitarchitektur
 
@@ -164,11 +166,23 @@ Der Self-Player-Flow wird derzeit nicht serverseitig auf Volljährigkeit begrenz
 
 Training bearbeiten (`update_training()` in `supabase/migrations/20260721094219_update_training.sql`, `updateTrainingAction()` in `src/actions/events.ts`, Route `src/app/(app)/teams/[teamId]/events/[eventId]/edit/page.tsx`, `EditEventForm`) ist lokal vollständig vorhanden, migriert und per Playwright verifiziert. Die RPC erlaubt ausschließlich `team_owner`, `head_coach` und `assistant_coach`, ausschließlich `event_type = 'training'`, ausschließlich solange weder das gespeicherte noch das neu eingereichte `starts_at` erreicht ist, und ausschließlich solange das Training nicht abgesagt ist; `team_id`, `club_id`, `season_id`, `created_by`, `event_type`, `is_cancelled` und `ends_at` sind nicht Teil der Funktionssignatur. Die Server Action verwendet für Redirect/Revalidation ausschließlich die von der RPC zurückgegebene `team_id`, nie einen Client-Wert. Der echte E2E-Rollennachweis besteht für `team_owner`-only; die bekannten Integrationslücken für `head_coach`-only und `assistant_coach`-only bleiben offen.
 
-Der bedingte Hard-Delete (`delete_training()` in `supabase/migrations/20260721114453_delete_training.sql`, `deleteTrainingAction()` und `DeleteTrainingForm`) ist lokal migriert und im vollständigen Playwright-Lauf verifiziert. Die RPC sperrt das Event und vorhandene Teilnahmezeilen, prüft `team_owner`/`head_coach`, exaktes `LÖSCHEN`, zukünftigen Beginn, nicht abgesagten Zustand und das Fehlen abgegebener Spieler-RSVP. Nicht beantwortete Teilnahmezeilen werden über den bestehenden FK-Cascade zusammen mit dem Event entfernt. Trainer-RSVP ist noch nicht implementiert und muss bei Einführung von `event_staff_rsvps` atomar in dieselbe Löschprüfung aufgenommen werden.
+Der bedingte Hard-Delete (`delete_training()` in `supabase/migrations/20260721114453_delete_training.sql`, `deleteTrainingAction()` und `DeleteTrainingForm`) ist für Spieler-RSVP lokal migriert und im vollständigen Playwright-Lauf verifiziert. Die additive Migration `20260722090000_add_staff_rsvp.sql` erweitert dieselbe RPC um eine atomare Trainer-RSVP-Sperre. Sie sperrt das Event und beide RSVP-Tabellen, prüft `team_owner`/`head_coach`, exaktes `LÖSCHEN`, zukünftigen Beginn, nicht abgesagten Zustand und das Fehlen abgegebener Spieler- sowie Trainer-RSVP. Nicht beantwortete Spieler-Teilnahmezeilen werden über den bestehenden FK-Cascade zusammen mit dem Event entfernt. Die Erweiterung ist lokal migriert und im vollständigen Playwright-Lauf verifiziert (Details: `docs/CURRENT_TASK.md`).
 
 Beim Erstellen eines Termins erzeugt ein Trigger `event_attendance`-Zeilen für aktive Spieler. Self-Player oder verifizierte Guardians setzen RSVP über `respond_to_event()`. Entfernte Spieler werden durch `is_active_player_assignment()` blockiert. Eine RSVP-Deadline am Terminbeginn wird derzeit nicht geprüft.
 
-Trainer-RSVP ist nicht implementiert; `event_attendance` ist ausschließlich spielerbezogen.
+Trainer-RSVP ist über die getrennte Tabelle `event_staff_rsvps`,
+`respond_to_event_as_staff()`, `list_staff_rsvps_for_event()` und eine eigene
+Card auf der Event-Detailseite umgesetzt. Die Schreib-RPC sperrt das Event per
+`FOR UPDATE`, prüft aktive `team_owner`-/`head_coach`-/`assistant_coach`-Rollen,
+Absagestatus und `starts_at` und schreibt ausschließlich die eigene Antwort per
+UPSERT. Die Listen-RPC liefert aktive Trainer auch ohne Antwort sowie
+historische Antworten nicht mehr aktiver Trainer mit `is_active_trainer = false`.
+`event_attendance` bleibt ausschließlich spielerbezogen.
+
+`delete_training()` sperrt und prüft zusätzlich `event_staff_rsvps`; jede
+Trainer-RSVP blockiert den Hard-Delete atomar. Die Event-Detailseite fragt die
+Existenz zusätzlich fail-closed ab und blendet das Löschformular nach einer
+Trainer-RSVP aus.
 
 ### Spieler entfernen
 
@@ -176,12 +190,15 @@ Trainer-RSVP ist nicht implementiert; `event_attendance` ist ausschließlich spi
 
 ## 8. Datenbank und Sicherheit
 
-Das Repository enthält 14 Migrationen; `20260721094219_update_training.sql` ist gegen den lokalen Supabase-Docker-Stack angewendet. Sie erzeugen 18 öffentliche Tabellen:
+Das Repository enthält 16 Migrationen. Die neue additive Migration
+`20260722090000_add_staff_rsvp.sql` erzeugt die 19. öffentliche Tabelle und die
+zugehörigen RLS-Policies/RPCs; lokal angewendet und verifiziert (Details:
+`docs/CURRENT_TASK.md`).
 
 - Rollen/Organisation: `roles`, `permissions`, `role_permissions`, `profiles`, `clubs`, `seasons`,
 - Mitgliedschaften: `club_memberships`, `club_member_roles`, `teams`, `team_memberships`, `team_member_roles`,
 - Spieler/Join: `players`, `player_guardians`, `team_invitation_links`, `team_join_requests`, `player_team_assignments`,
-- Termine: `events`, `event_attendance`.
+- Termine: `events`, `event_attendance`, `event_staff_rsvps`.
 
 RLS ist für alle öffentlichen Tabellen aktiviert. Kritische RPCs verwenden `SECURITY DEFINER` und `SET search_path = ''`. `src/types/database.types.ts` ist nur ein `Json`-Stub; generierte Schematypen fehlen.
 
@@ -207,10 +224,11 @@ Remote-Migrationen wurden bisher durch Claude Code ausgeführt. Künftig ist daf
 - `npm run lint` führt ESLint aus.
 - `npm run build` erstellt den Next.js-Produktionsbuild und beinhaltet den TypeScript-Check.
 - Ein separates `typecheck`- oder Unit-Test-Script existiert nicht.
-- Playwright enthält elf Spec-Dateien unter `tests/e2e/`, darunter drei ohne
-  Browser-Fixture (`datetime.spec.ts`, `trainingCancelRoleContract.spec.ts`,
-  `trainingEditRoleContract.spec.ts`), die reine Funktionen/Konstanten direkt
-  in Node testen.
+- Playwright enthält 15 Spec-Dateien unter `tests/e2e/`, darunter reine
+  Vertrags- und Hilfstests ohne Browser-Fixture (`datetime.spec.ts`,
+  `trainingCancelRoleContract.spec.ts`, `trainingDeleteRoleContract.spec.ts`,
+  `trainingEditRoleContract.spec.ts`, `trainingStaffRsvpRoleContract.spec.ts`
+  und `helpers/supabaseTestGuard.spec.ts`).
 - `.github/workflows/ci.yml` führt bei Push/PR auf `main` Lint und Build aus.
 - `.github/workflows/e2e.yml` läuft nur manuell über `workflow_dispatch`.
 

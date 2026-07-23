@@ -99,6 +99,43 @@ export type CancelEventState = { error: string } | { success: true } | null
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+export type RespondToEventAsStaffState = { error: string } | null
+
+export async function respondToEventAsStaffAction(
+  _prevState: RespondToEventAsStaffState,
+  formData: FormData,
+): Promise<RespondToEventAsStaffState> {
+  const eventId = (formData.get('event_id')    as string | null)?.trim()
+  const status  = (formData.get('rsvp_status') as string | null)?.trim()
+  const note    = (formData.get('rsvp_note')   as string | null)?.trim() || null
+
+  if (!eventId || !UUID_RE.test(eventId)) return { error: 'Termin nicht gefunden.' }
+  if (!status || !VALID_RSVP.includes(status as (typeof VALID_RSVP)[number])) {
+    return { error: 'Ungültige Antwort.' }
+  }
+
+  const supabase = await createClient()
+  const { data: teamId, error } = await supabase.rpc('respond_to_event_as_staff', {
+    p_event_id:    eventId,
+    p_rsvp_status: status,
+    p_rsvp_note:   note,
+  })
+
+  if (error || !teamId) {
+    const msg = (error?.message ?? '').toLowerCase()
+    if (msg.includes('nicht eingeloggt')) return { error: 'Bitte melde dich erneut an.' }
+    if (msg.includes('abgesagt'))         return { error: 'Dieses Training wurde abgesagt.' }
+    if (msg.includes('begonnen'))         return { error: 'Dieses Training hat bereits begonnen.' }
+    if (msg.includes('nicht gefunden'))   return { error: 'Du hast keine Berechtigung für diese Aktion.' }
+    return { error: 'Antwort konnte nicht gespeichert werden. Bitte erneut versuchen.' }
+  }
+
+  revalidatePath(`/teams/${teamId}/events/${eventId}`)
+  revalidatePath(`/teams/${teamId}/events`)
+  revalidatePath(`/teams/${teamId}`)
+  redirect(`/teams/${teamId}/events/${eventId}`)
+}
+
 export async function cancelEventAction(
   _prevState: CancelEventState,
   formData: FormData,

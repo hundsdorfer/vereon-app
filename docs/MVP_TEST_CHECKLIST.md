@@ -1,6 +1,6 @@
 # MVP-Testcheckliste — Vereon
 
-**Stand:** 2026-07-18
+**Stand:** 2026-07-22
 
 **Zweck:** Manuelle und automatisierte Abnahme des Einzelteam-MVP.
 
@@ -287,19 +287,36 @@ Anforderung festgeschrieben.
   `assistant_coach`/`team_manager` aus.
 - [x] Hard-Delete ist ausschließlich vor Terminbeginn möglich.
 - [x] Sobald eine Spieler-RSVP vorhanden ist, ist Hard-Delete gesperrt.
-  Trainer-RSVP ist noch nicht implementiert und daher noch nicht testbar.
+- [x] Sobald eine Trainer-RSVP vorhanden ist, ist Hard-Delete gesperrt. Die
+  atomare RPC-Sperre und das fail-closed UI-Gating sind lokal migriert und im
+  Playwright-Lauf verifiziert (`team_owner`-only).
 - [x] Nach Terminbeginn ist Hard-Delete gesperrt.
 - [x] Vor Hard-Delete muss exakt `LÖSCHEN` eingegeben werden; UI und RPC prüfen
   dies unabhängig voneinander.
 - [x] Wenn Löschen wegen Spieler-RSVP gesperrt ist, zeigt die UI weiterhin die
   Absage statt eines funktionslosen Löschbuttons.
 - [x] Änderung/Absage/Löschung wird serverseitig geprüft, nicht nur über UI.
-- [ ] Spieler, Guardians und Trainer können RSVP bis zum Terminbeginn ändern,
-  danach nicht mehr.
-- [ ] Trainer-RSVP liegt getrennt von Spieler-RSVP, z. B. in
-  `event_staff_rsvps`.
-- [ ] `team_owner`, `head_coach` und `assistant_coach` dürfen für sich selbst
-  Trainer-RSVP setzen; niemand antwortet für einen anderen Trainer.
+- [ ] Spieler und Guardians können RSVP bis zum Terminbeginn ändern, danach
+  nicht mehr (`respond_to_event()` prüft die Deadline noch nicht;
+  `FC-RSVP-009`).
+- [x] Trainer können RSVP bis zum Terminbeginn ändern, danach nicht mehr
+  (`respond_to_event_as_staff()`, im Gegensatz zur Spieler-RSVP bereits
+  durchgesetzt). Grenzfalltest kurz vor/nach `starts_at` im Playwright-Lauf
+  verifiziert.
+- [x] Trainer-RSVP liegt getrennt von Spieler-RSVP in
+  `event_staff_rsvps`. Migration lokal angewendet, Test grün.
+- [x] `team_owner`, `head_coach` und `assistant_coach` dürfen nur für sich
+  selbst Trainer-RSVP setzen; `team_manager` bleibt ausgeschlossen. Echte E2E-
+  Abdeckung ist nur für `team_owner` vorhanden und grün; die beiden übrigen
+  Rollen bleiben mangels legitimer Provisionierung mit `FC-ROLE-002` offen,
+  abgedeckt über den statischen Rollenvertrag.
+- [x] `list_staff_rsvps_for_event()` schützt vor Enumeration, liefert aktive
+  Trainer auch ohne Antwort, historische Antworten mit
+  `is_active_trainer = false`, Namen trotz fehlender Fremd-`profiles`-SELECT-
+  Policy und dedupliziert Mehrfachrollen. Im Playwright-Lauf verifiziert.
+- [x] Gleichzeitige Aufrufe von `respond_to_event_as_staff()` und
+  `delete_training()` lassen höchstens eine Operation erfolgreich enden und
+  hinterlassen einen konsistenten Zustand. Paralleltest grün.
 - [ ] Anwesenheitserfassung ist von RSVP getrennt.
 
 ---

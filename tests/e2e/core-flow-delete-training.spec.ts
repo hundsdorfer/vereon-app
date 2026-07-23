@@ -16,9 +16,8 @@ async function signInSupabaseClient(
 }
 
 test('Kernflow: Training bedingt hart löschen (team_owner-only)', async ({ browser }) => {
-  test.setTimeout(180_000)
-
   const supabaseEnv = getLoopbackSupabaseEnv()
+  test.setTimeout(180_000)
   const ts = Date.now()
   const ownerEmail = `owner+delete${ts}@vereon.test`
   const playerEmail = `player+delete${ts}@vereon.test`
@@ -73,6 +72,7 @@ test('Kernflow: Training bedingt hart löschen (team_owner-only)', async ({ brow
     const later = new Date(Date.now() + 172_800_000).toISOString()
     const deletableId = await createEvent(`E2E Deletable ${ts}`, future)
     const rsvpBlockedId = await createEvent(`E2E RSVP Blocked ${ts}`, later)
+    const staffRsvpBlockedId = await createEvent(`E2E Staff RSVP Blocked ${ts}`, later)
     const cancelledId = await createEvent(`E2E Cancelled ${ts}`, later)
     const pastId = await createEvent(`E2E Past ${ts}`, new Date(Date.now() - 60_000).toISOString())
     const matchId = await createEvent(`E2E Match ${ts}`, later, 'match')
@@ -117,6 +117,13 @@ test('Kernflow: Training bedingt hart löschen (team_owner-only)', async ({ brow
     })
     expect(rsvpError, rsvpError?.message).toBeNull()
 
+    const { error: staffRsvpError } = await ownerApi.rpc('respond_to_event_as_staff', {
+      p_event_id: staffRsvpBlockedId,
+      p_rsvp_status: 'attending',
+      p_rsvp_note: null,
+    })
+    expect(staffRsvpError, staffRsvpError?.message).toBeNull()
+
     const anonApi = createSupabaseClient(supabaseEnv.url, supabaseEnv.anonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
@@ -147,6 +154,13 @@ test('Kernflow: Training bedingt hart löschen (team_owner-only)', async ({ brow
     })
     expect(rsvpDeleteError).not.toBeNull()
     expect(rsvpDeleteError!.message.toLowerCase()).toContain('rückmeldungen')
+
+    const { error: staffRsvpDeleteError } = await ownerApi.rpc('delete_training', {
+      p_event_id: staffRsvpBlockedId,
+      p_confirmation: 'LÖSCHEN',
+    })
+    expect(staffRsvpDeleteError).not.toBeNull()
+    expect(staffRsvpDeleteError!.message.toLowerCase()).toContain('rückmeldungen')
 
     const { error: cancelError } = await ownerApi.rpc('cancel_event', { p_event_id: cancelledId })
     expect(cancelError, cancelError?.message).toBeNull()

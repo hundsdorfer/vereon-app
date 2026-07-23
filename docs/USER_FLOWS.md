@@ -1,6 +1,6 @@
 # User Flows — Vereon
 
-**Stand:** 2026-07-18
+**Stand:** 2026-07-22
 **Status:** Gepflegte Fassung auf Basis von `docs/FEATURE_CATALOG.md` und `docs/MVP_SCOPE.md`
 **Dokumenttyp:** Produkt-/UX-Flow-Dokument, kein Implementierungsauftrag
 
@@ -695,7 +695,7 @@ zusätzlich atomar geprüft werden.
 ### UF-0B-14 — Trainer-RSVP abgeben
 
 **Phase:** `MVP-0B`  
-**Flow-Status:** `offen`  
+**Flow-Status:** `umgesetzt`
 **Hauptrollen:** `team_owner`, `head_coach`, `assistant_coach`  
 **Betroffene Feature-IDs:** `FC-RSVP-003`, `FC-RSVP-004`, `FC-RSVP-005`
 
@@ -711,11 +711,12 @@ zusätzlich atomar geprüft werden.
 
 **Ergebnis:** Traineranwesenheit wird planbar, ohne dass Trainer als Spieler behandelt werden.
 
-**Offene UX-/Produktfragen:**
+**Getroffene UX-Entscheidung:** Trainer-RSVP wird in einer eigenen Card mit
+eigener Rückmeldung und getrennt gruppierter Trainerübersicht angezeigt. Die
+Spieler-/Guardian-RSVP bleibt davon unabhängig.
 
-- Wird Trainer-RSVP in derselben Übersicht wie Spieler-RSVP angezeigt oder getrennt?
-
-Die aktiven Trainerrollen dürfen die getrennte Trainer-RSVP-Übersicht sehen.
+Die aktiven Rollen `team_owner`, `head_coach` und `assistant_coach` dürfen die
+getrennte Trainer-RSVP-Übersicht sehen; `team_manager` bleibt ausgeschlossen.
 
 ---
 
@@ -1080,7 +1081,6 @@ Diese Fragen sind nicht alle vor der Pflege dieses Dokuments zu klären, aber si
 | Guardian-Join | Exakter Wortlaut der minimalen Berechtigungsbestätigung | MVP-0B / Minderjährige / Legal |
 | Co-Trainer | Aufnahme per Link, E-Mail oder bestehendem Nutzer? | MVP-0B / Rollen-UX |
 | Spieler entfernen | Unterschied zwischen Entfernen, Archivieren und vollständigem Löschen klar genug? | MVP-0B / Teamverwaltung / DSGVO-Abgrenzung |
-| Trainer-RSVP | Gemeinsame oder getrennte Darstellung zu Spieler-RSVP? | MVP-0B / UX |
 | Mobile MVP-Qualität | Wann gilt mobile Nutzung als ausreichend pilotfähig? | MVP-0B / MVP-1 |
 | Match-MVP | Welche Match-Felder sind wirklich minimal? | MVP-1 / eigene Entscheidung |
 | Anwesenheit | Abschluss und Wiederöffnung vor Umsetzung klären | MVP-1 / Rollen / Audit |

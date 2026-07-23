@@ -1,6 +1,6 @@
 # Sicherheitsarchitektur — Vereon
 
-**Stand:** 2026-07-21
+**Stand:** 2026-07-22
 
 **Zweck:** Sicherheitsregeln, bestätigte Schutzmechanismen und offene Risiken.
 **Ist-Status:** Für den implementierten Stand sind `docs/ARCHITECTURE.md` und
@@ -62,6 +62,8 @@ Supabase Cloud. Werte und Schlüssel werden nicht dokumentiert.
 | Spieler entfernen | nur `team_owner` und `head_coach`; Zuweisung wird beendet, vergangene Daten bleiben erhalten | `20260704120000_remove_player_from_team.sql` |
 | Event-Erstellung/Absage | RPCs erlauben `team_owner`, `head_coach` und `assistant_coach`; Absage ist Soft-Cancel und in `src/actions/events.ts` (`cancelEventAction()`) verdrahtet. UI-Sichtbarkeit des Absage-Buttons nutzt eine eigene, von der `team_manager` einschließenden `isTrainer`-Anzeige getrennte Prüfung (`src/lib/permissions.ts`) | `20260629200000_add_events.sql`, `src/actions/events.ts` |
 | Event-Bearbeitung (`FC-TRAINING-003`) | RPC `update_training()` (nur `team_owner`/`head_coach`/`assistant_coach`, nur `event_type='training'`, nur solange weder gespeichertes noch neues `starts_at` erreicht ist, nur solange nicht abgesagt; unveränderliche Felder nicht Teil der Signatur; explizites `REVOKE`/`GRANT EXECUTE` auf `authenticated`) und `updateTrainingAction()` (nutzt ausschließlich die von der RPC zurückgegebene `team_id`, nie einen Client-Wert) sind lokal migriert und im vollständigen Playwright-Lauf verifiziert. Der direkte Anon-RPC-Test bestätigt die `EXECUTE`-Grenze; echter E2E-Rollennachweis besteht für `team_owner`-only. | `supabase/migrations/20260721094219_update_training.sql`, `src/actions/events.ts`, `tests/e2e/core-flow-edit-training.spec.ts` |
+| Trainer-RSVP (`FC-RSVP-003`) | Getrennte Tabelle mit RLS; `respond_to_event_as_staff()` prüft Login, aktive Trainerrolle, Absage und Terminbeginn, setzt ausschließlich die eigene Antwort und gibt die serverseitig ermittelte `team_id` zurück. `list_staff_rsvps_for_event()` schützt gegen Enumeration und liefert aktuelle sowie historische Trainerzeilen. Beide öffentlichen RPCs und die RLS-Hilfsfunktion entziehen `PUBLIC`/`anon` explizit `EXECUTE` und gewähren es nur `authenticated`. | `supabase/migrations/20260722090000_add_staff_rsvp.sql`, `src/actions/events.ts`, `tests/e2e/core-flow-staff-rsvp.spec.ts` |
+| Event-Hard-Delete (`FC-TRAINING-004`) | `delete_training()` sperrt Event-, Spieler-RSVP- und Trainer-RSVP-Zeilen; jede abgegebene Spieler- oder vorhandene Trainer-RSVP blockiert den Hard-Delete. Die UI-Abfrage für Trainer-RSVP arbeitet bei Query-Fehlern fail-closed. | `supabase/migrations/20260722090000_add_staff_rsvp.sql`, Event-Detailseite, `tests/e2e/core-flow-delete-training.spec.ts` |
 | Eingaben | Server Actions validieren bekannte Formwerte manuell; Supabase Query Builder/RPC-Parameter vermeiden zusammengesetztes SQL aus Nutzereingaben | `src/actions/*.ts` |
 
 Die Tabelle bestätigt nur die genannten Schutzmechanismen. Sie ist kein
@@ -79,7 +81,7 @@ sicherheitskritische Implementierungen gelten zusätzlich:
 | Join-Anfrage annehmen/ablehnen | `team_owner`, `head_coach` | aktive Rolle im betroffenen Team |
 | Einladungscode anzeigen/erneuern/deaktivieren | `team_owner`, `head_coach`, `assistant_coach` | Anzeigen ist für `assistant_coach` in der aktuellen RLS noch nicht freigegeben; erneuern/deaktivieren ist nicht implementiert |
 | Training erstellen/bearbeiten/absagen | `team_owner`, `head_coach`, `assistant_coach` | Bearbeiten (`update_training()`) ist lokal migriert und verifiziert; echte E2E-Rollennachweise für `head_coach`-only und `assistant_coach`-only bleiben offen |
-| Training hart löschen | `team_owner`, `head_coach` | nur vor Beginn, ohne jegliche RSVP; zusätzliche Texteingabe `LÖSCHEN`; noch nicht implementiert |
+| Training hart löschen | `team_owner`, `head_coach` | nur vor Beginn, ohne Spieler- oder Trainer-RSVP; zusätzliche Texteingabe `LÖSCHEN`; atomar serverseitig umgesetzt |
 | Spieler aus Team entfernen | `team_owner`, `head_coach` | Soft-Delete der Zuweisung, kein Löschen der Person/Historie |
 | Rollen vergeben/entziehen | ausschließlich `team_owner` | vordefinierte Rollen, keine Einzelrechte; noch nicht implementiert |
 | Eigentum übertragen | ausschließlich aktueller `team_owner` | Ziel ist registriert, volljährig, aktiv im selben Team und bestätigt; genau ein Owner; noch nicht implementiert |
@@ -136,7 +138,7 @@ Security-Abnahme sind mindestens folgende Punkte relevant:
 | Vollständiges Spielergeburtsdatum fachlich beschlossen, aber Sichtbarkeits-/Consent-Modell nicht implementiert | offen | Feldfluss, RLS/Query-Grenzen und UI-Information gemeinsam umsetzen |
 | Einladungscode ohne dokumentiertes Rate-Limit | offen | Bruteforce-Schutz und Monitoring festlegen |
 | `team_manager` in Teilen der Migrationen/RLS | technische Altlast | vor Rollenänderungen vollständig inventarisieren und kontrolliert entfernen |
-| Bedingter Hard-Delete für Trainings | lokal umgesetzt und verifiziert | `delete_training()` prüft serverseitig Rolle, Zeit, Absagestatus, exaktes `LÖSCHEN` und vorhandene Spieler-RSVP; Trainer-RSVP muss bei Einführung von `event_staff_rsvps` ergänzt werden |
+| Bedingter Hard-Delete für Trainings | lokal umgesetzt | `delete_training()` prüft serverseitig Rolle, Zeit, Absagestatus, exaktes `LÖSCHEN` sowie Spieler- und Trainer-RSVP; Paralleltest und vollständiger Prüfnachweis siehe `docs/CURRENT_TASK.md` |
 | Standard-`PUBLIC`-Execute auf bestehenden Event-RPCs (`create_event()`, `respond_to_event()`, `cancel_event()` u. a.) | offen, neu identifiziert bei `FC-TRAINING-003` | explizites `REVOKE EXECUTE ... FROM PUBLIC/anon` und `GRANT ... TO authenticated` nachziehen; interne `auth.uid()`-Prüfung bleibt zusätzlich bestehen; die neue `update_training()`-RPC hat dies bereits, die älteren RPCs (noch) nicht — separater Auftrag nötig, kein automatischer Rückbau |
 | Dediziertes Error-Tracking/Monitoring | nicht verifiziert | Konzept und Verantwortlichkeit vor Pilot festlegen |
 | Cloud-Backup/Restore/Rollback | nicht verifiziert, Pilotblocker | Verfahren und Wiederherstellungstest dokumentieren |
@@ -166,7 +168,7 @@ Die ausführbaren Szenarien werden in `docs/MVP_TEST_CHECKLIST.md` gepflegt.
 
 - Club-/Mehrteam-Rollen sind technisch vorbereitet, aber nicht operativer
   MVP-Scope.
-- `audit_logs`, Trainer-RSVP (`event_staff_rsvps`), detaillierte
-  Anwesenheitserfassung und granulare Einzelrechte sind nicht implementiert.
+- `audit_logs`, detaillierte Anwesenheitserfassung und granulare Einzelrechte
+  sind nicht implementiert.
 - Diese Datei behauptet keine Produktionsreife. Unbekannte Vercel-, Supabase- oder
   organisatorische Einstellungen gelten bis zur Prüfung als **nicht verifiziert**.

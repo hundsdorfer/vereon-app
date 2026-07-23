@@ -1,6 +1,6 @@
 # Datenmodell — Vereon
 
-**Stand:** 2026-07-18
+**Stand:** 2026-07-22
 
 Dieses Dokument beschreibt das fachliche Zielmodell und kennzeichnet den Umsetzungsstand. Es ist keine ausführbare Migration. Der technische Ist-Zustand ergibt sich aus `supabase/migrations/`; Abweichungen stehen in `docs/STATUS.md`.
 
@@ -28,14 +28,15 @@ clubs ── seasons
        ├─ team_invitation_links ── team_join_requests
        ├─ player_team_assignments ── players
        └─ events ── event_attendance ── players
-                  └─ event_staff_rsvps        [Ziel]
+                  └─ event_staff_rsvps
 ```
 
 Der aktuelle Einzelteam-Flow funktioniert ohne Club: `teams.club_id` ist bei eigenständigen Teams `NULL`.
 
 ## 3. Technisch implementierte Tabellen
 
-Der verifizierte Migrationsstand enthält 18 öffentliche Tabellen:
+Der lokal angewendete und verifizierte Migrationsstand enthält 19 öffentliche
+Tabellen:
 
 | Bereich | Tabellen |
 |---|---|
@@ -43,7 +44,7 @@ Der verifizierte Migrationsstand enthält 18 öffentliche Tabellen:
 | Club und Saison | `clubs`, `seasons`, `club_memberships`, `club_member_roles` |
 | Teams und Rollen | `teams`, `team_memberships`, `team_member_roles` |
 | Spieler und Beitritt | `players`, `player_guardians`, `team_invitation_links`, `team_join_requests`, `player_team_assignments` |
-| Termine und RSVP | `events`, `event_attendance` |
+| Termine und RSVP | `events`, `event_attendance`, `event_staff_rsvps` |
 
 Für alle Tabellen ist RLS aktiviert. Die Tabellen `permissions` und `role_permissions` sind strukturell vorhanden, werden im Produkt aber noch nicht als granulare Rechteverwaltung genutzt.
 
@@ -326,18 +327,27 @@ Die aktuelle RPC prüft Absage und aktive Teamzuordnung, aber keine Deadline am 
 
 ### `event_staff_rsvps`
 
-**Status: Beschlossen – nicht implementiert**
+**Status: Implementiert**
 
-Trainer-RSVP wird getrennt von Spieler-RSVP modelliert. Fachlicher Schlüssel ist ein Termin plus aktives Teammitglied beziehungsweise Nutzer. Berechtigt sind `team_owner`, `head_coach` und `assistant_coach`.
+Trainer-RSVP ist getrennt von Spieler-RSVP modelliert. Fachlicher Schlüssel ist
+`UNIQUE (event_id, user_id)`. Die Tabelle enthält:
 
-Zielregeln:
+- `id`, `event_id`, `user_id`,
+- `rsvp_status` (`attending`, `declined`, `maybe`),
+- optionale freie `rsvp_note`,
+- `responded_at`, `created_at`, `updated_at`.
 
-- eigene Trainer-RSVP bis `starts_at` änderbar,
-- dieselben RSVP-Werte wie bei Spielern, sofern UX-seitig sinnvoll,
-- keine Vermischung mit `event_attendance`,
-- historische Zuordnung muss auch nach Rollenwechsel nachvollziehbar bleiben.
+`event_id` und `user_id` kaskadieren beim Löschen des jeweiligen Bezugs. Eigene
+Antworten und die Trainerübersicht sind per RLS lesbar; Schreiben erfolgt nur
+über `respond_to_event_as_staff()`. Die RPC erlaubt ausschließlich aktive
+`team_owner`, `head_coach` und `assistant_coach`, sperrt abgesagte und bereits
+begonnene Termine und aktualisiert die eigene Antwort per UPSERT.
 
-Die genaue Feldliste und der Umgang mit später entfernten Trainerrollen sind vor Migration technisch festzulegen.
+`list_staff_rsvps_for_event()` liefert aktuelle aktive Trainer auch ohne Antwort
+und ergänzt vorhandene Antworten inzwischen nicht mehr aktiver Trainer. Das
+Rückgabefeld `is_active_trainer` kennzeichnet diese Historiensemantik; mehrere
+Trainerrollen desselben Nutzers erzeugen nur eine Zeile. `team_manager` ist nicht
+berechtigt.
 
 ## 11. Anwesenheit, Matches und Audit
 
@@ -365,8 +375,8 @@ Für Eigentumsübertragung, Rollenänderungen, Einladungswechsel und sensible L�
 |---|---|---|
 | Spieler aus Team | Soft-Delete der Zuordnung, Historie bleibt | implementiert |
 | Team | Archivierung durch Owner statt normalem Hard-Delete | beschlossen, nicht implementiert |
-| Training ohne abgegebene RSVP vor Beginn | Hard-Delete durch Owner/Head mit exakter Texteingabe `LÖSCHEN` | lokal implementiert und verifiziert; Trainer-RSVP-Tabelle noch nicht vorhanden |
-| Training mit abgegebener RSVP, nach Beginn oder nach Absage | kein Hard-Delete, nur Absage/Historie | für Spieler-RSVP lokal implementiert und verifiziert; Trainer-RSVP folgt mit `event_staff_rsvps` |
+| Training ohne abgegebene RSVP vor Beginn | Hard-Delete durch Owner/Head mit exakter Texteingabe `LÖSCHEN` | lokal implementiert; Spieler- und Trainer-RSVP werden atomar geprüft |
+| Training mit abgegebener Spieler- oder Trainer-RSVP, nach Beginn oder nach Absage | kein Hard-Delete, nur Absage/Historie | implementiert; beide RSVP-Arten blockieren Hard-Delete |
 | abgelehnte/zurückgezogene Join-Anfrage | automatische Bereinigung nach 90 Tagen | Funktion vorhanden, Scheduling fehlt |
 | Account-Löschung | derzeit kein Self-Service; rechtlicher Prozess offen | offen |
 
@@ -389,5 +399,4 @@ Diese Punkte sind keine Aufforderung, Produktregeln neu zu erfinden:
 - technische Form der Kontaktperson,
 - Umgang mit bestehenden `players.date_of_birth`-Altdaten,
 - Bereinigung oder Migration von `token_hash`, `max_uses` und `team_manager`,
-- Historisierung entfernter Trainer in `event_staff_rsvps`,
 - Saisonmodell für eigenständige Teams.

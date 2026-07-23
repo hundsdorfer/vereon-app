@@ -6,12 +6,14 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { RsvpForm } from '@/features/events/RsvpForm'
+import { StaffRsvpForm } from '@/features/events/StaffRsvpForm'
 import { CancelEventButton } from '@/features/events/CancelEventButton'
 import { DeleteTrainingForm } from '@/features/events/DeleteTrainingForm'
 import {
   TRAINING_CANCEL_ROLES,
   TRAINING_DELETE_ROLES,
   TRAINING_EDIT_ROLES,
+  TRAINING_STAFF_RSVP_ROLES,
 } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
@@ -23,6 +25,15 @@ type AttendanceWithPlayer = {
   rsvp_note: string | null
   responded_at: string | null
   player: { id: string; first_name: string; last_name: string } | null
+}
+
+type StaffRsvpRow = {
+  user_id: string
+  full_name: string | null
+  rsvp_status: string | null
+  rsvp_note: string | null
+  responded_at: string | null
+  is_active_trainer: boolean
 }
 
 export default async function EventDetailPage({
@@ -45,6 +56,7 @@ export default async function EventDetailPage({
     { data: canCancel },
     { data: canEdit },
     { data: canDelete },
+    { data: canSeeStaffRsvp },
   ] = await Promise.all([
     supabase
       .from('teams')
@@ -74,6 +86,10 @@ export default async function EventDetailPage({
       p_team_id: teamId,
       p_role_keys: TRAINING_DELETE_ROLES,
     }),
+    supabase.rpc('has_team_role', {
+      p_team_id: teamId,
+      p_role_keys: TRAINING_STAFF_RSVP_ROLES,
+    }),
   ])
 
   if (!team || !event) notFound()
@@ -81,15 +97,43 @@ export default async function EventDetailPage({
 
   const hasStarted = new Date(event.starts_at) <= new Date()
 
-  const { data: attendanceRows, error: attendanceError } = await supabase
-    .from('event_attendance')
-    .select('id, player_id, rsvp_status, rsvp_note, responded_at')
-    .eq('event_id', eventId)
+  const [
+    { data: attendanceRows, error: attendanceError },
+    { data: staffRsvpExistenceRows, error: staffRsvpExistenceError },
+    staffRsvpListResult,
+  ] = await Promise.all([
+    supabase
+      .from('event_attendance')
+      .select('id, player_id, rsvp_status, rsvp_note, responded_at')
+      .eq('event_id', eventId),
+    supabase
+      .from('event_staff_rsvps')
+      .select('id')
+      .eq('event_id', eventId)
+      .limit(1),
+    canSeeStaffRsvp
+      ? supabase.rpc('list_staff_rsvps_for_event', { p_event_id: eventId })
+      : Promise.resolve({ data: null, error: null }),
+  ])
 
   if (attendanceError) {
     console.error('Event detail attendance query error', {
       message: attendanceError.message,
       code: attendanceError.code,
+    })
+  }
+
+  if (staffRsvpExistenceError) {
+    console.error('Event detail staff RSVP existence query error', {
+      message: staffRsvpExistenceError.message,
+      code: staffRsvpExistenceError.code,
+    })
+  }
+
+  if (staffRsvpListResult.error) {
+    console.error('Event detail staff RSVP list query error', {
+      message: staffRsvpListResult.error.message,
+      code: staffRsvpListResult.error.code,
     })
   }
 
@@ -121,12 +165,22 @@ export default async function EventDetailPage({
   const declined  = attendance.filter((a) => a.rsvp_status === 'declined')
   const maybe     = attendance.filter((a) => a.rsvp_status === 'maybe')
   const noAnswer  = attendance.filter((a) => !a.rsvp_status)
-  const hasSubmittedRsvp = attendance.some((a) => a.rsvp_status !== null)
+  const staffRsvps = (staffRsvpListResult.data ?? []) as StaffRsvpRow[]
+  const ownStaffRsvp = staffRsvps.find((row) => row.user_id === user.id) ?? null
+  const otherStaffRsvps = staffRsvps.filter((row) => row.user_id !== user.id)
+  const staffAttending = otherStaffRsvps.filter((row) => row.rsvp_status === 'attending')
+  const staffDeclined = otherStaffRsvps.filter((row) => row.rsvp_status === 'declined')
+  const staffMaybe = otherStaffRsvps.filter((row) => row.rsvp_status === 'maybe')
+  const staffNoAnswer = otherStaffRsvps.filter((row) => !row.rsvp_status)
+  const hasStaffRsvp = (staffRsvpExistenceRows?.length ?? 0) > 0
+  const hasSubmittedRsvp =
+    attendance.some((a) => a.rsvp_status !== null) || hasStaffRsvp
   const canHardDelete =
     !!canDelete &&
     !event.is_cancelled &&
     !hasStarted &&
     !attendanceError &&
+    !staffRsvpExistenceError &&
     !hasSubmittedRsvp
 
   return (
@@ -185,6 +239,75 @@ export default async function EventDetailPage({
             )}
           </CardContent>
         </Card>
+
+        {!!canSeeStaffRsvp && (
+          <Card>
+            <CardHeader>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <h2 className="text-sm font-semibold text-foreground">
+                  Trainer-Rückmeldungen
+                </h2>
+                {!staffRsvpListResult.error && otherStaffRsvps.length > 0 && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                    <span>
+                      <span className="font-medium text-foreground">{staffAttending.length}</span>{' '}
+                      Kommt
+                    </span>
+                    <span>
+                      <span className="font-medium text-foreground">{staffDeclined.length}</span>{' '}
+                      Kommt nicht
+                    </span>
+                    <span>
+                      <span className="font-medium text-foreground">{staffMaybe.length}</span>{' '}
+                      Vielleicht
+                    </span>
+                    <span>
+                      <span className="font-medium text-foreground">{staffNoAnswer.length}</span>{' '}
+                      Keine Antwort
+                    </span>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <StaffRsvpForm
+                eventId={eventId}
+                currentStatus={ownStaffRsvp?.rsvp_status ?? null}
+                currentNote={ownStaffRsvp?.rsvp_note ?? null}
+                isCancelled={event.is_cancelled}
+                hasStarted={hasStarted}
+              />
+
+              <div className="mt-6 border-t border-border pt-5">
+                <h3 className="mb-3 text-xs font-semibold text-foreground">Trainerteam</h3>
+                {staffRsvpListResult.error ? (
+                  <p className="text-sm text-muted-foreground">
+                    Trainer-Rückmeldungen konnten nicht geladen werden.
+                  </p>
+                ) : otherStaffRsvps.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Keine weiteren Trainer im Team.
+                  </p>
+                ) : (
+                  <div className="space-y-5">
+                    {staffAttending.length > 0 && (
+                      <StaffGroup label="Kommt" rows={staffAttending} />
+                    )}
+                    {staffDeclined.length > 0 && (
+                      <StaffGroup label="Kommt nicht" rows={staffDeclined} />
+                    )}
+                    {staffMaybe.length > 0 && (
+                      <StaffGroup label="Vielleicht" rows={staffMaybe} />
+                    )}
+                    {staffNoAnswer.length > 0 && (
+                      <StaffGroup label="Noch keine Antwort" rows={staffNoAnswer} muted />
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {!!canCancel && !event.is_cancelled && (
           <Card>
@@ -329,6 +452,39 @@ function PlayerGroup({
             </p>
             {a.rsvp_note && (
               <p className="text-xs text-muted-foreground">{a.rsvp_note}</p>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function StaffGroup({
+  label,
+  rows,
+  muted = false,
+}: {
+  label: string
+  rows: StaffRsvpRow[]
+  muted?: boolean
+}) {
+  return (
+    <div>
+      <h4
+        className={`mb-2 text-xs font-semibold ${muted ? 'text-muted-foreground' : 'text-foreground'}`}
+      >
+        {label}
+      </h4>
+      <ul className="space-y-1.5">
+        {rows.map((row) => (
+          <li key={row.user_id}>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm text-foreground">{row.full_name ?? 'Trainer'}</p>
+              {!row.is_active_trainer && <Badge variant="outline">Nicht mehr aktiv</Badge>}
+            </div>
+            {row.rsvp_note && (
+              <p className="text-xs text-muted-foreground">{row.rsvp_note}</p>
             )}
           </li>
         ))}

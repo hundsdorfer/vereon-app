@@ -2,7 +2,75 @@
 
 **Stand:** 2026-07-22
 
-## Aktuell: FC-TRAINING-004 „Training löschen" — implementiert, committet, remote migriert und deployed
+## Aktuell: FC-RSVP-003 „Trainer-RSVP abgeben" — lokal implementiert und verifiziert
+
+Die additive Migration `20260722090000_add_staff_rsvp.sql` ergänzt die von
+Spieler-RSVP getrennte Tabelle `event_staff_rsvps`, die RLS-Hilfsfunktion und
+Policies sowie `respond_to_event_as_staff()` und
+`list_staff_rsvps_for_event()`. `delete_training()` wurde in derselben
+Migration atomar um die Trainer-RSVP-Sperre erweitert. Alle neuen Funktionen
+entziehen `PUBLIC` und `anon` explizit `EXECUTE` und gewähren den Aufruf nur
+`authenticated`.
+
+Anwendungscode und UI sind umgesetzt: `respondToEventAsStaffAction()` verwendet
+nur die serverseitig zurückgegebene `team_id`,
+`TRAINING_STAFF_RSVP_ROLES` enthält ausschließlich `team_owner`, `head_coach`
+und `assistant_coach`, und die Event-Detailseite zeigt eine getrennte Card
+„Trainer-Rückmeldungen" mit freier optionaler Notiz. Die Hard-Delete-Anzeige
+fragt Trainer-RSVP zusätzlich fail-closed ab und verschwindet, sobald eine
+solche Antwort vorhanden ist.
+
+**Tests im Arbeitsbaum:** Neu sind
+`tests/e2e/trainingStaffRsvpRoleContract.spec.ts` und
+`tests/e2e/core-flow-staff-rsvp.spec.ts`; außerdem prüft
+`tests/e2e/core-flow-delete-training.spec.ts` die Blockade durch eine
+Trainer-RSVP. Der Kernflow deckt UPSERT, anonyme und unberechtigte Aufrufe,
+Absage, Vergangenheit und Deadline-Grenze, die dedizierte Listen-RPC,
+UI-Verhalten sowie das Parallelrennen mit `delete_training()` ab.
+
+**Umsetzung erfolgte arbeitsteilig:** Codex hat Migration, Anwendungscode,
+Tests und Dokumentation nach einem zuvor unabhängig durch Codex geprüften und
+korrigierten Plan erstellt; die Docker-abhängigen Prüfungen (lokale Migration,
+`db lint`/`db advisors`, Playwright) konnten in Codex' Sandbox mangels
+Docker-Zugriff nicht ausgeführt werden und wurden anschließend in dieser
+Umgebung nachgeholt.
+
+**Lokal vollständig geprüft (Stand 2026-07-22):** Migration
+`20260722090000_add_staff_rsvp.sql` mit `supabase migration up --local`
+angewendet und über `supabase migration list --local` bestätigt. Danach
+erfolgreich: `npx tsc --noEmit`, `npm run lint`, `npm run build`,
+`git diff --check`, `supabase db lint --local` (kein neuer Befund zu den
+neuen Funktionen — nur ein bereits bestehender, unabhängiger Hinweis zu
+`generate_team_code`) und `supabase db advisors --local` (sechs neue
+WARN-Hinweise zu `event_staff_rsvps`, ausschließlich Performance-Kategorie
+`auth_rls_initplan`/`multiple_permissive_policies` — exakt dasselbe bereits
+akzeptierte Muster wie bei der bestehenden Schwestertabelle
+`event_attendance`, keine neue Problemklasse).
+
+Vollständiger `npx playwright test`-Lauf: **66/66 Tests bestanden.** Dabei
+wurde ein durch die Implementierung verursachter, echter (kleiner) Fehler
+gefunden und behoben: `StaffRsvpForm.tsx` verwendete für den abgesagten
+Zustand denselben Wortlaut („Dieses Training wurde abgesagt.") wie das
+bereits bestehende, allen Betrachtern angezeigte Absage-Banner auf derselben
+Seite — dadurch erschien der Text doppelt und brach den zuvor unabhängig
+grünen Test `core-flow-cancel-training.spec.ts` (Strict-Mode-Konflikt bei
+`getByText`). Behoben durch abweichenden Text
+(„Rückmeldung ist nicht mehr möglich."); anschließend erneut vollständig grün
+verifiziert. Ein einzelner Testlauf-Ausreißer (Timeout durch Next.js/Turbopack
+Dev-Server-Kaltstart-Kompilierung beim allerersten Testaufruf der Sitzung) war
+beim Wiederholungslauf mit warmem Server reproduzierbar nicht mehr vorhanden —
+kein Logikfehler.
+
+Keine Remote-Datenbankaktion, kein `db push`, kein Commit und kein Push für
+`FC-RSVP-003`.
+
+**Bekannte Testgrenze:** Echte E2E-Konten nur mit `head_coach` oder
+`assistant_coach` können weiterhin nicht legitim provisioniert werden;
+`FC-ROLE-002` bleibt `planned_mvp`. Die Rollen sind im RPC-Code und im
+statischen Rollenvertrag abgedeckt, was die offenen Integrationsfälle nicht
+ersetzt.
+
+## Vorangegangene Aufgabe: FC-TRAINING-004 „Training löschen" — implementiert, committet, remote migriert und deployed
 
 Die bereits fachlich festgelegte bedingte Hard-Delete-Funktion ist lokal
 umgesetzt. `delete_training()` in
@@ -29,11 +97,12 @@ vollständiger Playwright-Lauf **60/60** grün. Außerdem erfolgreich:
 meldeten keinen neuen Befund zu `delete_training()`; bestehende Hinweise
 anderer Funktionen/Policies bleiben getrennt offen.
 
-**Bekannte Grenze:** `event_staff_rsvps` ist noch nicht implementiert. Sobald
-Trainer-RSVP eingeführt wird, muss `delete_training()` in derselben Umsetzung
-um die atomare Trainer-RSVP-Sperre ergänzt werden. `head_coach`-only bleibt
-mangels legitimem Testkonto-Weg nicht end-to-end verifiziert; `team_owner`-only
-ist echt E2E geprüft.
+**Damals bekannte Grenze, inzwischen im aktuellen Arbeitsbaum geschlossen:**
+`event_staff_rsvps` und die atomare Trainer-RSVP-Sperre in
+`delete_training()` sind Bestandteil der aktuellen FC-RSVP-003-Umsetzung; ihr
+Laufzeit-Prüfstand steht oben. `head_coach`-only bleibt mangels legitimem
+Testkonto-Weg nicht end-to-end verifiziert; `team_owner`-only ist für den
+bisherigen Spieler-RSVP-Löschflow echt E2E geprüft.
 
 **Unabhängiger Codex-Review (Stand 2026-07-22):** Review gegen Auftrag,
 Repository und zuständige Dokumente durchgeführt. Ergebnis: RPC-Logik,

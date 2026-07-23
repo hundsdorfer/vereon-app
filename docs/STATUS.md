@@ -1,13 +1,13 @@
 # Status — technisches Audit
 
 **Stand:** 2026-07-22
-**Geprüfter Stand:** `main` / `a75df7d` (enthält committet `FC-TRAINING-005`, `FC-TRAINING-003` und `FC-TRAINING-004`), gepusht und identisch mit `origin/main`. Alle 15 lokalen Migrationen sind remote angewendet (`supabase migration list` bestätigt Local == Remote). Vercel-Production-Deployment `dpl_CYKavARpN1woWMtD4hB34mAYAqX8` für diesen Commit ist `READY`. Offene funktionale Ende-zu-Ende-Verifikation des Lösch-Flows in Produktion: Details `docs/CURRENT_TASK.md`.
+**Geprüfter Stand:** `main` / `a75df7d` (enthält committet `FC-TRAINING-005`, `FC-TRAINING-003` und `FC-TRAINING-004`) zuzüglich lokaler, noch nicht committeter Änderungen für `FC-RSVP-003`. Die ersten 15 Migrationen sind remote angewendet; `20260722090000_add_staff_rsvp.sql` ist lokal angewendet und vollständig verifiziert (66/66 Playwright-Tests), aber noch nicht remote migriert. Details und aktueller Prüfstand: `docs/CURRENT_TASK.md`.
 
 Dieses Dokument ist die verbindliche lebende Übersicht für belegte technische Abweichungen, Risiken und Übergabepunkte. Technischer Ist-Zustand: `docs/ARCHITECTURE.md`. Fachliches Ziel: `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`.
 
 ## 1. Kurzurteil
 
-Der Einzelteam-Kernflow ist im Repository implementiert: Auth, Team-Erstellung, Einladung, Self-/Guardian-Join, Join-Entscheidung, Spieler-Soft-Remove, Trainingsanlage, Trainingsabsage und Spieler-/Guardian-RSVP.
+Der Einzelteam-Kernflow ist im Repository implementiert: Auth, Team-Erstellung, Einladung, Self-/Guardian-Join, Join-Entscheidung, Spieler-Soft-Remove, Trainingsanlage, Trainingsabsage, Spieler-/Guardian-RSVP und lokal migriert und verifiziert Trainer-RSVP.
 
 Die App ist intern gehostet, aber nicht pilotbereit. Der Zugriff auf die gehostete Instanz ist seit 2026-07-19 durch einen temporären internen Zugangsschutz begrenzt (verifiziert, siehe Abschnitt 2). Die größten verbleibenden Lücken betreffen Legal-/Consent-Themen, E-Mail-Verifizierung, automatisierte Datenbereinigung, Backup/Restore sowie mehrere beschlossene MVP-0B-Funktionen.
 
@@ -23,9 +23,10 @@ Die App ist intern gehostet, aber nicht pilotbereit. Der Zugriff auf die gehoste
 | Spieler per Soft-Delete entfernen | `src/actions/players.ts`, Migration `20260704120000_remove_player_from_team.sql` |
 | Trainings erstellen und anzeigen | `src/actions/events.ts`, `src/app/(app)/teams/[teamId]/events/*` |
 | Training absagen (`team_owner`, `head_coach`, `assistant_coach` laut RPC-Rechteprüfung) | `cancelEventAction()` in `src/actions/events.ts`, `cancel_event()` in `20260629200000_add_events.sql`, UI in `src/features/events/CancelEventButton.tsx` und `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx`; abgesagte Trainings bleiben in allen Übersichten (Liste, Team, Dashboard) sichtbar und markiert; neue/geänderte RSVP nach Absage serverseitig gesperrt; wiederholte Absage bleibt konsistent (zustands-idempotent). End-to-end verifiziert nur für `team_owner`-only (`tests/e2e/core-flow-cancel-training.spec.ts`); `head_coach`-only/`assistant_coach`-only sind **weiterhin nicht end-to-end verifiziert** (Begründung: Abschnitt 5) und stattdessen nur über RPC-Code-Review sowie einen statischen Rollenvertrags-Test für `TRAINING_CANCEL_ROLES` (`tests/e2e/trainingCancelRoleContract.spec.ts`) abgedeckt — kein Ersatz für die offenen Integrationsfälle. |
-| Training bedingt hart löschen | `delete_training()` in `20260721114453_delete_training.sql`, `deleteTrainingAction()`, `DeleteTrainingForm` und Event-Detailseite; lokal migriert und in `tests/e2e/core-flow-delete-training.spec.ts` für `team_owner`-only verifiziert. Serverseitig geprüft: exaktes `LÖSCHEN`, zukünftiger Beginn, nicht abgesagt, keine abgegebene Spieler-RSVP, kein `assistant_coach`/`team_manager`, explizites `REVOKE` für `PUBLIC`/`anon`. `head_coach`-only bleibt wegen fehlendem legitimen Testkonto-Weg offen; Trainer-RSVP ist noch nicht implementiert und muss bei Einführung von `event_staff_rsvps` ergänzt werden. |
+| Training bedingt hart löschen | `delete_training()` in `20260721114453_delete_training.sql`, `deleteTrainingAction()`, `DeleteTrainingForm` und Event-Detailseite; für Spieler-RSVP lokal migriert und in `tests/e2e/core-flow-delete-training.spec.ts` für `team_owner`-only verifiziert. Die lokale Migration `20260722090000_add_staff_rsvp.sql` erweitert die RPC atomar um eine Trainer-RSVP-Sperre; für `team_owner`-only end-to-end verifiziert (Parallel-Race-Test gegen `respond_to_event_as_staff()` eingeschlossen). `head_coach`-only bleibt wegen fehlendem legitimen Testkonto-Weg offen. |
+| Trainer-RSVP abgeben (`FC-RSVP-003`) | `respond_to_event_as_staff()`, `list_staff_rsvps_for_event()` und `event_staff_rsvps` in `20260722090000_add_staff_rsvp.sql`; `respondToEventAsStaffAction()`, `StaffRsvpForm.tsx`, getrennte Card „Trainer-Rückmeldungen" auf der Event-Detailseite. Lokal migriert und in `tests/e2e/core-flow-staff-rsvp.spec.ts` für `team_owner`-only verifiziert (UPSERT, Deadline-Grenze, Absage, Enumerationsschutz, dedizierte Listen-RPC inkl. Rollenwechsel-Historie). `head_coach`-/`assistant_coach`-only bleiben wegen fehlendem legitimen Testkonto-Weg offen, abgedeckt über `tests/e2e/trainingStaffRsvpRoleContract.spec.ts`. |
 | Spieler-/Guardian-RSVP und Trainerübersicht | `respond_to_event()`, `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx` |
-| RLS auf allen 18 öffentlichen Tabellen | `supabase/migrations/*` |
+| RLS auf allen 19 lokal angewendeten öffentlichen Tabellen | `supabase/migrations/*`, inklusive der neuen Tabelle `event_staff_rsvps` |
 | CI für Lint und Build | `.github/workflows/ci.yml` |
 | Temporärer interner Zugangsschutz (HTTP Basic Auth vor Supabase-Login) | lokal automatisiert getestet (`tests/e2e/internal-access.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts`); auf Vercel aktiviert (Projekt `vereon`, Scope `vereon-app`, Production-Deployment `dpl_NnTeWpNNmmEP9BbSAXfmwcXFxM5t`, Commit `029de982`); extern gegen `https://www.vereon.app` geprüft am 2026-07-19: ohne Zugangsdaten `HTTP 401` mit `WWW-Authenticate: Basic realm="Vereon Internal Access"` und `Cache-Control: private, no-store`, mit korrekten Zugangsdaten `HTTP 307` auf `/login`. Kein Ersatz für Supabase Auth/RLS, ausdrücklich temporär (`DEC-011`), vor externem Pilot zu entfernen/ersetzen. |
 | `/manifest.webmanifest` ohne Supabase-Login-Weiterleitung, interner Zugangsschutz bleibt davor aktiv | lokal implementiert und automatisiert getestet (`src/proxy.ts`, `tests/e2e/smoke.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts`); deployed (Production-Deployment `dpl_EQdwdj8bj5WidmbvAfKYptHtg5yT`, Commit `5caf3b7276893013ba2ef1b5da39d66907bb2b17`, Status `READY`) und extern gegen `https://www.vereon.app` verifiziert am 2026-07-19 (durch Codex geprüft, laut Nutzerangabe): ohne interne Zugangsdaten `HTTP 401`, mit korrekten internen Zugangsdaten `HTTP 200` mit `Content-Type: application/manifest+json; charset=utf-8` ohne Supabase-Login-Weiterleitung; `/dashboard` antwortet mit korrektem internem Zugang ohne Supabase-Session weiterhin mit `HTTP 307` auf `/login?redirect=%2Fdashboard`. Damit ist die Reihenfolge extern bestätigt: interner Zugangsschutz → Supabase-Routenschutz → Anwendung. |
@@ -67,6 +68,28 @@ Tests 2/2, vollständiger Playwright-Lauf **60/60**, `npx tsc --noEmit`,
 `npm run lint`, `npm run build`, `git diff --check`, `supabase db lint --local`
 und `supabase db advisors --local`. Kein neuer DB-Lint-/Advisor-Befund zu
 `delete_training()`.
+
+**Am 2026-07-22, nach Implementierung von FC-RSVP-003 (lokale, noch nicht
+committete Änderungen), erfolgreich ausgeführt:** Migration
+`20260722090000_add_staff_rsvp.sql` mit `supabase migration up --local`
+angewendet und über `supabase migration list --local` bestätigt;
+vollständiger `npx playwright test`-Lauf **66/66 Tests bestanden**;
+`npx tsc --noEmit`, `npm run lint`, `npm run build`, `git diff --check`,
+`supabase db lint --local` (kein neuer Befund zu den neuen Funktionen) und
+`supabase db advisors --local` (sechs neue, unkritische WARN-Hinweise zu
+`event_staff_rsvps` — dasselbe bereits akzeptierte Performance-Muster wie bei
+`event_attendance`, keine neue Problemklasse).
+
+Die Implementierung erfolgte arbeitsteilig: Codex erstellte Migration, Code,
+Tests und Doku nach einem zuvor unabhängig geprüften Plan; die
+Docker-abhängigen Prüfungen (Migration, DB-Lint/Advisors, Playwright) konnten
+in Codex' Sandbox mangels Docker-Zugriff nicht laufen und wurden danach in
+dieser Umgebung nachgeholt. Dabei wurde ein durch die Implementierung
+verursachter echter Fehler gefunden und behoben: `StaffRsvpForm.tsx` nutzte
+für den abgesagten Zustand denselben Text wie ein bereits bestehendes,
+seitenweites Absage-Banner, was `core-flow-cancel-training.spec.ts` durch
+doppelten Text brach (Strict-Mode-Konflikt) — nach Textanpassung erneut
+vollständig grün verifiziert.
 
 Lokale Supabase-Prüfung:
 
@@ -118,9 +141,9 @@ Testkonto-Weg als Integrationslücke offen (`FC-ROLE-002`).
 | Ziel | Ist-Zustand |
 |---|---|
 | Training absagen | umgesetzt und verifiziert (siehe Abschnitt 2); bekannte Testlücke: keine legitime `head_coach`-only-/`assistant_coach`-only-E2E-Verifikation ohne Service-Role oder neue Migration — kein `GRANT INSERT`/`DELETE` auf `team_member_roles` für `authenticated`, keine Co-Trainer-RPC (`FC-ROLE-002` noch `planned_mvp`). Isolierte Rollen-Fixture-Provisionierung für Tests ist als separater Folgebedarf offen, eigene Freigabe nötig. |
-| Training bedingt hart löschen | lokal umgesetzt und verifiziert; echte E2E-Abdeckung für `team_owner`-only, `head_coach`-only offen; Trainer-RSVP-Sperre folgt erst mit der noch nicht vorhandenen `event_staff_rsvps`-Tabelle |
-| RSVP nur bis Terminbeginn | `respond_to_event()` prüft keine `starts_at`-Deadline |
-| Trainer-RSVP | keine `event_staff_rsvps`-Tabelle und kein Flow |
+| Training bedingt hart löschen | für Spieler- und Trainer-RSVP lokal migriert und verifiziert (atomare Sperre, fail-closed UI-Gating, Parallel-Race-Test); echte Rollen-E2E-Abdeckung bleibt auf `team_owner`-only begrenzt |
+| RSVP nur bis Terminbeginn | `respond_to_event()` (Spieler-RSVP) prüft weiterhin keine `starts_at`-Deadline; `respond_to_event_as_staff()` (Trainer-RSVP, neu) prüft sie bereits — Inkonsistenz zwischen den beiden RSVP-Pfaden bleibt offen für `FC-RSVP-009` |
+| Trainer-RSVP (`FC-RSVP-003`) | lokal implementiert, migriert und im vollständigen Playwright-Lauf verifiziert (66/66); `team_owner`-only echt E2E geprüft, `head_coach`-/`assistant_coach`-only bleiben mangels Testkonto-Weg offen (`FC-ROLE-002`) |
 | Einladungscode erneuern/deaktivieren | ältere Revoke-RPC vorhanden, aber kein vollständiger `public_code`-Flow |
 | Einladungscode-Rechte für Assistant Coach | aktuelle Policies/RPCs sind nicht konsistent mit dem beschlossenen Ziel |
 | Beitrittsanfragen für Assistant Coach sichtbar | Ziel erlaubt Einsicht, aktuelle `team_join_requests`-RLS nur `team_owner`/`head_coach` |
@@ -148,10 +171,11 @@ Testkonto-Weg als Integrationslücke offen (`FC-ROLE-002`).
 
 ## 7. Datenbank- und Betriebsgrenzen
 
-- Das Repository enthält 15 additive Migrationen; die letzte,
-  `20260721114453_delete_training.sql`, ist sowohl gegen den lokalen
-  Supabase-Docker-Stack als auch gegen die Supabase-Cloud-Produktionsdatenbank
-  angewendet.
+- Das Repository enthält 16 additive Migrationen. Die ersten 15 bis
+  `20260721114453_delete_training.sql` sind gegen den lokalen Supabase-Docker-
+  Stack und die Supabase-Cloud-Produktionsdatenbank angewendet. Die neue
+  `20260722090000_add_staff_rsvp.sql` liegt nur lokal im Arbeitsbaum und ist
+  wegen des nicht laufenden Docker-Daemons noch nicht lokal angewendet.
 - Remote-Migrationsstand am 2026-07-22 per `supabase migration list`
   bestätigt: alle 15 Migrationen Local == Remote, inklusive der zuvor remote
   fehlenden `20260704120000_remove_player_from_team.sql`,
