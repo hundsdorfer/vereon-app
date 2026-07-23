@@ -1,7 +1,7 @@
 # Status — technisches Audit
 
-**Stand:** 2026-07-22
-**Geprüfter Stand:** `main` / `fdd6fcd` (committet, auf `origin/main` gepusht und deployed: `FC-TRAINING-005`, `FC-TRAINING-003`, `FC-TRAINING-004`, `FC-RSVP-003`) zuzüglich lokaler, noch nicht committeter Änderungen für `FC-ROLE-002`/`FC-ROLE-003`. Alle 16 zuvor bestehenden Migrationen sind remote angewendet; die neue `20260723100000_add_role_management.sql` ist lokal angewendet und vollständig verifiziert (80/80 Playwright-Tests), aber noch nicht remote migriert. Details und aktueller Prüfstand: `docs/CURRENT_TASK.md`.
+**Stand:** 2026-07-23
+**Geprüfter Stand:** `main` / `78cb449` (lokal committet, noch nicht auf `origin/main` gepusht: `FC-ROLE-002`/`FC-ROLE-003`; davor `fdd6fcd` committet, gepusht und deployed: `FC-TRAINING-005`, `FC-TRAINING-003`, `FC-TRAINING-004`, `FC-RSVP-003`). Alle 16 zuvor bestehenden Migrationen sind remote angewendet; die neue `20260723100000_add_role_management.sql` ist lokal angewendet und vollständig verifiziert (80/80 Playwright-Tests plus ein zusätzlicher, nach Codex-Review ergänzter Test), aber noch nicht remote migriert. Details und aktueller Prüfstand: `docs/CURRENT_TASK.md`.
 
 Dieses Dokument ist die verbindliche lebende Übersicht für belegte technische Abweichungen, Risiken und Übergabepunkte. Technischer Ist-Zustand: `docs/ARCHITECTURE.md`. Fachliches Ziel: `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`.
 
@@ -27,7 +27,7 @@ Die App ist intern gehostet, aber nicht pilotbereit. Der Zugriff auf die gehoste
 | Trainer-RSVP abgeben (`FC-RSVP-003`) | `respond_to_event_as_staff()`, `list_staff_rsvps_for_event()` und `event_staff_rsvps` in `20260722090000_add_staff_rsvp.sql`; `respondToEventAsStaffAction()`, `StaffRsvpForm.tsx`, getrennte Card „Trainer-Rückmeldungen" auf der Event-Detailseite. Lokal migriert und in `tests/e2e/core-flow-staff-rsvp.spec.ts` für `team_owner`-only verifiziert (UPSERT, Deadline-Grenze, Absage, Enumerationsschutz, dedizierte Listen-RPC). Die Rollenwechsel-Historie (`is_active_trainer = false` für inzwischen nicht mehr aktive Trainer) ist mangels legitimem Weg, einen solchen Datensatz zu erzeugen, **nicht** im Playwright-Lauf, sondern nur statisch über `tests/e2e/trainingStaffRsvpRoleContract.spec.ts` abgedeckt. `head_coach`-/`assistant_coach`-only bleiben ebenfalls wegen fehlendem legitimen Testkonto-Weg offen und sind über denselben statischen Rollenvertrag abgedeckt. |
 | Co-Trainer hinzufügen/entfernen (`FC-ROLE-002`/`FC-ROLE-003`) | `grant_assistant_coach()`, `revoke_assistant_coach()`, `list_assistant_coaches()` und `team_role_audit_log` in `20260723100000_add_role_management.sql`; Actions in `src/actions/team.ts`, UI-Card „Trainerteam" auf der Team-Detailseite. Lokal migriert und in `tests/e2e/core-flow-role-management.spec.ts` für `team_owner`-only end-to-end verifiziert — erstmals inklusive eines **real provisionierten** `assistant_coach`-Kontos (bislang stets über statische Rollenverträge ersetzt). Vergabe ist auf existierende, aktive, selbst registrierte Spieler beschränkt (bewusste Scope-Grenze, kein separater Coach-Einladungsweg); ein Entzug ohne verbleibende Rolle deaktiviert die zugrunde liegende Mitgliedschaft, damit kein dauerhafter, grundloser Teamzugriff zurückbleibt. `head_coach`-only bleibt weiterhin ohne legitimen Testkonto-Weg offen. Die vier bereits bestehenden Core-Flow-Tests (Training bearbeiten/absagen/löschen, Trainer-RSVP) wurden bewusst **nicht** um echte `assistant_coach`-only-Zweige erweitert — siehe „Bekannte Folgearbeiten" unten. |
 | Spieler-/Guardian-RSVP und Trainerübersicht | `respond_to_event()`, `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx` |
-| RLS auf allen 19 lokal angewendeten öffentlichen Tabellen | `supabase/migrations/*`, inklusive der neuen Tabelle `event_staff_rsvps` |
+| RLS auf allen 20 lokal angewendeten öffentlichen Tabellen | `supabase/migrations/*`, inklusive der neuen Tabelle `team_role_audit_log` |
 | CI für Lint und Build | `.github/workflows/ci.yml` |
 | Temporärer interner Zugangsschutz (HTTP Basic Auth vor Supabase-Login) | lokal automatisiert getestet (`tests/e2e/internal-access.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts`); auf Vercel aktiviert (Projekt `vereon`, Scope `vereon-app`, Production-Deployment `dpl_NnTeWpNNmmEP9BbSAXfmwcXFxM5t`, Commit `029de982`); extern gegen `https://www.vereon.app` geprüft am 2026-07-19: ohne Zugangsdaten `HTTP 401` mit `WWW-Authenticate: Basic realm="Vereon Internal Access"` und `Cache-Control: private, no-store`, mit korrekten Zugangsdaten `HTTP 307` auf `/login`. Kein Ersatz für Supabase Auth/RLS, ausdrücklich temporär (`DEC-011`), vor externem Pilot zu entfernen/ersetzen. |
 | `/manifest.webmanifest` ohne Supabase-Login-Weiterleitung, interner Zugangsschutz bleibt davor aktiv | lokal implementiert und automatisiert getestet (`src/proxy.ts`, `tests/e2e/smoke.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts`); deployed (Production-Deployment `dpl_EQdwdj8bj5WidmbvAfKYptHtg5yT`, Commit `5caf3b7276893013ba2ef1b5da39d66907bb2b17`, Status `READY`) und extern gegen `https://www.vereon.app` verifiziert am 2026-07-19 (durch Codex geprüft, laut Nutzerangabe): ohne interne Zugangsdaten `HTTP 401`, mit korrekten internen Zugangsdaten `HTTP 200` mit `Content-Type: application/manifest+json; charset=utf-8` ohne Supabase-Login-Weiterleitung; `/dashboard` antwortet mit korrektem internem Zugang ohne Supabase-Session weiterhin mit `HTTP 307` auf `/login?redirect=%2Fdashboard`. Damit ist die Reihenfolge extern bestätigt: interner Zugangsschutz → Supabase-Routenschutz → Anwendung. |
@@ -131,8 +131,9 @@ Lokale Supabase-Prüfung:
 
 Die Vector-Störung ist ein lokales Betriebsrisiko; ein Fehler des fachlichen Kernflows ist daraus nicht belegt.
 
-**Am 2026-07-23, nach Implementierung von FC-ROLE-002/FC-ROLE-003 (lokale,
-noch nicht committete Änderungen), erfolgreich ausgeführt:** Migration
+**Am 2026-07-23, nach Implementierung von FC-ROLE-002/FC-ROLE-003 (inzwischen
+lokal committet als `78cb449`, noch nicht auf `origin/main` gepusht),
+erfolgreich ausgeführt:** Migration
 `20260723100000_add_role_management.sql` mit `supabase migration up --local`
 angewendet und über `supabase migration list --local` bestätigt; gezielte
 Tests (11 statischer Rollenvertrag + 1 Kernflow, 12/12), vollständiger
@@ -142,6 +143,32 @@ Tests (11 statischer Rollenvertrag + 1 Kernflow, 12/12), vollständiger
 — noch während der Umsetzung behoben, siehe Migration; kein Befund zu
 `generate_team_code` verändert) und `supabase db advisors --local` (keine
 neuen Befunde zu `team_role_audit_log` oder den drei neuen Funktionen).
+
+**Unabhängiger Codex-Review (Stand 2026-07-23) des Commits `78cb449`:** Keine
+P0-Befunde. Ein **P1-Befund**: `grant_assistant_coach()` und
+`revoke_assistant_coach()` waren nicht gegeneinander serialisiert — der
+Fallback-Read einer bereits bestehenden Mitgliedschaft in
+`grant_assistant_coach()` sperrte die Zeile nicht (`FOR UPDATE` fehlte),
+wodurch ein gleichzeitiger Revoke dazwischenkommen und einen scheinbar
+erfolgreichen Grant auf einer inzwischen inaktiven Mitgliedschaft
+hinterlassen konnte — behoben durch `FOR UPDATE` auf dem Fallback-Read. Vier
+**P2-Befunde**: (1) ein einfacher Revoke ohne vorherige Spielerentfernung
+deaktivierte die Mitgliedschaft trotz weiterhin aktiver Spielerbeziehung,
+wodurch ein direkt anschließender erneuter Grant fälschlich mit
+„Mitgliedschaft ist nicht aktiv" scheiterte — behoben, indem die
+Lifecycle-Deaktivierung zusätzlich das Fehlen einer aktiven
+Spielerbeziehung voraussetzt; (2) der Kernflow-Test behauptete
+UPDATE-/DELETE-Ablehnung auf `team_role_audit_log` zu prüfen, testete zur
+Laufzeit aber nur INSERT — ergänzt um echte UPDATE-/DELETE-Versuche für
+Owner und Nicht-Owner; (3) mehrere kanonische Dokumente (`ARCHITECTURE.md`,
+`STATUS.md`, `CURRENT_TASK.md`) beschrieben den bereits committeten Stand
+noch als „nicht committet" und zählten Migrationen/Tabellen falsch (16/19
+statt 17/20 inklusive `team_role_audit_log`) — korrigiert; (4)
+`SECURITY.md` behauptete fälschlich, auch Revoke verlange eine aktive
+Spielerbeziehung — korrigiert. Ein neuer, gezielter Test
+(„Revoke ohne Spielerentfernung …") deckt die P1-/P2-Korrektur jetzt explizit
+ab. Alle Korrekturen wurden umgesetzt und erneut lokal verifiziert (siehe
+`docs/CURRENT_TASK.md`).
 
 ## 4. Priorität 0 — vor externem Pilotbetrieb
 

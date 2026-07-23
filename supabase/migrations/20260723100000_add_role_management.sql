@@ -29,10 +29,14 @@
 -- Lifecycle: grant_assistant_coach() legt team_memberships NUR an, wenn
 -- noch keine Zeile existiert — eine bestehende, nicht aktive Zeile wird
 -- NICHT reaktiviert (das würde stillschweigend alle noch daran hängenden
--- Altrollen wieder wirksam machen). revoke_assistant_coach() setzt die
--- Mitgliedschaft auf 'inactive', sobald keine Rolle mehr daran hängt, damit
--- keine dauerhafte, grundlose Teammitgliedschaft zurückbleibt (z. B. nach
--- Spielerentfernung plus Rollenentzug).
+-- Altrollen wieder wirksam machen); der Fallback-Read sperrt die Zeile
+-- (FOR UPDATE), um mit einem gleichzeitigen Entzug zu serialisieren.
+-- revoke_assistant_coach() setzt die Mitgliedschaft auf 'inactive', sobald
+-- WEDER eine Rolle NOCH eine aktive Spielerbeziehung mehr besteht — damit
+-- bleibt sie für weiterhin aktive Spieler nach einem einfachen Rollenentzug
+-- aktiv (ein erneuter Grant bleibt möglich) und wird nur bei kombinierter
+-- Spieler- plus Rollenentfernung deaktiviert, damit keine dauerhafte,
+-- grundlose Teammitgliedschaft zurückbleibt.
 --
 -- Audit: team_role_audit_log protokolliert jede tatsächliche Vergabe/jeden
 -- tatsächlichen Entzug (kein Eintrag bei idempotentem No-Op). assigned_by/
@@ -84,9 +88,10 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = '' AS $$
 DECLARE
-  v_membership_id  uuid;
-  v_role_id        uuid;
-  v_role_row_id    uuid;
+  v_membership_id     uuid;
+  v_membership_status text;
+  v_role_id           uuid;
+  v_role_row_id       uuid;
 BEGIN
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'Nicht eingeloggt';
@@ -124,12 +129,17 @@ BEGIN
   ON CONFLICT (team_id, user_id) DO NOTHING
   RETURNING id INTO v_membership_id;
 
+  -- Codex-Review 2: Ohne FOR UPDATE könnte ein gleichzeitiger Revoke
+  -- zwischen diesem Read und dem folgenden Rollen-INSERT committen — Grant
+  -- würde dann fälschlich Erfolg melden, obwohl die Mitgliedschaft inzwischen
+  -- inactive ist. Der Lock serialisiert Grant und Revoke auf derselben Zeile.
   IF v_membership_id IS NULL THEN
-    SELECT id INTO v_membership_id
+    SELECT id, status INTO v_membership_id, v_membership_status
     FROM public.team_memberships
-    WHERE team_id = p_team_id AND user_id = p_target_user_id AND status = 'active';
+    WHERE team_id = p_team_id AND user_id = p_target_user_id
+    FOR UPDATE;
 
-    IF v_membership_id IS NULL THEN
+    IF v_membership_id IS NULL OR v_membership_status IS DISTINCT FROM 'active' THEN
       RAISE EXCEPTION 'Mitgliedschaft ist nicht aktiv';
     END IF;
   END IF;
@@ -164,10 +174,10 @@ GRANT  EXECUTE ON FUNCTION public.grant_assistant_coach(uuid, uuid) TO authentic
 
 -- ------------------------------------------------------------
 -- revoke_assistant_coach()
--- Entzieht die Rolle assistant_coach. Die team_memberships-Zeile bleibt nur
--- aktiv, solange noch mindestens eine Rolle daran hängt — sonst wird sie
--- deaktiviert, damit keine dauerhafte, grundlose Teammitgliedschaft
--- zurückbleibt.
+-- Entzieht die Rolle assistant_coach. Die team_memberships-Zeile bleibt
+-- aktiv, solange noch eine Rolle ODER eine aktive Spielerbeziehung
+-- besteht — nur wenn beides fehlt, wird sie deaktiviert, damit keine
+-- dauerhafte, grundlose Teammitgliedschaft zurückbleibt.
 -- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.revoke_assistant_coach(
   p_team_id        uuid,
@@ -221,10 +231,23 @@ BEGIN
   INSERT INTO public.team_role_audit_log (team_id, target_user_id, role_key, action, performed_by)
   VALUES (p_team_id, p_target_user_id, 'assistant_coach', 'revoked', auth.uid());
 
-  -- Lifecycle: eine Mitgliedschaft, die dieses Feature selbst angelegt hat,
-  -- bleibt nicht grundlos aktiv, wenn keine Rolle mehr daran hängt.
+  -- Lifecycle (Codex-Review 2 präzisiert): eine Mitgliedschaft, die dieses
+  -- Feature selbst angelegt hat, bleibt nicht grundlos aktiv, wenn WEDER
+  -- eine Rolle noch eine aktive Spielerbeziehung mehr besteht. Solange die
+  -- Person weiterhin aktiver Spieler ist, bleibt die Mitgliedschaft aktiv —
+  -- sonst würde ein einfacher Revoke (ohne vorherige Spielerentfernung) die
+  -- Mitgliedschaft deaktivieren und ein direkt anschließender erneuter Grant
+  -- an derselben, weiterhin aktiven Person fälschlich mit "Mitgliedschaft
+  -- ist nicht aktiv" scheitern.
   IF NOT EXISTS (
     SELECT 1 FROM public.team_member_roles WHERE team_membership_id = v_membership_id
+  ) AND NOT EXISTS (
+    SELECT 1
+    FROM public.player_team_assignments pta
+    JOIN public.players p ON p.id = pta.player_id
+    WHERE pta.team_id = p_team_id
+      AND p.user_id   = p_target_user_id
+      AND pta.status  = 'active'
   ) THEN
     UPDATE public.team_memberships SET status = 'inactive' WHERE id = v_membership_id;
   END IF;
@@ -234,7 +257,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.revoke_assistant_coach(uuid, uuid) IS
-  'Entzieht assistant_coach. Nur team_owner. Deaktiviert die Mitgliedschaft, sobald keine Rolle mehr verbleibt. Protokolliert in team_role_audit_log.';
+  'Entzieht assistant_coach. Nur team_owner. Deaktiviert die Mitgliedschaft nur, wenn weder eine Rolle noch eine aktive Spielerbeziehung verbleibt. Protokolliert in team_role_audit_log.';
 
 REVOKE EXECUTE ON FUNCTION public.revoke_assistant_coach(uuid, uuid) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.revoke_assistant_coach(uuid, uuid) FROM anon;

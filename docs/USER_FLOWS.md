@@ -468,13 +468,16 @@ sind keine offene Berechtigungsentscheidung dieses Flows.
 
 **Ergebnis:** Nicht mehr berechtigte Co-Trainer haben keinen operativen Zugriff mehr.
 
-**Getroffene Produktentscheidung:** Die entfernte Person bleibt weiterhin
-normales Teammitglied — nur die Rolle wird entzogen, nicht die
-Teamzugehörigkeit selbst. Verbleibt nach dem Entzug keine Rolle mehr an der
-Mitgliedschaft, wird diese zusätzlich deaktiviert (`status = 'inactive'` in
-`team_memberships`), damit keine dauerhafte, grundlose Teamzugriffsberechtigung
-zurückbleibt — relevant insbesondere, wenn die Person zusätzlich zuvor als
-Spieler entfernt wurde. Jeder Entzug wird in `team_role_audit_log`
+**Getroffene Produktentscheidung:** Die getrennte Spielerzuordnung
+(`player_team_assignments`) bleibt von einem Rollenentzug unberührt — eine
+weiterhin aktive Spielerin/ein weiterhin aktiver Spieler bleibt normaler
+Spieler im Team, unabhängig von der Co-Trainer-Rolle. Die rollenbasierte
+Teammitgliedschaft (`team_memberships`) wird nur dann deaktiviert
+(`status = 'inactive'`), wenn nach dem Entzug **weder** eine Rolle **noch**
+eine aktive Spielerbeziehung mehr besteht — relevant insbesondere, wenn die
+Person zusätzlich zuvor als Spieler entfernt wurde. Solange sie weiterhin
+aktiver Spieler ist, bleibt die Mitgliedschaft aktiv und ein erneuter Grant
+ist ohne Umweg möglich. Jeder Entzug wird in `team_role_audit_log`
 protokolliert (Nachvollziehbarkeit).
 
 Unabhängig davon bleibt jederzeit genau ein `team_owner` erhalten.

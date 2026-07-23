@@ -230,6 +230,32 @@ test('Kernflow: Co-Trainer hinzufügen/entfernen, Audit-Log und Lifecycle', asyn
     })
     expect(ownerAuditInsertError).not.toBeNull()
 
+    // Auch UPDATE/DELETE sind für niemanden möglich, nicht einmal für den
+    // Owner — nur die RPCs (SECURITY DEFINER) dürfen schreiben.
+    const { error: ownerAuditUpdateError } = await ownerApi
+      .from('team_role_audit_log')
+      .update({ action: 'revoked' })
+      .eq('team_id', teamId)
+    expect(ownerAuditUpdateError).not.toBeNull()
+
+    const { error: ownerAuditDeleteError } = await ownerApi
+      .from('team_role_audit_log')
+      .delete()
+      .eq('team_id', teamId)
+    expect(ownerAuditDeleteError).not.toBeNull()
+
+    const { error: playerAuditUpdateError } = await playerApi
+      .from('team_role_audit_log')
+      .update({ action: 'revoked' })
+      .eq('team_id', teamId)
+    expect(playerAuditUpdateError).not.toBeNull()
+
+    const { error: playerAuditDeleteError } = await playerApi
+      .from('team_role_audit_log')
+      .delete()
+      .eq('team_id', teamId)
+    expect(playerAuditDeleteError).not.toBeNull()
+
     const { data: playerAuditSelect, error: playerAuditSelectError } = await playerApi
       .from('team_role_audit_log')
       .select('id')
@@ -395,6 +421,130 @@ test('Kernflow: Co-Trainer hinzufügen/entfernen, Audit-Log und Lifecycle', asyn
       .order('performed_at', { ascending: true })
     expect(auditFinalError, auditFinalError?.message).toBeNull()
     expect(auditFinal).toEqual([{ action: 'granted' }, { action: 'revoked' }])
+  } finally {
+    await ownerContext.close()
+    await playerContext.close()
+  }
+})
+
+// Codex-Review (Commit 78cb449, 2. Runde) fand: ein einfacher Revoke ohne
+// vorherige Spielerentfernung deaktivierte ursprünglich die Mitgliedschaft
+// trotz weiterhin aktiver Spielerbeziehung — ein direkt anschließender
+// erneuter Grant scheiterte dadurch fälschlich mit "Mitgliedschaft ist nicht
+// aktiv". Behoben, indem revoke_assistant_coach() die Mitgliedschaft nur
+// deaktiviert, wenn WEDER eine Rolle NOCH eine aktive Spielerbeziehung
+// verbleibt. Dieser Test verifiziert genau dieses Szenario isoliert.
+test('Revoke ohne Spielerentfernung: Mitgliedschaft bleibt aktiv, erneuter Grant funktioniert sofort', async ({ browser }) => {
+  const supabaseEnv = getLoopbackSupabaseEnv()
+  test.setTimeout(120_000)
+
+  const ts = Date.now()
+  const ownerEmail = `owner+role-mgmt-regrant${ts}@vereon.test`
+  const playerEmail = `player+role-mgmt-regrant${ts}@vereon.test`
+  const password = 'Test1234!'
+  const teamName = `E2E Role Management Regrant Team ${ts}`
+
+  const ownerContext = await browser.newContext()
+  const playerContext = await browser.newContext()
+  const ownerPage = await ownerContext.newPage()
+  const playerPage = await playerContext.newPage()
+
+  try {
+    await ownerPage.goto('/register')
+    await ownerPage.fill('#first_name', 'Otto')
+    await ownerPage.fill('#last_name', 'Owner')
+    await ownerPage.fill('#email', ownerEmail)
+    await ownerPage.fill('#date_of_birth', '1985-03-20')
+    await ownerPage.selectOption('select#onboarding_role', 'coach')
+    await ownerPage.fill('#password', password)
+    await ownerPage.check('input[name="terms_accepted"]')
+    await ownerPage.check('input[name="privacy_accepted"]')
+    await ownerPage.getByRole('button', { name: 'Konto erstellen' }).click()
+    await ownerPage.waitForURL('/dashboard')
+
+    const ownerApi = await signInSupabaseClient(supabaseEnv, ownerEmail, password)
+    const { data: teamId, error: createTeamError } = await ownerApi.rpc(
+      'create_independent_team',
+      { p_team_name: teamName, p_also_head_coach: false },
+    )
+    expect(createTeamError, createTeamError?.message).toBeNull()
+
+    await ownerPage.goto(`/teams/${teamId}/invite`)
+    const joinUrl = await ownerPage.inputValue('input[aria-label="Einladungslink"]')
+    const joinCode = joinUrl.split('/join/')[1]
+    const joinPath = `/join/${joinCode}`
+
+    await playerPage.goto(`/register?redirect=${encodeURIComponent(joinPath)}`)
+    await playerPage.fill('#first_name', 'Rita')
+    await playerPage.fill('#last_name', 'Regrant')
+    await playerPage.fill('#email', playerEmail)
+    await playerPage.fill('#date_of_birth', '2000-06-15')
+    await playerPage.selectOption('select#onboarding_role', 'player')
+    await playerPage.fill('#password', password)
+    await playerPage.check('input[name="terms_accepted"]')
+    await playerPage.check('input[name="privacy_accepted"]')
+    await playerPage.getByRole('button', { name: 'Konto erstellen' }).click()
+    await playerPage.waitForURL(joinPath)
+    await playerPage.getByRole('button', { name: 'Ich trete selbst bei' }).click()
+    await playerPage.getByRole('button', { name: 'Beitrittsanfrage senden' }).click()
+
+    await ownerPage.goto(`/teams/${teamId}/requests`)
+    await ownerPage.getByRole('button', { name: 'Annehmen' }).click()
+    await expect(ownerPage.getByText('Keine offenen Anfragen')).toBeVisible({ timeout: 10_000 })
+
+    const playerApi = await signInSupabaseClient(supabaseEnv, playerEmail, password)
+    const { data: playerUserData } = await playerApi.auth.getUser()
+    const playerUserId = playerUserData.user!.id
+
+    const { error: grantError } = await ownerApi.rpc('grant_assistant_coach', {
+      p_team_id: teamId,
+      p_target_user_id: playerUserId,
+    })
+    expect(grantError, grantError?.message).toBeNull()
+
+    // Einfacher Revoke, OHNE die Person zuvor als Spieler zu entfernen.
+    const { error: revokeError } = await ownerApi.rpc('revoke_assistant_coach', {
+      p_team_id: teamId,
+      p_target_user_id: playerUserId,
+    })
+    expect(revokeError, revokeError?.message).toBeNull()
+
+    const { data: membershipAfterRevoke, error: membershipAfterRevokeError } = await ownerApi
+      .from('team_memberships')
+      .select('status')
+      .eq('team_id', teamId)
+      .eq('user_id', playerUserId)
+      .single()
+    expect(membershipAfterRevokeError, membershipAfterRevokeError?.message).toBeNull()
+    expect(membershipAfterRevoke!.status).toBe('active')
+
+    // Erneuter Grant muss sofort funktionieren, ohne "Mitgliedschaft ist
+    // nicht aktiv" — das war der ursprüngliche Bug.
+    const { data: regrantTeamId, error: regrantError } = await ownerApi.rpc(
+      'grant_assistant_coach',
+      { p_team_id: teamId, p_target_user_id: playerUserId },
+    )
+    expect(regrantError, regrantError?.message).toBeNull()
+    expect(regrantTeamId).toBe(teamId)
+
+    const { data: hasRoleAfterRegrant, error: hasRoleAfterRegrantError } = await playerApi.rpc(
+      'has_team_role',
+      { p_team_id: teamId, p_role_keys: ['assistant_coach'] },
+    )
+    expect(hasRoleAfterRegrantError, hasRoleAfterRegrantError?.message).toBeNull()
+    expect(hasRoleAfterRegrant).toBe(true)
+
+    const { data: auditRows, error: auditRowsError } = await ownerApi
+      .from('team_role_audit_log')
+      .select('action')
+      .eq('team_id', teamId)
+      .order('performed_at', { ascending: true })
+    expect(auditRowsError, auditRowsError?.message).toBeNull()
+    expect(auditRows).toEqual([
+      { action: 'granted' },
+      { action: 'revoked' },
+      { action: 'granted' },
+    ])
   } finally {
     await ownerContext.close()
     await playerContext.close()

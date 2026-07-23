@@ -2,9 +2,10 @@
 
 **Stand:** 2026-07-23
 **Dokumenttyp:** code-verifizierte technische Ist-Dokumentation
-**Geprüfter Stand:** `main` / `b9425ed` (committet, gepusht, deployed:
-`FC-RSVP-003`) zuzüglich lokaler, noch nicht committeter Änderungen für
-`FC-ROLE-002`/`FC-ROLE-003` (Details: `docs/CURRENT_TASK.md`).
+**Geprüfter Stand:** `main` / `78cb449` (lokal committet, noch nicht auf
+`origin/main` gepusht: `FC-ROLE-002`/`FC-ROLE-003`; `b9425ed` davor
+committet, gepusht und deployed: `FC-RSVP-003`). Details:
+`docs/CURRENT_TASK.md`.
 
 Dieses Dokument beschreibt ausschließlich den im Repository belegbaren Ist-Zustand. Fachliche Zielentscheidungen stehen in `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`. Abweichungen zwischen Ist und Ziel werden in `docs/STATUS.md` geführt.
 
@@ -190,15 +191,17 @@ Trainer-RSVP aus.
 
 ## 8. Datenbank und Sicherheit
 
-Das Repository enthält 16 Migrationen. Die neue additive Migration
-`20260722090000_add_staff_rsvp.sql` erzeugt die 19. öffentliche Tabelle und die
-zugehörigen RLS-Policies/RPCs; lokal angewendet und verifiziert (Details:
-`docs/CURRENT_TASK.md`).
+Das Repository enthält 17 Migrationen. Die neueste additive Migration
+`20260723100000_add_role_management.sql` erzeugt die 20. öffentliche Tabelle
+(`team_role_audit_log`) sowie `grant_assistant_coach()`,
+`revoke_assistant_coach()` und `list_assistant_coaches()`; lokal angewendet
+und verifiziert (Details: `docs/CURRENT_TASK.md`).
 
 - Rollen/Organisation: `roles`, `permissions`, `role_permissions`, `profiles`, `clubs`, `seasons`,
 - Mitgliedschaften: `club_memberships`, `club_member_roles`, `teams`, `team_memberships`, `team_member_roles`,
 - Spieler/Join: `players`, `player_guardians`, `team_invitation_links`, `team_join_requests`, `player_team_assignments`,
-- Termine: `events`, `event_attendance`, `event_staff_rsvps`.
+- Termine: `events`, `event_attendance`, `event_staff_rsvps`,
+- Audit: `team_role_audit_log`.
 
 RLS ist für alle öffentlichen Tabellen aktiviert. Kritische RPCs verwenden `SECURITY DEFINER` und `SET search_path = ''`. `src/types/database.types.ts` ist nur ein `Json`-Stub; generierte Schematypen fehlen.
 

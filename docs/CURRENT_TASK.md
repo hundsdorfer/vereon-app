@@ -71,7 +71,33 @@ Eligibility-Beschränkung auf selbst registrierte, aktive Spieler ist eine
 bewusste Scope-Grenze, keine offene Lücke — ein separater
 Coach-Einladungsweg ist nicht Teil dieses Auftrags.
 
-Keine Remote-Datenbankaktion, kein `db push`, kein Commit und kein Push für
+**Commit und Codex-Review (Stand 2026-07-23):** Lokal als Commit `78cb449`
+committet. Unabhängiger Codex-Review gegen Auftrag, Repository und
+zuständige Dokumente durchgeführt: keine P0-Befunde. Ein **P1-Befund** —
+`grant_assistant_coach()` und `revoke_assistant_coach()` waren nicht
+gegeneinander serialisiert (fehlendes `FOR UPDATE` auf dem Fallback-Read
+einer bestehenden Mitgliedschaft in `grant_assistant_coach()`), wodurch ein
+gleichzeitiger Revoke einen scheinbar erfolgreichen Grant auf einer
+inzwischen inaktiven Mitgliedschaft hinterlassen konnte — behoben. Vier
+**P2-Befunde**: einfacher Revoke ohne Spielerentfernung deaktivierte die
+Mitgliedschaft trotz weiterhin aktiver Spielerbeziehung (erneuter Grant
+scheiterte fälschlich) — behoben, indem die Lifecycle-Deaktivierung
+zusätzlich das Fehlen einer aktiven Spielerbeziehung voraussetzt; Audit-Test
+behauptete UPDATE-/DELETE-Ablehnung zu prüfen, testete aber nur INSERT —
+ergänzt; mehrere kanonische Dokumente beschrieben den Commit fälschlich als
+„nicht committet" und zählten Migrationen/Tabellen falsch — korrigiert;
+`SECURITY.md` behauptete fälschlich, Revoke verlange ebenfalls eine aktive
+Spielerbeziehung — korrigiert. Ein neuer, gezielter Test
+(`Revoke ohne Spielerentfernung: Mitgliedschaft bleibt aktiv, erneuter Grant
+funktioniert sofort`) deckt die Korrektur jetzt explizit ab. Alle
+Korrekturen erneut lokal verifiziert: Migration per `CREATE OR REPLACE`
+angewendet, `supabase db lint --local` weiterhin ohne neue Befunde,
+vollständiger `npx playwright test`-Lauf **81/81 Tests bestanden** (80 zuvor
+plus 1 neuer, gezielter Test für das P1-/P2-Szenario, sowie 4 zusätzliche
+Assertions im bestehenden Kernflow-Test für UPDATE/DELETE-Ablehnung auf
+`team_role_audit_log`).
+
+Keine Remote-Datenbankaktion, kein `db push` und kein Push für
 `FC-ROLE-002`/`FC-ROLE-003`.
 
 ## Vorangegangene Aufgabe: FC-RSVP-003 „Trainer-RSVP abgeben" — lokal implementiert, verifiziert, committet und Codex-reviewt
