@@ -101,9 +101,17 @@ Assertions im bestehenden Kernflow-Test für UPDATE/DELETE-Ablehnung auf
 Freigabe):** `supabase db push` gegen die Supabase-Cloud-Produktionsdatenbank
 ausgeführt; `supabase migration list` bestätigt alle 17 Migrationen als
 Local == Remote, inklusive `20260723100000_add_role_management.sql`.
-Anschließend `git push` auf `origin/main`: `main` und `origin/main` sind
-identisch (`0db9116`). Kein Deployment für diesen Stand bislang angestoßen
-oder verifiziert.
+Anschließend `git push` auf `origin/main` in zwei Schritten (der zweite,
+rein dokumentarische Commit `72cf287` folgte separat): `main` und
+`origin/main` sind identisch (`72cf287`).
+
+**Deployment (Stand 2026-07-23):** Die GitHub-Integration löste für
+`72cf287` automatisch ein Vercel-Deployment aus
+(`dpl_8MPs4gZgBeEsJCyhyMf6JjoBKSWs`, Projekt `vereon`,
+Team-ID `team_hb0bxyTevci5xD0iCZ4VYiPW`), Status `READY` auf `production`,
+Alias `vereon.app`/`www.vereon.app`. Nicht-mutierende externe Prüfung ohne
+interne Zugangsdaten bestätigt das bekannte, unveränderte Basic-Auth-Verhalten:
+`/manifest.webmanifest` und `/dashboard` antworten weiterhin mit `401`.
 
 ## Vorangegangene Aufgabe: FC-RSVP-003 „Trainer-RSVP abgeben" — lokal implementiert, verifiziert, committet und Codex-reviewt
 

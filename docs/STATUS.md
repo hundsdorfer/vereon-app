@@ -1,13 +1,16 @@
 # Status — technisches Audit
 
 **Stand:** 2026-07-23
-**Geprüfter Stand:** `main` / `0db9116` (committet und auf `origin/main`
+**Geprüfter Stand:** `main` / `72cf287` (committet und auf `origin/main`
 gepusht: `FC-ROLE-002`/`FC-ROLE-003`, inklusive Codex-Review-Korrekturen).
 Alle 17 Migrationen sind remote angewendet (inklusive
 `20260723100000_add_role_management.sql`, mit ausdrücklicher Freigabe per
 `supabase db push`) und lokal vollständig verifiziert (81/81
-Playwright-Tests). Kein Deployment für diesen Stand bislang angestoßen oder
-verifiziert. Details und aktueller Prüfstand: `docs/CURRENT_TASK.md`.
+Playwright-Tests). Vercel-Production-Deployment
+`dpl_8MPs4gZgBeEsJCyhyMf6JjoBKSWs` für exakt diesen Commit ist `READY`
+(Alias `vereon.app`/`www.vereon.app`), extern gegen bekanntes
+Basic-Auth-Verhalten geprüft. Details und aktueller Prüfstand:
+`docs/CURRENT_TASK.md`.
 
 Dieses Dokument ist die verbindliche lebende Übersicht für belegte technische Abweichungen, Risiken und Übergabepunkte. Technischer Ist-Zustand: `docs/ARCHITECTURE.md`. Fachliches Ziel: `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`.
 
