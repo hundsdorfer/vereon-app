@@ -1,7 +1,7 @@
 # Status — technisches Audit
 
 **Stand:** 2026-07-22
-**Geprüfter Stand:** `main` / `d1d89dc` (enthält committet `FC-TRAINING-005`, `FC-TRAINING-003`, `FC-TRAINING-004` und `FC-RSVP-003`; `main` und `origin/main` sind identisch). Alle 16 Migrationen sind remote angewendet, inklusive `20260722090000_add_staff_rsvp.sql` (mit ausdrücklicher Freigabe per `supabase db push`). Details und aktueller Prüfstand: `docs/CURRENT_TASK.md`.
+**Geprüfter Stand:** `main` / `fdd6fcd` (enthält committet `FC-TRAINING-005`, `FC-TRAINING-003`, `FC-TRAINING-004` und `FC-RSVP-003`; `main` und `origin/main` sind identisch). Alle 16 Migrationen sind remote angewendet, inklusive `20260722090000_add_staff_rsvp.sql` (mit ausdrücklicher Freigabe per `supabase db push`). Vercel-Production-Deployment `dpl_kZbQCFRyZzMhUZtxX3AQwGXcM6hs` für exakt diesen Commit ist `READY` (Alias `vereon.app`/`www.vereon.app`), extern gegen bekanntes Basic-Auth-Verhalten geprüft. Details und aktueller Prüfstand: `docs/CURRENT_TASK.md`.
 
 Dieses Dokument ist die verbindliche lebende Übersicht für belegte technische Abweichungen, Risiken und Übergabepunkte. Technischer Ist-Zustand: `docs/ARCHITECTURE.md`. Fachliches Ziel: `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`.
 

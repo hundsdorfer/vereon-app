@@ -77,8 +77,28 @@ funktionalen Bypass.
 `supabase db push` gegen die Supabase-Cloud-Produktionsdatenbank ausgeführt;
 `supabase migration list` bestätigt alle 16 Migrationen als Local == Remote,
 inklusive `20260722090000_add_staff_rsvp.sql`. Anschließend `git push` auf
-`origin/main`: `main` und `origin/main` sind identisch (`d1d89dc`). Kein
-Deployment für diesen Stand bislang angestoßen oder verifiziert.
+`origin/main` in zwei Schritten (der zweite, rein dokumentarische Commit
+`fdd6fcd` wurde zunächst versehentlich lokal committet, aber nicht mitgepusht,
+und in einem separaten Schritt nachgeholt): `main` und `origin/main` sind
+identisch (`fdd6fcd`).
+
+**Deployment (Stand 2026-07-23, mit ausdrücklicher Freigabe):** Die
+GitHub-Integration löste für `fdd6fcd` automatisch ein Vercel-Deployment aus
+(`dpl_kZbQCFRyZzMhUZtxX3AQwGXcM6hs`, Projekt `vereon`,
+Team-ID `team_hb0bxyTevci5xD0iCZ4VYiPW`), Status `READY` auf `production`,
+Alias `vereon.app`/`www.vereon.app`. Nicht-mutierende externe Prüfung ohne
+interne Zugangsdaten bestätigt das bekannte, unveränderte Basic-Auth-Verhalten:
+`/manifest.webmanifest` und `/dashboard` antworten weiterhin mit `401`.
+
+**Nebenfund:** `.vercel/repo.json` im Arbeitsbaum verweist auf ein anderes
+Projekt/Team (`prj_kZrGS59UuEUhaVWmQplUfHy8NcJd` /
+`team_FmEjcJvyg59XUXkrnYVUrsqy`) als das tatsächlich für `vereon.app`
+verwendete Vercel-Projekt (`vereon`, `prj_n6jHXPocICaO32FAsV6SMzTAjPmF`,
+Team `team_hb0bxyTevci5xD0iCZ4VYiPW`) — verifiziert anhand der bekannten,
+in `docs/STATUS.md` dokumentierten Deployment-ID
+`dpl_CYKavARpN1woWMtD4hB34mAYAqX8`. Die Datei ist offenbar veraltet; bisher
+nicht korrigiert, da außerhalb dieses Auftrags — separate Freigabe nötig,
+falls gewünscht.
 
 **Bekannte Testgrenze:** Echte E2E-Konten nur mit `head_coach` oder
 `assistant_coach` können weiterhin nicht legitim provisioniert werden;
