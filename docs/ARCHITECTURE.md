@@ -1,9 +1,10 @@
 # Architektur — Vereon
 
-**Stand:** 2026-07-22
+**Stand:** 2026-07-23
 **Dokumenttyp:** code-verifizierte technische Ist-Dokumentation
-**Geprüfter Stand:** `main` / `d1d89dc`, einschließlich `FC-RSVP-003`
-(`main` und `origin/main` identisch; Details: `docs/CURRENT_TASK.md`).
+**Geprüfter Stand:** `main` / `b9425ed` (committet, gepusht, deployed:
+`FC-RSVP-003`) zuzüglich lokaler, noch nicht committeter Änderungen für
+`FC-ROLE-002`/`FC-ROLE-003` (Details: `docs/CURRENT_TASK.md`).
 
 Dieses Dokument beschreibt ausschließlich den im Repository belegbaren Ist-Zustand. Fachliche Zielentscheidungen stehen in `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`. Abweichungen zwischen Ist und Ziel werden in `docs/STATUS.md` geführt.
 
@@ -20,7 +21,7 @@ Vereon ist eine deutschsprachige Webanwendung für die Organisation einzelner Fu
 - Spieler- und Guardian-RSVP,
 - getrennte Spieler-/Guardian- und Trainer-RSVP-Übersichten für Trainerrollen.
 
-Club-/Mehrteam-Verwaltung ist im Schema vorbereitet, besitzt aber keinen vollständigen App-Flow. Match, Anwesenheitsabschluss und Rollenverwaltung sind nicht implementiert. Training bearbeiten, der bedingte Hard-Delete und Trainer-RSVP sind lokal umgesetzt; Prüfnachweise und bekannte Grenzen stehen in `docs/CURRENT_TASK.md`.
+Club-/Mehrteam-Verwaltung ist im Schema vorbereitet, besitzt aber keinen vollständigen App-Flow. Match und Anwesenheitsabschluss sind nicht implementiert. Rollenverwaltung ist für `assistant_coach` implementiert (`FC-ROLE-002`/`FC-ROLE-003`); darüber hinaus (`head_coach`-Vergabe, Eigentumsübertragung) nicht. Training bearbeiten, der bedingte Hard-Delete und Trainer-RSVP sind lokal umgesetzt; Prüfnachweise und bekannte Grenzen stehen in `docs/CURRENT_TASK.md`.
 
 ## 2. Laufzeitarchitektur
 

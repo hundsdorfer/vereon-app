@@ -420,7 +420,7 @@ MVP-0B ist keine Vereinsverwaltungsphase. Es schließt Lücken, die den Alltag s
 ### UF-0B-04 — Co-Trainer hinzufügen
 
 **Phase:** `MVP-0B`  
-**Flow-Status:** `offen`  
+**Flow-Status:** `umgesetzt`  
 **Hauptrollen:** `team_owner`
 **Weitere Rollen:** `assistant_coach`  
 **Betroffene Feature-IDs:** `FC-ROLE-002`
@@ -429,16 +429,20 @@ MVP-0B ist keine Vereinsverwaltungsphase. Es schließt Lücken, die den Alltag s
 
 **Grobe Schritte:**
 
-1. `team_owner` öffnet die Team-/Rollenverwaltung.
-2. Eine Person wird als Co-Trainer eingeladen oder hinzugefügt.
+1. `team_owner` öffnet die Team-Detailseite (Card „Trainerteam").
+2. Eine bereits aktive, selbst registrierte Spielerin/ein Spieler wird ausgewählt.
 3. Die Person erhält die Rolle `assistant_coach`.
 4. `assistant_coach` kann freigegebene operative Funktionen nutzen.
 
 **Ergebnis:** Ein Co-Trainer kann im Team mitarbeiten.
 
-**Offene UX-/Produktfragen:**
-
-- Erfolgt die Aufnahme über Einladungscode, E-Mail oder Auswahl bestehender Mitglieder?
+**Getroffene Produktentscheidung:** Die Aufnahme erfolgt ausschließlich über
+Auswahl bestehender, aktiver, selbst registrierter Spieler (aktive
+`player_team_assignments`-Zuordnung mit gesetztem `players.user_id`). Es gibt
+aktuell keinen separaten Einladungs- oder E-Mail-Weg, um jemanden direkt als
+Co-Trainer aufzunehmen, ohne zuvor Spieler im Team gewesen zu sein — das ist
+eine bewusste, dokumentierte Scope-Grenze (`grant_assistant_coach()` in
+`20260723100000_add_role_management.sql`), kein technisches Versehen.
 
 Die sichtbaren Funktionen ergeben sich aus `docs/ROLES_AND_PERMISSIONS.md` und
 sind keine offene Berechtigungsentscheidung dieses Flows.
@@ -448,7 +452,7 @@ sind keine offene Berechtigungsentscheidung dieses Flows.
 ### UF-0B-05 — Co-Trainer entfernen
 
 **Phase:** `MVP-0B`  
-**Flow-Status:** `offen`  
+**Flow-Status:** `umgesetzt`  
 **Hauptrollen:** `team_owner`
 **Weitere Rollen:** `assistant_coach`  
 **Betroffene Feature-IDs:** `FC-ROLE-003`
@@ -457,16 +461,21 @@ sind keine offene Berechtigungsentscheidung dieses Flows.
 
 **Grobe Schritte:**
 
-1. `team_owner` öffnet die Team-/Rollenverwaltung.
+1. `team_owner` öffnet die Team-Detailseite (Card „Trainerteam").
 2. Eine bestehende `assistant_coach`-Rolle wird ausgewählt.
-3. Die Entfernung wird bestätigt.
+3. Die Entfernung wird über einen zweistufigen Bestätigungsdialog bestätigt.
 4. Die betroffene Person verliert die Co-Trainer-Berechtigung.
 
 **Ergebnis:** Nicht mehr berechtigte Co-Trainer haben keinen operativen Zugriff mehr.
 
-**Offene UX-/Produktfragen:**
-
-- Wird eine entfernte Person weiterhin als normales Teammitglied geführt oder vollständig aus dem Team entfernt?
+**Getroffene Produktentscheidung:** Die entfernte Person bleibt weiterhin
+normales Teammitglied — nur die Rolle wird entzogen, nicht die
+Teamzugehörigkeit selbst. Verbleibt nach dem Entzug keine Rolle mehr an der
+Mitgliedschaft, wird diese zusätzlich deaktiviert (`status = 'inactive'` in
+`team_memberships`), damit keine dauerhafte, grundlose Teamzugriffsberechtigung
+zurückbleibt — relevant insbesondere, wenn die Person zusätzlich zuvor als
+Spieler entfernt wurde. Jeder Entzug wird in `team_role_audit_log`
+protokolliert (Nachvollziehbarkeit).
 
 Unabhängig davon bleibt jederzeit genau ein `team_owner` erhalten.
 

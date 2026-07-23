@@ -243,6 +243,7 @@ Bei kleineren Entscheidungen dürfen einzelne Abschnitte kompakter sein oder ent
 | ID      |      Datum | Titel                                                    | Status                 | Typ                                 |
 | ------- | ---------: | -------------------------------------------------------- | ---------------------- | ----------------------------------- |
 | DEC-001 | 2026-07-06 | Dokumentationsstruktur und kanonische Quellen            | accepted               | Documentation                       |
+| DEC-013 | 2026-07-23 | Co-Trainer-Provisionierung und Audit-Retention (`FC-ROLE-002`/`FC-ROLE-003`) | accepted | Product / Security / Privacy / Technical |
 | DEC-012 | 2026-07-18 | Projekt-Handoff über Project Brief und Current Task      | accepted               | Documentation                       |
 | DEC-011 | 2026-07-18 | Geschütztes Entwicklungs-Deployment und Pilot-Gates      | accepted               | Technical / Security / Privacy      |
 | DEC-010 | 2026-07-18 | Geburtsdaten und Guardian-Nachweis im Jugend-MVP          | accepted               | Privacy / Product / Security        |
@@ -477,6 +478,101 @@ docs/USER_FLOWS.md
 docs/PROJECT_STATUS.md
 docs/ROADMAP.md
 ```
+
+---
+
+## DEC-013 — 2026-07-23 — Co-Trainer-Provisionierung und Audit-Retention (`FC-ROLE-002`/`FC-ROLE-003`)
+
+**Status:** accepted
+**Typ:** Product / Security / Privacy / Technical
+**Entscheidungszeitpunkt:** 2026-07-23
+**Ersetzt:** —
+**Ersetzt durch:** —
+
+**Kontext:**
+`FC-ROLE-002`/`FC-ROLE-003` sollten `team_owner` erlauben, die Rolle
+`assistant_coach` zu vergeben/entziehen. Ein erster Planentwurf nahm an, eine
+zweite Person werde über den bestehenden Invite/Join/Accept-Flow zu einer
+aktiven `team_memberships`-Zeile — eine unabhängige Codex-Prüfung des Plans
+widerlegte das: dieser Flow erzeugt ausschließlich
+`player_team_assignments`-Zeilen; `team_memberships` wird bislang
+ausschließlich von `create_independent_team()` für den Team-Ersteller
+befüllt. Es gab also keinen bestehenden Weg, wie eine zweite Person
+überhaupt eine `team_memberships`-Zeile erhält. Zusätzlich verlangt
+`FC-ROLE-003` ausdrücklich Nachvollziehbarkeit von Rollenentzügen, wofür ein
+Audit-Mechanismus fehlte.
+
+**Entscheidung:**
+1. `grant_assistant_coach()` legt die `team_memberships`-Zeile selbst an,
+   aber ausschließlich für Nutzer mit einer nachweisbaren, aktiven
+   Spielerbeziehung zum Team (aktive `player_team_assignments`-Zeile mit
+   gesetztem `players.user_id`). Ein Co-Trainer-Kandidat muss also zuvor
+   aktiver, selbst registrierter Spieler im Team gewesen sein.
+2. Eine bestehende, nicht aktive `team_memberships`-Zeile wird niemals
+   reaktiviert (kein `UPDATE ... SET status = 'active'` auf Bestandszeilen)
+   — nur fehlende Zeilen werden neu angelegt. Das verhindert, dass ein Grant
+   stillschweigend alte, noch an der Zeile hängende Rollen (z. B.
+   `head_coach`) wieder wirksam macht.
+3. `revoke_assistant_coach()` deaktiviert die Mitgliedschaft
+   (`status = 'inactive'`), sobald nach dem Entzug keine Rolle mehr daran
+   hängt — verhindert dauerhaften, grundlosen Teamzugriff nach Spieler- und
+   Rollenentfernung.
+4. Eine neue Tabelle `team_role_audit_log` protokolliert jede tatsächliche
+   Vergabe/jeden tatsächlichen Entzug (kein Eintrag bei idempotentem
+   No-Op); nur `team_owner` darf sie lesen. `target_user_id` und
+   `performed_by` verwenden `ON DELETE SET NULL` statt `CASCADE`, damit eine
+   spätere Account-Löschung die Historie anonymisiert statt sie vollständig
+   zu entfernen oder die Löschung zu blockieren.
+5. Self-Targeting (Owner vergibt/entzieht sich selbst die Rolle) ist
+   serverseitig verboten, unabhängig von der UI.
+
+**Begründung:**
+Option 1 (Eligibility über bestehende Spielerbeziehung) vermeidet einen
+neuen, separaten Coach-Einladungs-/Join-Flow und hält den Auftrag
+selbstständig umsetzbar, statt Teile von `FC-ROLE-001`
+(Mitglieder-/Rollenanzeige) vorwegzunehmen. Entscheidung 2 und 3 schließen
+zwei von Codex identifizierte, sicherheitsrelevante Lifecycle-Lücken
+(Privilegien-Reaktivierung bzw. dauerhafter Zugriff nach Entzug). Entscheidung
+4 erfüllt die explizite Nachvollziehbarkeitsanforderung aus
+`FC-ROLE-003`, ohne das allgemeine, weiterhin offene `audit_logs`-Konzept
+(Eigentumsübertragung, Einladungswechsel, Löschvorgänge) vorwegzunehmen.
+
+**Verworfene Alternativen:**
+- Ein neuer, separater Join-Flow „als Co-Trainer beitreten" (größerer Scope,
+  eigener Review-/Testaufwand, für diesen Auftrag nicht erforderlich).
+- `ON CONFLICT ... DO UPDATE SET status = 'active'` beim Membership-Upsert
+  (verworfen: reaktiviert stillschweigend Altrollen).
+- Physisches `DELETE` ohne Audit-Log beim Entzug (verworfen: widerspricht
+  der expliziten Nachvollziehbarkeitsanforderung in `FC-ROLE-003`).
+- `ON DELETE CASCADE` auf den Audit-Log-Nutzerreferenzen (verworfen: würde
+  die Historie bei Account-Löschung vollständig entfernen).
+
+**Gilt für:**
+`grant_assistant_coach()`, `revoke_assistant_coach()`,
+`list_assistant_coaches()`, `team_role_audit_log` in
+`supabase/migrations/20260723100000_add_role_management.sql`.
+
+**Gilt nicht für / Nicht entschieden:**
+- Allgemeine Rollenverwaltung über `assistant_coach` hinaus (`head_coach`
+  vergeben/entziehen, Eigentumsübertragung) — weiterhin offen.
+- Ein separater Coach-Einladungs-/Join-Weg unabhängig vom Spielerstatus —
+  bewusst nicht Teil dieser Entscheidung.
+- Das allgemeine `audit_logs`-Konzept für andere sensible Vorgänge.
+
+**Auswirkungen:**
+`docs/FEATURE_CATALOG.md`, `docs/USER_FLOWS.md` (UF-0B-04/05),
+`docs/DATABASE_MODEL.md`, `docs/ROLES_AND_PERMISSIONS.md`,
+`docs/DSGVO_PRIVACY_MODEL.md`.
+
+**Offene Folgeaufgaben:**
+Die vier bestehenden Core-Flow-Tests (Training bearbeiten/absagen/löschen,
+Trainer-RSVP) um echte `assistant_coach`-only-Zweige erweitern (benannter,
+nicht beauftragter Folgeauftrag, siehe `docs/STATUS.md`).
+
+**Verwandte Docs:**
+`docs/FEATURE_CATALOG.md`, `docs/USER_FLOWS.md`, `docs/DATABASE_MODEL.md`,
+`docs/ROLES_AND_PERMISSIONS.md`, `docs/SECURITY.md`,
+`docs/DSGVO_PRIVACY_MODEL.md`, `docs/STATUS.md`, `docs/CURRENT_TASK.md`.
 
 ---
 

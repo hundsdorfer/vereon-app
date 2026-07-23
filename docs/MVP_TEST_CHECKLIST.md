@@ -188,7 +188,12 @@ Anforderung festgeschrieben.
 
 ## 8. Zieltest — Rollen und Eigentumsübertragung
 
-- [ ] Nur `team_owner` vergibt oder entzieht vordefinierte Rollen.
+- [x] Nur `team_owner` vergibt oder entzieht vordefinierte Rollen — für
+  `assistant_coach` implementiert (`FC-ROLE-002`/`FC-ROLE-003`,
+  `grant_assistant_coach()`/`revoke_assistant_coach()`), echt E2E verifiziert
+  in `tests/e2e/core-flow-role-management.spec.ts` inkl. Self-Targeting-
+  Ablehnung. Allgemeine Rollenverwaltung (`head_coach`, Eigentumsübertragung)
+  bleibt offen.
 - [ ] Es können keine granularen Einzelrechte vergeben werden.
 - [ ] Es existiert jederzeit genau ein `team_owner`.
 - [ ] Owner-Entzug ist nur als explizite Eigentumsübertragung möglich.
@@ -231,9 +236,12 @@ Anforderung festgeschrieben.
   (`tests/e2e/core-flow-edit-training.spec.ts`, vollständiger Lauf 58/58 am
   2026-07-21).
 - [ ] `head_coach`-only: End-to-End-Test offen/blockiert (kein legitimer
-  App-/RPC-Weg für ein isoliertes Testkonto, siehe `docs/STATUS.md`,
-  verknüpft mit `FC-ROLE-002`).
-- [ ] `assistant_coach`-only: End-to-End-Test offen/blockiert (dito).
+  App-/RPC-Weg für ein isoliertes Testkonto, siehe `docs/STATUS.md`).
+- [ ] `assistant_coach`-only: End-to-End-Test für DIESES Feature offen. Der
+  allgemeine Testkonto-Blocker ist seit `FC-ROLE-002`/`FC-ROLE-003`
+  aufgehoben (siehe Abschnitt oben); `core-flow-edit-training.spec.ts` wurde
+  bewusst noch nicht rückwirkend um einen echten Zweig erweitert (separater,
+  benannter Folgeauftrag, siehe `docs/STATUS.md`).
 - [x] Statischer Rollenvertrag (`TRAINING_EDIT_ROLES`,
   `tests/e2e/trainingEditRoleContract.spec.ts`) bestanden — ersetzt NICHT die
   beiden offenen Integrationsfälle oben.
@@ -262,9 +270,12 @@ Anforderung festgeschrieben.
 - [x] `team_owner`-only: echter End-to-End-Test bestanden
   (`tests/e2e/core-flow-cancel-training.spec.ts`).
 - [ ] `head_coach`-only: End-to-End-Test offen/blockiert (kein legitimer
-  App-/RPC-Weg für ein isoliertes Testkonto, siehe `docs/STATUS.md`,
-  verknüpft mit `FC-ROLE-002`).
-- [ ] `assistant_coach`-only: End-to-End-Test offen/blockiert (dito).
+  App-/RPC-Weg für ein isoliertes Testkonto, siehe `docs/STATUS.md`).
+- [ ] `assistant_coach`-only: End-to-End-Test für DIESES Feature offen. Der
+  allgemeine Testkonto-Blocker ist seit `FC-ROLE-002`/`FC-ROLE-003`
+  aufgehoben; `core-flow-cancel-training.spec.ts` wurde bewusst noch nicht
+  rückwirkend um einen echten Zweig erweitert (separater, benannter
+  Folgeauftrag, siehe `docs/STATUS.md`).
 - [x] Statischer Rollenvertrag (`TRAINING_CANCEL_ROLES`) und RPC-Code-Review
   für alle drei Rollen vorhanden — dies ersetzt NICHT die beiden offenen
   Integrationsfälle oben. `cancel_event()` prüft serverseitig symmetrisch
@@ -307,9 +318,14 @@ Anforderung festgeschrieben.
   `event_staff_rsvps`. Migration lokal angewendet, Test grün.
 - [x] `team_owner`, `head_coach` und `assistant_coach` dürfen nur für sich
   selbst Trainer-RSVP setzen; `team_manager` bleibt ausgeschlossen. Echte E2E-
-  Abdeckung ist nur für `team_owner` vorhanden und grün; die beiden übrigen
-  Rollen bleiben mangels legitimer Provisionierung mit `FC-ROLE-002` offen,
-  abgedeckt über den statischen Rollenvertrag.
+  Abdeckung ist nur für `team_owner` vorhanden und grün; `head_coach` und
+  `assistant_coach` bleiben für DIESES Feature offen, abgedeckt über den
+  statischen Rollenvertrag. Der allgemeine Provisionierungs-Blocker für
+  `assistant_coach` ist seit `FC-ROLE-002`/`FC-ROLE-003` aufgehoben;
+  `core-flow-staff-rsvp.spec.ts` wurde bewusst noch nicht rückwirkend um
+  einen echten Zweig erweitert (separater, benannter Folgeauftrag, siehe
+  `docs/STATUS.md`). `head_coach`-only bleibt weiterhin ohne legitimen
+  Testkonto-Weg offen.
 - [x] `list_staff_rsvps_for_event()` schützt vor Enumeration, liefert aktive
   Trainer auch ohne Antwort, Namen trotz fehlender Fremd-`profiles`-SELECT-
   Policy und dedupliziert Mehrfachrollen. Im Playwright-Lauf verifiziert. Der

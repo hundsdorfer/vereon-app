@@ -150,6 +150,7 @@ das eigene verknüpfte Kind werden getrennt davon behandelt.
 | vollständiges Geburtsdatum nach Teamende | nicht mehr im Teamkontext anzeigen; notwendige Historie nur mit Geburtsjahr | nicht implementiert |
 | abgesagter Termin | sichtbar als abgesagt; keine neuen/geänderten RSVP | Absage-RPC vorhanden, App-Flow fehlt |
 | Nutzerkonto löschen | Prozess, Rechtsfolgen, Aufbewahrung und Entkopplung fachanwaltlich/technisch definieren | kein bestätigter Self-Service-Prozess |
+| Co-Trainer-Rollenänderung (`team_role_audit_log`) | Historie (wer/wen/wann/welche Aktion) bleibt bei Account-Löschung erhalten, Personenbezug wird entfernt statt den Log-Eintrag zu löschen | implementiert: `target_user_id`/`performed_by` nutzen `ON DELETE SET NULL` statt `CASCADE`; nur `team_owner` darf lesen (RLS) |
 | Team archivieren | Historie erhalten; kein pauschaler Hard-Delete | Zielmodell, nicht vollständig implementiert |
 
 Fristen für angenommene Join-Anfragen, Profile, Events, RSVP, Sicherheitslogs und

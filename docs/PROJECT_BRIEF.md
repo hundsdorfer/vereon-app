@@ -37,7 +37,7 @@ Training bearbeiten (`FC-TRAINING-003`) und der bedingte Hard-Delete
 Playwright-Lauf verifiziert (60/60 am 2026-07-21; bekannte rollen- und
 Trainer-RSVP-bezogene Testlücken siehe `docs/STATUS.md`).
 
-Nicht vollständig implementiert sind unter anderem E-Mail-Verifizierung, Passwort-Reset, Rollenverwaltung, Owner-Transfer, Einladungscode-Erneuerung, RSVP-Deadline, Trainer-RSVP, Anwesenheitsabschluss und Teamarchivierung.
+Nicht vollständig implementiert sind unter anderem E-Mail-Verifizierung, Passwort-Reset, allgemeine Rollenverwaltung über `assistant_coach` hinaus (`head_coach`-Vergabe, Owner-Transfer), Einladungscode-Erneuerung, RSVP-Deadline, Anwesenheitsabschluss und Teamarchivierung. Co-Trainer hinzufügen/entfernen (`assistant_coach`) und Trainer-RSVP sind implementiert.
 
 ## Zielrollen
 

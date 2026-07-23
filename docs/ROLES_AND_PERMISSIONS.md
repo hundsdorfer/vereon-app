@@ -188,6 +188,8 @@ MVP-0B ergänzt insbesondere:
 
 Rollen werden im MVP nur über vordefinierte Rollen vergeben. Granulare Einzelrechte pro Nutzer sind ausdrücklich nicht vorgesehen. Rollenvergabe und Rollenentzug liegen ausschließlich beim `team_owner`.
 
+**Status (`FC-ROLE-002`/`FC-ROLE-003`, implementiert):** `grant_assistant_coach()`/`revoke_assistant_coach()` in `20260723100000_add_role_management.sql` setzen dies durch — ausschließlich `team_owner`, nie `head_coach` oder `assistant_coach` selbst, kein Self-Targeting. Vergaben bleiben über `assigned_by`/`assigned_at` auf `team_member_roles` nachvollziehbar; da ein `DELETE` beim Entzug keine Historie hinterlässt, protokolliert zusätzlich `team_role_audit_log` (nur für `team_owner` einsehbar) jede tatsächliche Vergabe/jeden Entzug.
+
 MVP-0B ist weiterhin keine Vereinsverwaltungsphase.
 
 ### 6.3 MVP-1 — erste real nutzbare Testversion

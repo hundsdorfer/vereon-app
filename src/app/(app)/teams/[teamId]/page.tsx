@@ -6,6 +6,9 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { RemovePlayerButton } from '@/features/players/RemovePlayerButton'
+import { GrantAssistantCoachButton } from '@/features/team/GrantAssistantCoachButton'
+import { RevokeAssistantCoachButton } from '@/features/team/RevokeAssistantCoachButton'
+import { ROLE_MANAGEMENT_ROLES } from '@/lib/permissions'
 
 export const dynamic = 'force-dynamic'
 
@@ -102,6 +105,7 @@ export default async function TeamDetailPage({
     { data: upcomingTrainings },
     { data: isTrainer },
     { data: canManageMembers },
+    { data: canManageRoles },
   ] = await Promise.all([
     supabase
       .from('team_join_requests')
@@ -130,7 +134,39 @@ export default async function TeamDetailPage({
       p_team_id: teamId,
       p_role_keys: ['team_owner', 'head_coach'],
     }),
+    supabase.rpc('has_team_role', {
+      p_team_id: teamId,
+      p_role_keys: ROLE_MANAGEMENT_ROLES,
+    }),
   ])
+
+  // Trainerteam-Card ist bewusst auf FC-ROLE-002/003 beschränkt (Vergabe/
+  // Entzug von assistant_coach für bestehende, aktive Spieler) — kein
+  // allgemeiner Mitglieder-/Rollen-Viewer; das bleibt die separate, offene
+  // FC-ROLE-001. Fail-closed: bei Fehler werden sowohl Grant- als auch
+  // Revoke-Aktionen unterdrückt statt mit `data ?? []` falsche Kandidaten
+  // anzuzeigen.
+  let assistantCoaches: { user_id: string; full_name: string | null }[] = []
+  let assistantCoachesError = false
+
+  if (canManageRoles) {
+    const { data, error } = await supabase.rpc('list_assistant_coaches', {
+      p_team_id: teamId,
+    })
+
+    if (error) {
+      assistantCoachesError = true
+      console.error('List assistant coaches query error', {
+        message: error.message,
+        code: error.code,
+        hint: error.hint,
+      })
+    } else {
+      assistantCoaches = data ?? []
+    }
+  }
+
+  const assistantCoachUserIds = new Set(assistantCoaches.map((c) => c.user_id))
 
   if (assignmentsError) {
     console.error('Player assignments query error', {
@@ -239,6 +275,77 @@ export default async function TeamDetailPage({
             </dl>
           </CardContent>
         </Card>
+
+        {!!canManageRoles && (
+          <Card>
+            <CardHeader>
+              <h2 className="text-sm font-semibold text-foreground">Trainerteam</h2>
+            </CardHeader>
+            <CardContent>
+              {assistantCoachesError ? (
+                <p className="text-sm text-muted-foreground">
+                  Co-Trainer konnten nicht geladen werden. Bitte Seite neu laden.
+                </p>
+              ) : (
+                <>
+                  {assistantCoaches.length > 0 && (
+                    <ul className="divide-y divide-border">
+                      {assistantCoaches.map((coach) => (
+                        <li key={coach.user_id} className="py-3 first:pt-0 last:pb-0">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">
+                                {coach.full_name ?? 'Unbekannt'}
+                              </p>
+                              <p className="mt-0.5 text-xs text-muted-foreground">Co-Trainer</p>
+                            </div>
+                            <RevokeAssistantCoachButton
+                              teamId={team.id}
+                              targetUserId={coach.user_id}
+                              memberName={coach.full_name ?? 'Diese Person'}
+                            />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {(() => {
+                    const candidates = activeAssignments.filter(
+                      (a) => a.player?.user_id && !assistantCoachUserIds.has(a.player.user_id),
+                    )
+                    if (candidates.length === 0 && assistantCoaches.length === 0) {
+                      return (
+                        <p className="text-sm text-muted-foreground">
+                          Noch keine Co-Trainer. Aktive Spieler können hier zu Co-Trainern gemacht werden.
+                        </p>
+                      )
+                    }
+                    if (candidates.length === 0) return null
+                    return (
+                      <ul className="divide-y divide-border">
+                        {candidates.map((a) => (
+                          <li key={a.id} className="py-3 first:pt-0 last:pb-0">
+                            <div className="flex items-start justify-between gap-4">
+                              <div>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {a.player!.first_name} {a.player!.last_name}
+                                </p>
+                              </div>
+                              <GrantAssistantCoachButton
+                                teamId={team.id}
+                                targetUserId={a.player!.user_id!}
+                              />
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )
+                  })()}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

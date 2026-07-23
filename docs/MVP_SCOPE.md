@@ -213,7 +213,7 @@ Diese Reihenfolge ist keine detaillierte Aufgabenplanung. Sie beschreibt nur Sco
 | `AUTH` | `FC-AUTH-005`, `FC-AUTH-006` | `planned_mvp` | E-Mail-Verifizierung und Passwort-Reset sind grundlegende Sicherheits- und Recovery-Funktionen. |
 | `PLAYER` | `FC-PLAYER-003` | `partial` | Das verpflichtende Geburtsjahr ist umgesetzt; die freiwillige Angabe des vollständigen Geburtsdatums mit enger Zweck- und Sichtbarkeitsbegrenzung fehlt noch. |
 | `TEAM` | `FC-TEAM-003` | `planned_mvp` | Mannschaftsgrunddaten müssen korrigierbar sein. |
-| `ROLE` | `FC-ROLE-002`, `FC-ROLE-003` | `planned_mvp` | Ausschließlich der `team_owner` vergibt oder entzieht die vordefinierte Co-Trainer-Rolle; granulare Einzelrechte sind nicht Teil des MVP. |
+| `ROLE` | `FC-ROLE-002`, `FC-ROLE-003` | `implemented` | Ausschließlich der `team_owner` vergibt oder entzieht die vordefinierte Co-Trainer-Rolle; granulare Einzelrechte sind nicht Teil des MVP. Vergabe ist auf existierende, aktive, selbst registrierte Spieler beschränkt (kein separater Coach-Einladungsweg). |
 | `INVITE` | `FC-INVITE-007`, `FC-INVITE-008`, `FC-INVITE-009` | `partial` / `planned_mvp` | `team_owner` und `head_coach` entscheiden Beitrittsanfragen; alle drei Trainerrollen kontrollieren Einladungscodes; alte Anfragen müssen vor Pilotbetrieb automatisiert bereinigt werden. |
 | `TRAINING` | `FC-TRAINING-003`, `FC-TRAINING-004`, `FC-TRAINING-005` | `implemented` | Bearbeiten, bedingter Hard-Delete und Absagen sind lokal umgesetzt; bekannte Rollen- und Trainer-RSVP-Testgrenzen stehen in `STATUS.md`. |
 | `RSVP` | `FC-RSVP-003` | `planned_mvp` | Trainer und Co-Trainer müssen eigene Teilnahme rückmelden können. |

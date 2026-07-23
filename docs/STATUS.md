@@ -1,7 +1,7 @@
 # Status — technisches Audit
 
 **Stand:** 2026-07-22
-**Geprüfter Stand:** `main` / `fdd6fcd` (enthält committet `FC-TRAINING-005`, `FC-TRAINING-003`, `FC-TRAINING-004` und `FC-RSVP-003`; `main` und `origin/main` sind identisch). Alle 16 Migrationen sind remote angewendet, inklusive `20260722090000_add_staff_rsvp.sql` (mit ausdrücklicher Freigabe per `supabase db push`). Vercel-Production-Deployment `dpl_kZbQCFRyZzMhUZtxX3AQwGXcM6hs` für exakt diesen Commit ist `READY` (Alias `vereon.app`/`www.vereon.app`), extern gegen bekanntes Basic-Auth-Verhalten geprüft. Details und aktueller Prüfstand: `docs/CURRENT_TASK.md`.
+**Geprüfter Stand:** `main` / `fdd6fcd` (committet, auf `origin/main` gepusht und deployed: `FC-TRAINING-005`, `FC-TRAINING-003`, `FC-TRAINING-004`, `FC-RSVP-003`) zuzüglich lokaler, noch nicht committeter Änderungen für `FC-ROLE-002`/`FC-ROLE-003`. Alle 16 zuvor bestehenden Migrationen sind remote angewendet; die neue `20260723100000_add_role_management.sql` ist lokal angewendet und vollständig verifiziert (80/80 Playwright-Tests), aber noch nicht remote migriert. Details und aktueller Prüfstand: `docs/CURRENT_TASK.md`.
 
 Dieses Dokument ist die verbindliche lebende Übersicht für belegte technische Abweichungen, Risiken und Übergabepunkte. Technischer Ist-Zustand: `docs/ARCHITECTURE.md`. Fachliches Ziel: `docs/FEATURE_CATALOG.md`, `docs/ROLES_AND_PERMISSIONS.md` und `docs/DATABASE_MODEL.md`.
 
@@ -25,11 +25,25 @@ Die App ist intern gehostet, aber nicht pilotbereit. Der Zugriff auf die gehoste
 | Training absagen (`team_owner`, `head_coach`, `assistant_coach` laut RPC-Rechteprüfung) | `cancelEventAction()` in `src/actions/events.ts`, `cancel_event()` in `20260629200000_add_events.sql`, UI in `src/features/events/CancelEventButton.tsx` und `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx`; abgesagte Trainings bleiben in allen Übersichten (Liste, Team, Dashboard) sichtbar und markiert; neue/geänderte RSVP nach Absage serverseitig gesperrt; wiederholte Absage bleibt konsistent (zustands-idempotent). End-to-end verifiziert nur für `team_owner`-only (`tests/e2e/core-flow-cancel-training.spec.ts`); `head_coach`-only/`assistant_coach`-only sind **weiterhin nicht end-to-end verifiziert** (Begründung: Abschnitt 5) und stattdessen nur über RPC-Code-Review sowie einen statischen Rollenvertrags-Test für `TRAINING_CANCEL_ROLES` (`tests/e2e/trainingCancelRoleContract.spec.ts`) abgedeckt — kein Ersatz für die offenen Integrationsfälle. |
 | Training bedingt hart löschen | `delete_training()` in `20260721114453_delete_training.sql`, `deleteTrainingAction()`, `DeleteTrainingForm` und Event-Detailseite; für Spieler-RSVP lokal migriert und in `tests/e2e/core-flow-delete-training.spec.ts` für `team_owner`-only verifiziert. Die lokale Migration `20260722090000_add_staff_rsvp.sql` erweitert die RPC atomar um eine Trainer-RSVP-Sperre; für `team_owner`-only end-to-end verifiziert (Parallel-Race-Test gegen `respond_to_event_as_staff()` eingeschlossen). `head_coach`-only bleibt wegen fehlendem legitimen Testkonto-Weg offen. |
 | Trainer-RSVP abgeben (`FC-RSVP-003`) | `respond_to_event_as_staff()`, `list_staff_rsvps_for_event()` und `event_staff_rsvps` in `20260722090000_add_staff_rsvp.sql`; `respondToEventAsStaffAction()`, `StaffRsvpForm.tsx`, getrennte Card „Trainer-Rückmeldungen" auf der Event-Detailseite. Lokal migriert und in `tests/e2e/core-flow-staff-rsvp.spec.ts` für `team_owner`-only verifiziert (UPSERT, Deadline-Grenze, Absage, Enumerationsschutz, dedizierte Listen-RPC). Die Rollenwechsel-Historie (`is_active_trainer = false` für inzwischen nicht mehr aktive Trainer) ist mangels legitimem Weg, einen solchen Datensatz zu erzeugen, **nicht** im Playwright-Lauf, sondern nur statisch über `tests/e2e/trainingStaffRsvpRoleContract.spec.ts` abgedeckt. `head_coach`-/`assistant_coach`-only bleiben ebenfalls wegen fehlendem legitimen Testkonto-Weg offen und sind über denselben statischen Rollenvertrag abgedeckt. |
+| Co-Trainer hinzufügen/entfernen (`FC-ROLE-002`/`FC-ROLE-003`) | `grant_assistant_coach()`, `revoke_assistant_coach()`, `list_assistant_coaches()` und `team_role_audit_log` in `20260723100000_add_role_management.sql`; Actions in `src/actions/team.ts`, UI-Card „Trainerteam" auf der Team-Detailseite. Lokal migriert und in `tests/e2e/core-flow-role-management.spec.ts` für `team_owner`-only end-to-end verifiziert — erstmals inklusive eines **real provisionierten** `assistant_coach`-Kontos (bislang stets über statische Rollenverträge ersetzt). Vergabe ist auf existierende, aktive, selbst registrierte Spieler beschränkt (bewusste Scope-Grenze, kein separater Coach-Einladungsweg); ein Entzug ohne verbleibende Rolle deaktiviert die zugrunde liegende Mitgliedschaft, damit kein dauerhafter, grundloser Teamzugriff zurückbleibt. `head_coach`-only bleibt weiterhin ohne legitimen Testkonto-Weg offen. Die vier bereits bestehenden Core-Flow-Tests (Training bearbeiten/absagen/löschen, Trainer-RSVP) wurden bewusst **nicht** um echte `assistant_coach`-only-Zweige erweitert — siehe „Bekannte Folgearbeiten" unten. |
 | Spieler-/Guardian-RSVP und Trainerübersicht | `respond_to_event()`, `src/app/(app)/teams/[teamId]/events/[eventId]/page.tsx` |
 | RLS auf allen 19 lokal angewendeten öffentlichen Tabellen | `supabase/migrations/*`, inklusive der neuen Tabelle `event_staff_rsvps` |
 | CI für Lint und Build | `.github/workflows/ci.yml` |
 | Temporärer interner Zugangsschutz (HTTP Basic Auth vor Supabase-Login) | lokal automatisiert getestet (`tests/e2e/internal-access.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts`); auf Vercel aktiviert (Projekt `vereon`, Scope `vereon-app`, Production-Deployment `dpl_NnTeWpNNmmEP9BbSAXfmwcXFxM5t`, Commit `029de982`); extern gegen `https://www.vereon.app` geprüft am 2026-07-19: ohne Zugangsdaten `HTTP 401` mit `WWW-Authenticate: Basic realm="Vereon Internal Access"` und `Cache-Control: private, no-store`, mit korrekten Zugangsdaten `HTTP 307` auf `/login`. Kein Ersatz für Supabase Auth/RLS, ausdrücklich temporär (`DEC-011`), vor externem Pilot zu entfernen/ersetzen. |
 | `/manifest.webmanifest` ohne Supabase-Login-Weiterleitung, interner Zugangsschutz bleibt davor aktiv | lokal implementiert und automatisiert getestet (`src/proxy.ts`, `tests/e2e/smoke.spec.ts`, `tests/e2e/internal-access-enabled.spec.ts`); deployed (Production-Deployment `dpl_EQdwdj8bj5WidmbvAfKYptHtg5yT`, Commit `5caf3b7276893013ba2ef1b5da39d66907bb2b17`, Status `READY`) und extern gegen `https://www.vereon.app` verifiziert am 2026-07-19 (durch Codex geprüft, laut Nutzerangabe): ohne interne Zugangsdaten `HTTP 401`, mit korrekten internen Zugangsdaten `HTTP 200` mit `Content-Type: application/manifest+json; charset=utf-8` ohne Supabase-Login-Weiterleitung; `/dashboard` antwortet mit korrektem internem Zugang ohne Supabase-Session weiterhin mit `HTTP 307` auf `/login?redirect=%2Fdashboard`. Damit ist die Reihenfolge extern bestätigt: interner Zugangsschutz → Supabase-Routenschutz → Anwendung. |
+
+**Bekannte Folgearbeiten (aus `FC-ROLE-002`/`FC-ROLE-003`, Stand 2026-07-23):**
+Jetzt, da ein legitimer Weg existiert, ein reales `assistant_coach`-Testkonto
+zu provisionieren, könnten die vier bestehenden Core-Flow-Tests
+(`core-flow-cancel-training.spec.ts`, `core-flow-edit-training.spec.ts`,
+`core-flow-delete-training.spec.ts`, `core-flow-staff-rsvp.spec.ts`) um
+echte `assistant_coach`-only-Zweige erweitert werden, statt weiterhin nur auf
+die jeweiligen statischen Rollenverträge zu vertrauen. Bewusst nicht Teil
+dieses Auftrags (Scope-Entscheidung), noch nicht beauftragt. `head_coach`-only
+bleibt davon unberührt weiterhin ungelöst (`FC-ROLE-002` löst nur die
+`assistant_coach`-Seite; `head_coach` ist ausschließlich über
+`create_independent_team(p_also_head_coach: true)` erreichbar, identisch mit
+`team_owner`).
 
 ## 3. Prüfstand
 
@@ -117,6 +131,18 @@ Lokale Supabase-Prüfung:
 
 Die Vector-Störung ist ein lokales Betriebsrisiko; ein Fehler des fachlichen Kernflows ist daraus nicht belegt.
 
+**Am 2026-07-23, nach Implementierung von FC-ROLE-002/FC-ROLE-003 (lokale,
+noch nicht committete Änderungen), erfolgreich ausgeführt:** Migration
+`20260723100000_add_role_management.sql` mit `supabase migration up --local`
+angewendet und über `supabase migration list --local` bestätigt; gezielte
+Tests (11 statischer Rollenvertrag + 1 Kernflow, 12/12), vollständiger
+`npx playwright test`-Lauf **80/80 Tests bestanden**; `npx tsc --noEmit`,
+`npm run lint`, `npm run build`, `git diff --check`, `supabase db lint --local`
+(ein neuer, echter Befund — ungenutzte Variable in `grant_assistant_coach()`
+— noch während der Umsetzung behoben, siehe Migration; kein Befund zu
+`generate_team_code` verändert) und `supabase db advisors --local` (keine
+neuen Befunde zu `team_role_audit_log` oder den drei neuen Funktionen).
+
 ## 4. Priorität 0 — vor externem Pilotbetrieb
 
 **Verifiziert geschlossen (2026-07-19):** „Deployment öffentlich erreichbar“
@@ -165,7 +191,7 @@ Testkonto-Weg als Integrationslücke offen (`FC-ROLE-002`).
 | Einladungscode erneuern/deaktivieren | ältere Revoke-RPC vorhanden, aber kein vollständiger `public_code`-Flow |
 | Einladungscode-Rechte für Assistant Coach | aktuelle Policies/RPCs sind nicht konsistent mit dem beschlossenen Ziel |
 | Beitrittsanfragen für Assistant Coach sichtbar | Ziel erlaubt Einsicht, aktuelle `team_join_requests`-RLS nur `team_owner`/`head_coach` |
-| Rollenverwaltung durch Team Owner | kein App-Flow; DB-Strukturen allein genügen nicht |
+| Rollenverwaltung durch Team Owner | `assistant_coach` hinzufügen/entfernen implementiert (`FC-ROLE-002`/`FC-ROLE-003`, siehe Abschnitt 2); `head_coach`-Vergabe/-Entzug und allgemeine Rollenverwaltung darüber hinaus weiterhin ohne App-Flow |
 | genau ein Owner und bestätigte Übertragung | keine Eindeutigkeitsregel oder Transfer-RPC |
 | Team archivieren | Statusfeld vorhanden, kein App-Flow |
 | verpflichtendes Geburtsjahr, optionales volles Datum | aktuelles Profil verlangt volles Datum; Spieler-Spalte `birth_year` ist nullable |
@@ -189,11 +215,15 @@ Testkonto-Weg als Integrationslücke offen (`FC-ROLE-002`).
 
 ## 7. Datenbank- und Betriebsgrenzen
 
-- Das Repository enthält 16 additive Migrationen, alle gegen den lokalen
-  Supabase-Docker-Stack und die Supabase-Cloud-Produktionsdatenbank angewendet.
+- Das Repository enthält 17 additive Migrationen. Die ersten 16 sind gegen
+  den lokalen Supabase-Docker-Stack und die Supabase-Cloud-Produktionsdatenbank
+  angewendet. Die neue `20260723100000_add_role_management.sql` ist mit
+  `supabase migration up --local` gegen den lokalen Supabase-Docker-Stack
+  angewendet und über `supabase migration list --local` bestätigt, aber noch
+  nicht remote migriert.
 - Remote-Migrationsstand am 2026-07-23 per `supabase migration list`
-  bestätigt: alle 16 Migrationen Local == Remote, inklusive der zuvor remote
-  fehlenden `20260704120000_remove_player_from_team.sql`,
+  bestätigt: alle 16 zuvor bestehenden Migrationen Local == Remote, inklusive
+  der zuvor remote fehlenden `20260704120000_remove_player_from_team.sql`,
   `20260721094219_update_training.sql`, `20260721114453_delete_training.sql`
   und `20260722090000_add_staff_rsvp.sql` (jeweils mit ausdrücklicher
   Freigabe per `supabase db push` angewendet).

@@ -2,7 +2,79 @@
 
 **Stand:** 2026-07-23
 
-## Aktuell: FC-RSVP-003 „Trainer-RSVP abgeben" — lokal implementiert, verifiziert, committet und Codex-reviewt
+## Aktuell: FC-ROLE-002/FC-ROLE-003 „Co-Trainer hinzufügen/entfernen" — lokal implementiert und verifiziert
+
+Die additive Migration `20260723100000_add_role_management.sql` ergänzt drei
+neue RPCs — `grant_assistant_coach()`, `revoke_assistant_coach()`,
+`list_assistant_coaches()` — sowie die neue Tabelle `team_role_audit_log`.
+Ausschließlich `team_owner` darf die Rolle `assistant_coach` vergeben oder
+entziehen; nie `head_coach` oder `assistant_coach` selbst; Self-Targeting ist
+serverseitig verboten.
+
+**Planungsvorlauf und zwei unabhängige Codex-Reviews des Plans (vor
+Implementierungsbeginn):** Der erste Planentwurf ging fälschlich davon aus,
+eine zweite Person werde über den bestehenden Invite/Join/Accept-Flow zu
+einer aktiven `team_memberships`-Zeile — Codex wies nach, dass dieser Flow
+ausschließlich `player_team_assignments`-Zeilen erzeugt und `team_memberships`
+einzig von `create_independent_team()` befüllt wird. Nutzerentscheidung:
+`grant_assistant_coach()` legt die `team_memberships`-Zeile selbst an, aber
+nur für Nutzer mit nachweisbarer, aktiver Spielerbeziehung zum Team —
+Konsequenz: ein Co-Trainer-Kandidat muss zuvor aktiver, selbst registrierter
+Spieler im Team gewesen sein (bewusste, dokumentierte Scope-Grenze, kein
+separater Coach-Einladungsweg). Eine zweite Codex-Review-Runde fand zwei
+weitere P1-Befunde, die vor der Umsetzung behoben wurden: (1) der ursprünglich
+geplante `ON CONFLICT ... DO UPDATE SET status='active'`-Upsert hätte eine
+bestehende inaktive Mitgliedschaft reaktiviert und damit stillschweigend
+alle noch daran hängenden Altrollen wieder wirksam gemacht — behoben durch
+ein reines Insert-wenn-fehlend ohne Reaktivierung; (2) ein entfernter
+Co-Trainer, der zuvor zusätzlich als Spieler entfernt wurde, hätte eine
+dauerhaft aktive, grundlose Teammitgliedschaft behalten — behoben durch
+Deaktivierung der Mitgliedschaft in `revoke_assistant_coach()`, sobald keine
+Rolle mehr daran hängt.
+
+**Umsetzung:** `src/actions/team.ts` (`grantAssistantCoachAction`/
+`revokeAssistantCoachAction`, verwenden ausschließlich die von der RPC
+zurückgegebene `team_id`), `src/lib/permissions.ts`
+(`ROLE_MANAGEMENT_ROLES`), neue UI-Komponenten
+`src/features/team/GrantAssistantCoachButton.tsx` und
+`RevokeAssistantCoachButton.tsx`, neue Card „Trainerteam" auf
+`src/app/(app)/teams/[teamId]/page.tsx` (fail-closed bei RPC-Fehler, kein
+`data ?? []`-Fallback).
+
+**Tests:** `tests/e2e/core-flow-role-management.spec.ts` (echter
+`team_owner`→`assistant_coach`-Kernflow mit real provisioniertem
+Testkonto — erstmals ohne statischen Rollenvertrags-Ersatz für
+`assistant_coach` selbst; deckt Grant, Revoke, Audit-Log, Idempotenz,
+Self-Targeting, teamfremde/nichtexistente Ziel-IDs, anonyme Aufrufe,
+reales Inaktivitäts-Gate nach Spielerentfernung und Lifecycle-Deaktivierung
+der Mitgliedschaft ab) und `tests/e2e/roleManagementRoleContract.spec.ts`
+(statischer Rollenvertrag). Bewusst **nicht** Teil dieses Auftrags: die vier
+bestehenden Core-Flow-Tests um echte `assistant_coach`-only-Zweige zu
+erweitern (Scope-Entscheidung, siehe `docs/STATUS.md`, „Bekannte
+Folgearbeiten").
+
+**Lokal vollständig geprüft (Stand 2026-07-23):** Migration
+`20260723100000_add_role_management.sql` mit `supabase migration up --local`
+angewendet und über `supabase migration list --local` bestätigt. Danach
+erfolgreich: gezielte Tests (12/12), vollständiger `npx playwright test`-Lauf
+**80/80 Tests bestanden**, `npx tsc --noEmit`, `npm run lint`, `npm run build`,
+`git diff --check`, `supabase db lint --local` (ein während der Umsetzung
+gefundener und behobener echter Befund — ungenutzte Variable in
+`grant_assistant_coach()`; kein neuer Befund danach) und
+`supabase db advisors --local` (keine neuen Befunde zu `team_role_audit_log`
+oder den drei neuen Funktionen).
+
+**Bekannte Grenzen:** `head_coach`-only bleibt weiterhin ohne legitimen
+Testkonto-Weg offen (`create_independent_team(p_also_head_coach: true)`
+erzeugt denselben Nutzer wie `team_owner`, kein isoliertes Konto). Die
+Eligibility-Beschränkung auf selbst registrierte, aktive Spieler ist eine
+bewusste Scope-Grenze, keine offene Lücke — ein separater
+Coach-Einladungsweg ist nicht Teil dieses Auftrags.
+
+Keine Remote-Datenbankaktion, kein `db push`, kein Commit und kein Push für
+`FC-ROLE-002`/`FC-ROLE-003`.
+
+## Vorangegangene Aufgabe: FC-RSVP-003 „Trainer-RSVP abgeben" — lokal implementiert, verifiziert, committet und Codex-reviewt
 
 Die additive Migration `20260722090000_add_staff_rsvp.sql` ergänzt die von
 Spieler-RSVP getrennte Tabelle `event_staff_rsvps`, die RLS-Hilfsfunktion und
@@ -100,11 +172,17 @@ in `docs/STATUS.md` dokumentierten Deployment-ID
 nicht korrigiert, da außerhalb dieses Auftrags — separate Freigabe nötig,
 falls gewünscht.
 
-**Bekannte Testgrenze:** Echte E2E-Konten nur mit `head_coach` oder
-`assistant_coach` können weiterhin nicht legitim provisioniert werden;
-`FC-ROLE-002` bleibt `planned_mvp`. Die Rollen sind im RPC-Code und im
-statischen Rollenvertrag abgedeckt, was die offenen Integrationsfälle nicht
-ersetzt.
+**Bekannte Testgrenze (Stand zum Zeitpunkt dieser Umsetzung):** Echte
+E2E-Konten nur mit `head_coach` oder `assistant_coach` konnten damals nicht
+legitim provisioniert werden; `FC-ROLE-002` war noch `planned_mvp`. Die
+Rollen waren im RPC-Code und im statischen Rollenvertrag abgedeckt, was die
+offenen Integrationsfälle nicht ersetzte. **Nachtrag (2026-07-23):**
+`FC-ROLE-002`/`FC-ROLE-003` sind inzwischen implementiert und lösen den
+allgemeinen `assistant_coach`-Testkonto-Blocker; dieser Kernflow
+(`core-flow-staff-rsvp.spec.ts`) wurde dafür bewusst **nicht** rückwirkend
+um einen echten `assistant_coach`-only-Zweig erweitert (separater,
+benannter Folgeauftrag, siehe `docs/STATUS.md`). `head_coach`-only bleibt
+weiterhin ohne legitimen Testkonto-Weg offen.
 
 ## Vorangegangene Aufgabe: FC-TRAINING-004 „Training löschen" — implementiert, committet, remote migriert und deployed
 
@@ -243,13 +321,17 @@ Ebenfalls erfolgreich: `npx tsc --noEmit`, `npm run lint`, `npm run build`,
 `supabase db advisors --local`. Lint/Advisors meldeten keinen neuen Befund zu
 `update_training()`; bestehende Hinweise bleiben getrennt dokumentiert.
 
-**Bekannte Testlücke (wie bei FC-TRAINING-005):** `head_coach`-only und
-`assistant_coach`-only sind **nicht** end-to-end verifizierbar — kein
-legitimer App-/RPC-Weg für ein isoliertes Testkonto (`FC-ROLE-002`
-weiterhin `planned_mvp`). Ersatzweise über RPC-Code-Review und den
-statischen Rollenvertrags-Test `TRAINING_EDIT_ROLES`
-(`tests/e2e/trainingEditRoleContract.spec.ts`) abgedeckt — ersetzt NICHT die
-offene Integrationsverifikation.
+**Bekannte Testlücke (wie bei FC-TRAINING-005, Stand zum Zeitpunkt dieser
+Umsetzung):** `head_coach`-only und `assistant_coach`-only waren **nicht**
+end-to-end verifizierbar — kein legitimer App-/RPC-Weg für ein isoliertes
+Testkonto (`FC-ROLE-002` war noch `planned_mvp`). Ersatzweise über
+RPC-Code-Review und den statischen Rollenvertrags-Test `TRAINING_EDIT_ROLES`
+(`tests/e2e/trainingEditRoleContract.spec.ts`) abgedeckt. **Nachtrag
+(2026-07-23):** `FC-ROLE-002`/`FC-ROLE-003` sind inzwischen implementiert;
+`core-flow-edit-training.spec.ts` wurde bewusst **nicht** rückwirkend um
+einen echten `assistant_coach`-only-Zweig erweitert (separater, benannter
+Folgeauftrag, siehe `docs/STATUS.md`). `head_coach`-only bleibt weiterhin
+ohne legitimen Testkonto-Weg offen.
 
 **Dokumentierter Security-Folgebedarf (nicht in diesem Auftrag behoben):**
 Die bereits bestehenden RPCs `create_event()`, `respond_to_event()`,
@@ -422,18 +504,21 @@ Supabase: **40/40 Tests bestanden** (neu: `core-flow-cancel-training.spec.ts`,
 `helpers/supabaseTestGuard.spec.ts`; keine Regression in bestehenden Specs).
 Details: `docs/STATUS.md`.
 
-**Bekannte Testlücke:** `head_coach`-only und `assistant_coach`-only sind
-**nicht** end-to-end verifiziert — es gibt aktuell keinen legitimen
-App-/RPC-Weg, ein isoliertes Testkonto für diese Rollen zu erzeugen (kein
-`GRANT INSERT`/`DELETE` auf `team_member_roles` für `authenticated`, keine
-Co-Trainer-RPC; `FC-ROLE-002` weiterhin `planned_mvp`). Stattdessen über
-RPC-Code-Review (`cancel_event()` prüft alle drei Rollen symmetrisch) und
-einen statischen Rollenvertrags-Test für `TRAINING_CANCEL_ROLES`
-(`tests/e2e/trainingCancelRoleContract.spec.ts`) abgedeckt — dies ersetzt
-NICHT die offene End-to-End-Verifikation für `head_coach`-only und
-`assistant_coach`-only. Isolierte, rein testbezogene
-Rollen-Fixture-Provisionierung ist als separater Folgebedarf offen und braucht
-eine eigene Freigabe.
+**Bekannte Testlücke (Stand zum Zeitpunkt dieser Umsetzung):** `head_coach`-only
+und `assistant_coach`-only waren **nicht** end-to-end verifiziert — es gab
+keinen legitimen App-/RPC-Weg, ein isoliertes Testkonto für diese Rollen zu
+erzeugen (kein `GRANT INSERT`/`DELETE` auf `team_member_roles` für
+`authenticated`, keine Co-Trainer-RPC; `FC-ROLE-002` war noch `planned_mvp`).
+Stattdessen über RPC-Code-Review (`cancel_event()` prüft alle drei Rollen
+symmetrisch) und einen statischen Rollenvertrags-Test für
+`TRAINING_CANCEL_ROLES` (`tests/e2e/trainingCancelRoleContract.spec.ts`)
+abgedeckt. **Nachtrag (2026-07-23):** `FC-ROLE-002`/`FC-ROLE-003` sind
+inzwischen implementiert und lösen die isolierte
+`assistant_coach`-Testkonto-Provisionierung allgemein;
+`core-flow-cancel-training.spec.ts` wurde bewusst **nicht** rückwirkend um
+einen echten `assistant_coach`-only-Zweig erweitert (separater, benannter
+Folgeauftrag, siehe `docs/STATUS.md`). `head_coach`-only bleibt weiterhin
+ohne legitimen Testkonto-Weg offen.
 
 **Nachtrag (Stand 2026-07-21):** Diese Umsetzung wurde inzwischen als Commit
 `e3a0698` auf `main` committet und ist bestätigt auf `origin/main` gepusht

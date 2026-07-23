@@ -89,10 +89,26 @@ Die konkrete Abbildung von `birth_year` und den Dokumentversionen ist vor einer 
 
 Der Seed enthält weiterhin `team_manager`; die Rolle gehört nicht mehr zum fachlichen Zielmodell. Bestehende Leseprüfungen verwenden sie teilweise noch.
 
+**Implementiert (`FC-ROLE-002`/`FC-ROLE-003`):** Vergabe und Entzug der Rolle
+`assistant_coach` erfolgen ausschließlich durch den `team_owner`
+(`grant_assistant_coach()`/`revoke_assistant_coach()` in
+`20260723100000_add_role_management.sql`). Eine zweite Person erhält dabei
+erstmals eine `team_memberships`-Zeile — bislang legte ausschließlich
+`create_independent_team()` eine solche Zeile an (für den Team-Ersteller).
+Vergabe setzt eine nachweisbare, aktive Spielerbeziehung voraus (aktive
+`player_team_assignments`-Zeile mit gesetztem `players.user_id`); die neue
+Tabelle `team_role_audit_log` protokolliert jede Vergabe/jeden Entzug. Ein
+Entzug ohne verbleibende Rolle deaktiviert die Mitgliedschaft
+(`status = 'inactive'`), damit keine dauerhafte, grundlose
+Teamzugriffsberechtigung zurückbleibt.
+
 **Beschlossen – nicht implementiert:**
 
-- Pro Team existiert genau ein `team_owner`.
-- Rollenverwaltung erfolgt ausschließlich durch den `team_owner`.
+- Pro Team existiert genau ein `team_owner` (kein DB-Constraint, nur durch
+  `create_independent_team()` als einzigen `team_owner`-Schreibpfad
+  faktisch abgesichert).
+- Allgemeine Rollenverwaltung über `assistant_coach` hinaus (z. B.
+  `head_coach`-Vergabe/-Entzug, Eigentumsübertragung).
 - Es gibt zunächst nur vordefinierte Rollen, keine individuellen Einzelrechte.
 - Eigentumsübertragung ist nur an einen bereits registrierten, volljährigen und aktiven Nutzer desselben Teams möglich.
 - Der neue Owner muss die Übernahme ausdrücklich bestätigen.
@@ -365,9 +381,21 @@ berechtigt.
 
 ### Audit-Log
 
-**Status: Offen**
+**Status: Teilweise implementiert.** Ein allgemeines `audit_logs`-Konzept für
+Eigentumsübertragung, Einladungswechsel und sensible Löschvorgänge existiert
+weiterhin nicht — Umfang, Aufbewahrung und Sichtbarkeit dafür bleiben vor
+Umsetzung zu entscheiden.
 
-Für Eigentumsübertragung, Rollenänderungen, Einladungswechsel und sensible Löschvorgänge ist Nachvollziehbarkeit erforderlich. Eine `audit_logs`-Tabelle existiert nicht. Umfang, Aufbewahrung und Sichtbarkeit müssen vor Umsetzung entschieden werden.
+Für `assistant_coach`-Rollenänderungen (`FC-ROLE-002`/`FC-ROLE-003`) existiert
+seit `20260723100000_add_role_management.sql` die dedizierte, eng geschnittene
+Tabelle `team_role_audit_log` (`team_id`, `target_user_id`, `role_key`,
+`action` (`granted`/`revoked`), `performed_by`, `performed_at`). Nur
+`team_owner` darf sie lesen (RLS-`SELECT`-Policy über `has_team_role()`);
+Schreibzugriff hat ausschließlich `SECURITY DEFINER` (keine `INSERT`/
+`UPDATE`/`DELETE`-Grants für `authenticated`). `target_user_id` und
+`performed_by` verwenden `ON DELETE SET NULL` statt `CASCADE`, damit eine
+spätere Account-Löschung die Historie anonymisiert statt sie vollständig zu
+entfernen oder die Löschung zu blockieren.
 
 ## 12. Löschung und Aufbewahrung
 
